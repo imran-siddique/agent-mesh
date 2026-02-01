@@ -152,6 +152,70 @@ class TestCLI:
             assert isinstance(data, list)
         except json.JSONDecodeError:
             pytest.fail("Audit JSON output is not valid JSON")
+    
+    def test_proxy_command_help(self, runner):
+        """Test proxy command shows help."""
+        result = runner.invoke(app, ["proxy", "--help"])
+        
+        assert result.exit_code == 0
+        assert "proxy" in result.output.lower()
+        assert "target" in result.output.lower()
+    
+    def test_init_integration_claude(self, runner):
+        """Test init-integration command for Claude."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "claude_config.json"
+            
+            result = runner.invoke(app, [
+                "init-integration",
+                "--claude",
+                "--config-path", str(config_path),
+                "--no-backup",
+            ])
+            
+            assert result.exit_code == 0
+            assert config_path.exists()
+            
+            # Verify config contents
+            with open(config_path) as f:
+                config = json.load(f)
+            
+            assert "mcpServers" in config
+            assert "agentmesh" in str(config).lower()
+    
+    def test_init_integration_updates_existing_config(self, runner):
+        """Test init-integration preserves existing config."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "existing_config.json"
+            
+            # Create existing config
+            existing_config = {
+                "mcpServers": {
+                    "existing-server": {
+                        "command": "python",
+                        "args": ["server.py"]
+                    }
+                }
+            }
+            with open(config_path, "w") as f:
+                json.dump(existing_config, f)
+            
+            # Run init-integration
+            result = runner.invoke(app, [
+                "init-integration",
+                "--claude",
+                "--config-path", str(config_path),
+                "--no-backup",
+            ])
+            
+            assert result.exit_code == 0
+            
+            # Verify existing server is preserved
+            with open(config_path) as f:
+                config = json.load(f)
+            
+            assert "existing-server" in config["mcpServers"]
+            assert len(config["mcpServers"]) > 1
 
 
 class TestCLIEdgeCases:
