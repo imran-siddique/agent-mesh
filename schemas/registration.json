@@ -1,0 +1,378 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agentmesh.io/schemas/registration/v1",
+  "title": "AgentMesh Registration Handshake Schema",
+  "description": "JSON Schema for agent registration with the AgentMesh Identity Core",
+  "version": "1.0.0",
+  "definitions": {
+    "RegistrationRequest": {
+      "type": "object",
+      "required": ["agent_name", "public_key", "sponsor_email", "capabilities"],
+      "properties": {
+        "agent_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Human-readable agent name"
+        },
+        "agent_description": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Optional agent description"
+        },
+        "organization": {
+          "type": "string",
+          "description": "Organization name"
+        },
+        "organization_id": {
+          "type": "string",
+          "description": "Organization identifier"
+        },
+        "public_key": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/=]+$",
+          "description": "Ed25519 public key (base64 encoded)"
+        },
+        "key_algorithm": {
+          "type": "string",
+          "enum": ["Ed25519", "RSA-2048", "ECDSA-P256"],
+          "default": "Ed25519",
+          "description": "Public key algorithm"
+        },
+        "sponsor_email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email of human sponsor"
+        },
+        "sponsor_id": {
+          "type": "string",
+          "description": "Unique sponsor identifier"
+        },
+        "sponsor_signature": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/=]+$",
+          "description": "Sponsor's signature over agent details (base64)"
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z_]+:[a-z_]+$"
+          },
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "Agent capabilities (e.g., ['read:data', 'write:reports'])"
+        },
+        "supported_protocols": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["a2a", "mcp", "iatp", "acp"]
+          },
+          "uniqueItems": true,
+          "description": "Supported protocols"
+        },
+        "parent_did": {
+          "type": "string",
+          "pattern": "^did:mesh:[a-z0-9]{32}$",
+          "description": "Parent agent DID if this is a delegated agent"
+        },
+        "parent_signature": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/=]+$",
+          "description": "Parent's signature for delegation (base64)"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Custom metadata key-value pairs"
+        },
+        "requested_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of request"
+        }
+      }
+    },
+    "RegistrationResponse": {
+      "type": "object",
+      "required": ["agent_did", "agent_name", "initial_trust_score", "status"],
+      "properties": {
+        "agent_did": {
+          "type": "string",
+          "pattern": "^did:mesh:[a-z0-9]{32}$",
+          "description": "Agent's decentralized identifier"
+        },
+        "agent_name": {
+          "type": "string",
+          "description": "Confirmed agent name"
+        },
+        "svid_certificate": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/=]+$",
+          "description": "X.509 certificate in DER format (base64)"
+        },
+        "svid_private_key": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/=]+$",
+          "description": "Private key, encrypted (base64)"
+        },
+        "svid_key_id": {
+          "type": "string",
+          "description": "Key identifier"
+        },
+        "svid_expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Certificate expiration time (15 min default)"
+        },
+        "initial_trust_score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "default": 500,
+          "description": "Initial trust score (0-1000)"
+        },
+        "trust_dimensions": {
+          "$ref": "#/definitions/TrustScoreDimensions"
+        },
+        "access_token": {
+          "type": "string",
+          "description": "Short-lived access token (JWT)"
+        },
+        "refresh_token": {
+          "type": "string",
+          "description": "Refresh token for credential rotation"
+        },
+        "token_ttl_seconds": {
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 3600,
+          "default": 900,
+          "description": "Token time-to-live in seconds (15 min default)"
+        },
+        "registry_endpoint": {
+          "type": "string",
+          "format": "uri",
+          "description": "AgentMesh registry endpoint URL"
+        },
+        "ca_certificate": {
+          "type": "string",
+          "description": "CA certificate for mTLS verification (PEM format)"
+        },
+        "status": {
+          "$ref": "#/definitions/RegistrationStatus"
+        },
+        "registered_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Registration timestamp"
+        },
+        "next_rotation_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Next credential rotation time"
+        }
+      }
+    },
+    "TrustScoreDimensions": {
+      "type": "object",
+      "properties": {
+        "policy_compliance": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Policy compliance score"
+        },
+        "resource_efficiency": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Resource efficiency score"
+        },
+        "output_quality": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Output quality score"
+        },
+        "security_posture": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Security posture score"
+        },
+        "collaboration_health": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Collaboration health score"
+        }
+      }
+    },
+    "RegistrationStatus": {
+      "type": "string",
+      "enum": [
+        "success",
+        "pending_sponsor_approval",
+        "rejected_invalid_sponsor",
+        "rejected_invalid_key",
+        "rejected_duplicate",
+        "rejected_policy_violation"
+      ],
+      "description": "Registration status"
+    },
+    "RegistrationError": {
+      "type": "object",
+      "required": ["error_code", "error_message"],
+      "properties": {
+        "error_code": {
+          "type": "string",
+          "description": "Machine-readable error code"
+        },
+        "error_message": {
+          "type": "string",
+          "description": "Human-readable error message"
+        },
+        "validation_errors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Field-level validation errors"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Error timestamp"
+        }
+      }
+    },
+    "CredentialRotationRequest": {
+      "type": "object",
+      "required": ["agent_did", "current_access_token", "refresh_token"],
+      "properties": {
+        "agent_did": {
+          "type": "string",
+          "pattern": "^did:mesh:[a-z0-9]{32}$",
+          "description": "Agent's DID"
+        },
+        "current_access_token": {
+          "type": "string",
+          "description": "Current (expiring) access token"
+        },
+        "refresh_token": {
+          "type": "string",
+          "description": "Refresh token"
+        },
+        "new_public_key": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/=]+$",
+          "description": "Optional: new public key for key rotation (base64)"
+        }
+      }
+    },
+    "CredentialRotationResponse": {
+      "type": "object",
+      "required": ["new_access_token", "expires_at", "ttl_seconds"],
+      "properties": {
+        "new_svid_certificate": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/=]+$",
+          "description": "New X.509 certificate (base64)"
+        },
+        "new_svid_private_key": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/=]+$",
+          "description": "New private key if rotated (base64)"
+        },
+        "new_access_token": {
+          "type": "string",
+          "description": "New access token"
+        },
+        "new_refresh_token": {
+          "type": "string",
+          "description": "New refresh token"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Token expiration time"
+        },
+        "ttl_seconds": {
+          "type": "integer",
+          "minimum": 60,
+          "description": "Time-to-live in seconds"
+        }
+      }
+    },
+    "TrustVerificationRequest": {
+      "type": "object",
+      "required": ["requester_did", "peer_did"],
+      "properties": {
+        "requester_did": {
+          "type": "string",
+          "pattern": "^did:mesh:[a-z0-9]{32}$",
+          "description": "DID of agent making the request"
+        },
+        "peer_did": {
+          "type": "string",
+          "pattern": "^did:mesh:[a-z0-9]{32}$",
+          "description": "DID of peer to verify"
+        },
+        "required_trust_score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "default": 500,
+          "description": "Minimum required trust score"
+        },
+        "required_capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Required capabilities"
+        }
+      }
+    },
+    "TrustVerificationResponse": {
+      "type": "object",
+      "required": ["verified", "peer_trust_score"],
+      "properties": {
+        "verified": {
+          "type": "boolean",
+          "description": "Whether peer meets trust requirements"
+        },
+        "peer_trust_score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "Peer's current trust score"
+        },
+        "peer_capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Peer's capabilities"
+        },
+        "peer_name": {
+          "type": "string",
+          "description": "Peer's agent name"
+        },
+        "rejection_reason": {
+          "type": "string",
+          "description": "Reason if verification failed"
+        },
+        "verified_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Verification timestamp"
+        }
+      }
+    }
+  }
+}
