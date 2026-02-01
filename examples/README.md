@@ -2,6 +2,12 @@
 
 Real-world examples and integrations showcasing how to secure AI agents with AgentMesh.
 
+## 🚀 [Quick Start Guide](./QUICKSTART.md)
+
+**New to AgentMesh?** Start here for a 5-minute tutorial to create your first governed agent.
+
+---
+
 ## Quick Start
 
 Each example is self-contained with its own README and dependencies. Navigate to any example directory and follow the instructions.
@@ -48,15 +54,15 @@ Each example is self-contained with its own README and dependencies. Navigate to
 ---
 
 ### 4. [DevOps Automation Agent](./04-devops-automation/)
-**Use Case:** Secure a DevOps agent that can deploy infrastructure, manage secrets, and execute privileged operations.
+**Use Case:** Secure a DevOps agent that deploys infrastructure, manages secrets, and executes privileged operations.
 
 **What you'll learn:**
-- Narrow delegation for sub-agents
-- Just-in-time credential issuance
-- Resource-specific capability grants
+- Narrow delegation for sub-agents (deploy, secrets, DB)
+- Just-in-time credential issuance (15-min TTL)
+- Approval workflows for production deployments
 - Risk-based adaptive scoring
 
-**Best for:** Platform engineers, SRE teams
+**Best for:** Platform engineers, SRE teams, DevOps automation
 
 ---
 
