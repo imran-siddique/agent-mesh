@@ -1,0 +1,17 @@
+"""
+Core Identity Module
+
+Certificate Authority for issuing SPIFFE/SVID certificates.
+"""
+
+from .ca import (
+    CertificateAuthority,
+    RegistrationRequest,
+    RegistrationResponse,
+)
+
+__all__ = [
+    "CertificateAuthority",
+    "RegistrationRequest",
+    "RegistrationResponse",
+]
