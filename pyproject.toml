@@ -1,15 +1,15 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "agentmesh"
-version = "0.1.0"
-description = "The Secure Nervous System for Cloud-Native Agent Ecosystems"
+version = "1.0.0a1"
+description = "The Secure Nervous System for Cloud-Native Agent Ecosystems - Identity, Trust, Reward, Governance"
 readme = "README.md"
 license = {text = "Apache-2.0"}
 authors = [
-    {name = "Imran Siddique", email = "imran@example.com"}
+    {name = "Imran Siddique", email = "imran.siddique@microsoft.com"}
 ]
 keywords = [
     "ai",
@@ -21,19 +21,30 @@ keywords = [
     "a2a",
     "mcp",
     "iatp",
+    "zero-trust",
+    "compliance",
+    "soc2",
+    "hipaa",
+    "eu-ai-act",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Security",
+    "Topic :: Security :: Cryptography",
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Systems Administration :: Authentication/Directory",
 ]
 requires-python = ">=3.11"
 dependencies = [
+    # Core agent-os with Nexus and IATP support
+    "agent-os[nexus,iatp]>=1.2.0",
+    # Additional dependencies
     "pydantic>=2.5.0",
     "cryptography>=42.0.0",
     "pynacl>=1.5.0",
@@ -43,8 +54,6 @@ dependencies = [
     "structlog>=24.1.0",
     "click>=8.1.0",
     "rich>=13.0.0",
-    # agent-os dependency for IATP/Nexus
-    # "agent-os @ git+https://github.com/imran-siddique/agent-os.git",
 ]
 
 [project.optional-dependencies]
@@ -62,13 +71,26 @@ server = [
 ]
 
 [project.scripts]
-agentmesh = "agentmesh.cli.main:cli"
+agentmesh = "agentmesh.cli.main:main"
 
 [project.urls]
 Homepage = "https://github.com/imran-siddique/agent-mesh"
-Documentation = "https://github.com/imran-siddique/agent-mesh/docs"
+Documentation = "https://github.com/imran-siddique/agent-mesh#readme"
 Repository = "https://github.com/imran-siddique/agent-mesh"
 Issues = "https://github.com/imran-siddique/agent-mesh/issues"
+Changelog = "https://github.com/imran-siddique/agent-mesh/blob/master/CHANGELOG.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agentmesh"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "/docs",
+    "/README.md",
+    "/LICENSE",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
