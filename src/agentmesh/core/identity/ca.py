@@ -13,7 +13,7 @@ Features:
 
 import hashlib
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization
@@ -130,8 +130,8 @@ class CertificateAuthority:
             .issuer_name(issuer)
             .public_key(self.ca_public_key)
             .serial_number(x509.random_serial_number())
-            .not_valid_before(datetime.utcnow())
-            .not_valid_after(datetime.utcnow() + timedelta(days=3650))  # 10 years
+            .not_valid_before(datetime.now(timezone.utc))
+            .not_valid_after(datetime.now(timezone.utc) + timedelta(days=3650))  # 10 years
             .add_extension(
                 x509.BasicConstraints(ca=True, path_length=None),
                 critical=True,
@@ -193,7 +193,7 @@ class CertificateAuthority:
             (certificate_der, key_id, expires_at)
         """
         ttl = ttl_minutes or self.default_ttl_minutes
-        expires_at = datetime.utcnow() + timedelta(minutes=ttl)
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=ttl)
 
         # Generate key ID
         key_id = f"key_{hashlib.sha256(public_key).hexdigest()[:16]}"
@@ -213,7 +213,7 @@ class CertificateAuthority:
             .issuer_name(self.ca_certificate.subject)
             .public_key(public_key_obj)
             .serial_number(x509.random_serial_number())
-            .not_valid_before(datetime.utcnow())
+            .not_valid_before(datetime.now(timezone.utc))
             .not_valid_after(expires_at)
             .add_extension(
                 x509.BasicConstraints(ca=False, path_length=None),
