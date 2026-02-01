@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "agentmesh"
+name = "agentmesh-platform"
 version = "1.0.0a1"
 description = "The Secure Nervous System for Cloud-Native Agent Ecosystems - Identity, Trust, Reward, Governance"
 readme = "README.md"
@@ -42,8 +42,8 @@ classifiers = [
 ]
 requires-python = ">=3.11"
 dependencies = [
-    # Core agent-os with Nexus and IATP support
-    "agent-os[nexus,iatp]>=1.2.0",
+    # Core agent-os-kernel with Nexus and IATP support
+    "agent-os-kernel[nexus,iatp]>=1.2.0",
     # Additional dependencies
     "pydantic>=2.5.0",
     "cryptography>=42.0.0",
