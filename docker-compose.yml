@@ -1,0 +1,151 @@
+version: '3.8'
+
+services:
+  # PostgreSQL - Primary data store
+  postgres:
+    image: postgres:15-alpine
+    container_name: agentmesh-postgres
+    environment:
+      POSTGRES_DB: agentmesh
+      POSTGRES_USER: agentmesh
+      POSTGRES_PASSWORD: agentmesh_dev_password
+      POSTGRES_INITDB_ARGS: "-E UTF8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentmesh"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - agentmesh
+
+  # Redis - Caching layer
+  redis:
+    image: redis:7-alpine
+    container_name: agentmesh-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - agentmesh
+
+  # AgentMesh Server
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    container_name: agentmesh-server
+    environment:
+      AGENTMESH_ENV: development
+      AGENTMESH_LOG_LEVEL: DEBUG
+      AGENTMESH_STORAGE_BACKEND: redis
+      AGENTMESH_REDIS_HOST: redis
+      AGENTMESH_REDIS_PORT: 6379
+      AGENTMESH_POSTGRES_HOST: postgres
+      AGENTMESH_POSTGRES_PORT: 5432
+      AGENTMESH_POSTGRES_DB: agentmesh
+      AGENTMESH_POSTGRES_USER: agentmesh
+      AGENTMESH_POSTGRES_PASSWORD: agentmesh_dev_password
+    ports:
+      - "8080:8080"  # API server
+      - "9090:9090"  # Metrics
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./data:/data
+    networks:
+      - agentmesh
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8080/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # AgentMesh Sidecar (Example)
+  sidecar:
+    build:
+      context: .
+      dockerfile: Dockerfile.sidecar
+    container_name: agentmesh-sidecar
+    environment:
+      AGENTMESH_MODE: sidecar
+      AGENTMESH_LOG_LEVEL: DEBUG
+      AGENTMESH_SERVER_URL: http://server:8080
+    ports:
+      - "8081:8081"  # Proxy
+      - "9091:9091"  # Metrics
+    depends_on:
+      - server
+    networks:
+      - agentmesh
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; os.path.exists('/var/run/agentmesh/healthy')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # Prometheus (Metrics collection)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: agentmesh-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./deployments/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - agentmesh
+
+  # Grafana (Metrics visualization)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: agentmesh-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: agentmesh
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./deployments/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./deployments/grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    networks:
+      - agentmesh
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  agentmesh:
+    driver: bridge
+    name: agentmesh-network
