@@ -66,7 +66,20 @@ class PolicyRule(BaseModel):
     
     def _eval_expression(self, expr: str, context: dict) -> bool:
         """Evaluate a simple expression."""
-        # Handle common patterns
+        # Handle compound conditions first (AND/OR)
+        # This must be checked before individual conditions
+        
+        # OR conditions
+        if " or " in expr:
+            parts = expr.split(" or ")
+            return any(self._eval_expression(p.strip(), context) for p in parts)
+        
+        # AND conditions
+        if " and " in expr:
+            parts = expr.split(" and ")
+            return all(self._eval_expression(p.strip(), context) for p in parts)
+        
+        # Now handle atomic conditions
         
         # Equality: action.type == 'export'
         eq_match = re.match(r"(\w+(?:\.\w+)*)\s*==\s*['\"]([^'\"]+)['\"]", expr)
@@ -80,16 +93,6 @@ class PolicyRule(BaseModel):
         if bool_match:
             path = bool_match.group(1)
             return bool(self._get_nested(context, path))
-        
-        # AND conditions
-        if " and " in expr:
-            parts = expr.split(" and ")
-            return all(self._eval_expression(p.strip(), context) for p in parts)
-        
-        # OR conditions
-        if " or " in expr:
-            parts = expr.split(" or ")
-            return any(self._eval_expression(p.strip(), context) for p in parts)
         
         return False
     
