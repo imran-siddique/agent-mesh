@@ -1,0 +1,63 @@
+policies:
+  - id: "default-security"
+    name: "Default Security Policy"
+    version: "1.0.0"
+    enabled: true
+    
+    rules:
+      - id: "no-secrets-in-output"
+        name: "Prevent Secret Leakage"
+        action: "redact"
+        conditions:
+          - "output contains 'password'"
+          - "output contains 'api_key'"
+          - "output contains 'secret'"
+          - "output contains 'token'"
+        message: "Sensitive data detected and redacted"
+        severity: "high"
+      
+      - id: "rate-limit-api"
+        name: "API Rate Limiting"
+        action: "block"
+        conditions:
+          - "tool == 'api_call'"
+          - "count(tool='api_call', window='1h') > 100"
+        message: "API rate limit exceeded (100 calls/hour)"
+        severity: "medium"
+      
+      - id: "rate-limit-database"
+        name: "Database Query Rate Limiting"
+        action: "block"
+        conditions:
+          - "tool == 'database_query'"
+          - "count(tool='database_query', window='1h') > 200"
+        message: "Database query rate limit exceeded (200 queries/hour)"
+        severity: "medium"
+      
+      - id: "block-dangerous-sql"
+        name: "Prevent Dangerous SQL"
+        action: "block"
+        conditions:
+          - "tool == 'database_query'"
+          - "params.query contains 'DROP'"
+          - "params.query contains 'DELETE'"
+          - "params.query contains 'TRUNCATE'"
+          - "params.query contains 'ALTER'"
+        message: "Dangerous SQL keywords detected"
+        severity: "critical"
+      
+      - id: "require-peer-trust"
+        name: "Minimum Peer Trust Score"
+        action: "block"
+        conditions:
+          - "peer_trust_score < 500"
+        message: "Peer trust score below minimum threshold"
+        severity: "high"
+      
+      - id: "audit-all-actions"
+        name: "Audit All Tool Invocations"
+        action: "audit"
+        conditions:
+          - "always"
+        message: "Tool invocation logged"
+        severity: "info"
