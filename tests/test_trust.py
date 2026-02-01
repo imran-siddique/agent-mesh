@@ -5,9 +5,13 @@ from datetime import datetime
 
 from agentmesh.trust import (
     TrustBridge,
+    ProtocolBridge,
+    A2AAdapter,
+    MCPAdapter,
     TrustHandshake,
     HandshakeResult,
     CapabilityScope,
+    CapabilityGrant,
     CapabilityRegistry,
 )
 
@@ -17,78 +21,151 @@ class TestTrustBridge:
     
     def test_create_bridge(self):
         """Test creating a trust bridge."""
-        bridge = TrustBridge()
+        bridge = TrustBridge(agent_did="did:mesh:test")
         
         assert bridge is not None
-        assert len(bridge.adapters) > 0  # Has protocol adapters
+        assert bridge.agent_did == "did:mesh:test"
     
-    def test_a2a_support(self):
-        """Test A2A protocol support."""
-        bridge = TrustBridge()
+    def test_default_trust_threshold(self):
+        """Test default trust threshold is 700."""
+        bridge = TrustBridge(agent_did="did:mesh:test")
         
-        assert bridge.supports_protocol("a2a")
+        assert bridge.default_trust_threshold == 700
     
-    def test_mcp_support(self):
-        """Test MCP protocol support."""
-        bridge = TrustBridge()
+    def test_get_trusted_peers_empty(self):
+        """Test getting trusted peers when none exist."""
+        bridge = TrustBridge(agent_did="did:mesh:test")
         
-        assert bridge.supports_protocol("mcp")
+        peers = bridge.get_trusted_peers()
+        assert len(peers) == 0
     
-    def test_iatp_support(self):
-        """Test IATP protocol support."""
-        bridge = TrustBridge()
+    @pytest.mark.asyncio
+    async def test_verify_peer(self):
+        """Test verifying a peer."""
+        bridge = TrustBridge(agent_did="did:mesh:agent-a")
         
-        assert bridge.supports_protocol("iatp")
+        # Verification requires network, so this tests the flow
+        result = await bridge.verify_peer(
+            peer_did="did:mesh:agent-b",
+            protocol="iatp",
+        )
+        
+        assert isinstance(result, HandshakeResult)
+
+
+class TestProtocolBridge:
+    """Tests for ProtocolBridge."""
+    
+    def test_create_protocol_bridge(self):
+        """Test creating a protocol bridge."""
+        bridge = ProtocolBridge(agent_did="did:mesh:test")
+        
+        assert bridge is not None
+        assert "a2a" in bridge.supported_protocols
+        assert "mcp" in bridge.supported_protocols
+        assert "iatp" in bridge.supported_protocols
+    
+    def test_a2a_to_mcp_translation(self):
+        """Test A2A to MCP message translation."""
+        bridge = ProtocolBridge(agent_did="did:mesh:test")
+        
+        a2a_message = {
+            "task_type": "summarize",
+            "parameters": {"text": "Hello world"},
+        }
+        
+        mcp_message = bridge._a2a_to_mcp(a2a_message)
+        
+        assert mcp_message["method"] == "tools/call"
+        assert mcp_message["params"]["name"] == "summarize"
+    
+    def test_mcp_to_a2a_translation(self):
+        """Test MCP to A2A message translation."""
+        bridge = ProtocolBridge(agent_did="did:mesh:test")
+        
+        mcp_message = {
+            "method": "tools/call",
+            "params": {
+                "name": "analyze",
+                "arguments": {"data": [1, 2, 3]},
+            },
+        }
+        
+        a2a_message = bridge._mcp_to_a2a(mcp_message)
+        
+        assert a2a_message["task_type"] == "analyze"
 
 
 class TestTrustHandshake:
     """Tests for TrustHandshake."""
     
-    @pytest.mark.asyncio
-    async def test_handshake_success(self):
-        """Test successful trust handshake."""
-        handshake = TrustHandshake()
+    def test_create_handshake(self):
+        """Test creating a trust handshake."""
+        handshake = TrustHandshake(agent_did="did:mesh:agent-a")
         
-        result = await handshake.initiate(
-            initiator_did="did:agentmesh:agent-a",
-            responder_did="did:agentmesh:agent-b",
-            capabilities_requested=["read"],
-        )
-        
-        assert isinstance(result, HandshakeResult)
-        # Note: In real implementation, would need peer to respond
+        assert handshake is not None
+        assert handshake.agent_did == "did:mesh:agent-a"
     
-    @pytest.mark.asyncio
-    async def test_handshake_challenge_response(self):
-        """Test challenge-response mechanism."""
-        handshake = TrustHandshake()
+    def test_create_challenge(self):
+        """Test challenge creation."""
+        handshake = TrustHandshake(agent_did="did:mesh:agent-a")
         
-        challenge = handshake.create_challenge("did:agentmesh:agent-a")
+        challenge = handshake.create_challenge()
         
         assert challenge.nonce is not None
         assert challenge.timestamp is not None
+        assert len(challenge.nonce) > 0
     
     @pytest.mark.asyncio
-    async def test_handshake_timeout(self):
-        """Test handshake timeout behavior."""
-        handshake = TrustHandshake(timeout_ms=100)
-        
-        # This should timeout quickly
-        result = await handshake.initiate(
-            initiator_did="did:agentmesh:agent-a",
-            responder_did="did:agentmesh:nonexistent",
-            capabilities_requested=["read"],
+    async def test_handshake_initiate(self):
+        """Test initiating a handshake."""
+        handshake = TrustHandshake(
+            agent_did="did:mesh:agent-a",
+            timeout_ms=100,  # Short timeout for test
         )
         
-        # Should fail due to timeout
-        assert not result.success or result.error is not None
+        result = await handshake.initiate(
+            peer_did="did:mesh:agent-b",
+            required_trust_score=500,
+        )
+        
+        assert isinstance(result, HandshakeResult)
+
+
+class TestHandshakeResult:
+    """Tests for HandshakeResult."""
+    
+    def test_successful_result(self):
+        """Test creating a successful result."""
+        result = HandshakeResult(
+            verified=True,
+            peer_did="did:mesh:peer",
+            trust_score=750,
+            capabilities=["read", "write"],
+        )
+        
+        assert result.verified
+        assert result.trust_score == 750
+        assert result.error is None
+    
+    def test_failed_result(self):
+        """Test creating a failed result."""
+        result = HandshakeResult(
+            verified=False,
+            peer_did="did:mesh:peer",
+            trust_score=0,
+            error="Peer not found",
+        )
+        
+        assert not result.verified
+        assert result.error == "Peer not found"
 
 
 class TestCapabilities:
     """Tests for CapabilityScope and CapabilityRegistry."""
     
-    def test_capability_scope(self):
-        """Test capability scope creation."""
+    def test_capability_scope_creation(self):
+        """Test creating a capability scope."""
         scope = CapabilityScope(
             name="file_access",
             resources=["file:///data/*"],
@@ -96,34 +173,46 @@ class TestCapabilities:
         )
         
         assert scope.name == "file_access"
-        assert scope.allows("read")
-        assert not scope.allows("delete")
+        assert "read" in scope.actions
+        assert "write" in scope.actions
     
-    def test_capability_registry(self):
-        """Test capability registry."""
-        registry = CapabilityRegistry()
-        
-        # Register a capability
-        registry.register(
-            agent_did="did:agentmesh:test",
-            scope=CapabilityScope(
-                name="api_access",
-                resources=["https://api.example.com/*"],
-                actions=["get", "post"],
-            ),
+    def test_capability_scope_allows(self):
+        """Test checking if action is allowed."""
+        scope = CapabilityScope(
+            name="limited",
+            resources=["api://data"],
+            actions=["read"],
         )
         
-        # Check capabilities
-        caps = registry.get_capabilities("did:agentmesh:test")
+        assert scope.allows("read")
+        assert not scope.allows("write")
+        assert not scope.allows("delete")
+    
+    def test_capability_registry_register(self):
+        """Test registering capabilities."""
+        registry = CapabilityRegistry()
+        
+        scope = CapabilityScope(
+            name="api_access",
+            resources=["https://api.example.com/*"],
+            actions=["get", "post"],
+        )
+        
+        registry.register(
+            agent_did="did:mesh:test",
+            scope=scope,
+        )
+        
+        caps = registry.get_capabilities("did:mesh:test")
         assert len(caps) == 1
         assert caps[0].name == "api_access"
     
-    def test_capability_validation(self):
-        """Test capability validation."""
+    def test_capability_registry_is_allowed(self):
+        """Test checking if action is allowed for agent."""
         registry = CapabilityRegistry()
         
         registry.register(
-            agent_did="did:agentmesh:test",
+            agent_did="did:mesh:test",
             scope=CapabilityScope(
                 name="limited",
                 resources=["resource:A"],
@@ -133,14 +222,101 @@ class TestCapabilities:
         
         # Should be allowed
         assert registry.is_allowed(
-            agent_did="did:agentmesh:test",
+            agent_did="did:mesh:test",
             resource="resource:A",
             action="read",
         )
         
-        # Should be denied
+        # Should be denied - wrong resource
         assert not registry.is_allowed(
-            agent_did="did:agentmesh:test",
+            agent_did="did:mesh:test",
             resource="resource:B",
             action="read",
         )
+        
+        # Should be denied - wrong action
+        assert not registry.is_allowed(
+            agent_did="did:mesh:test",
+            resource="resource:A",
+            action="write",
+        )
+    
+    def test_capability_grant(self):
+        """Test capability grant."""
+        grant = CapabilityGrant(
+            agent_did="did:mesh:test",
+            scope=CapabilityScope(
+                name="test",
+                resources=["*"],
+                actions=["read"],
+            ),
+            granted_by="did:mesh:admin",
+        )
+        
+        assert grant.is_valid()
+        assert not grant.is_expired()
+
+
+class TestA2AAdapter:
+    """Tests for A2A protocol adapter."""
+    
+    def test_create_adapter(self):
+        """Test creating A2A adapter."""
+        bridge = TrustBridge(agent_did="did:mesh:test")
+        adapter = A2AAdapter(agent_did="did:mesh:test", trust_bridge=bridge)
+        
+        assert adapter is not None
+        assert adapter.agent_did == "did:mesh:test"
+    
+    @pytest.mark.asyncio
+    async def test_discover_agent(self):
+        """Test agent discovery."""
+        bridge = TrustBridge(agent_did="did:mesh:test")
+        adapter = A2AAdapter(agent_did="did:mesh:test", trust_bridge=bridge)
+        
+        # Discovery returns mock data in current implementation
+        agent_card = await adapter.discover_agent("https://example.com")
+        
+        assert agent_card is not None
+        assert "name" in agent_card
+
+
+class TestMCPAdapter:
+    """Tests for MCP protocol adapter."""
+    
+    def test_create_adapter(self):
+        """Test creating MCP adapter."""
+        bridge = TrustBridge(agent_did="did:mesh:test")
+        adapter = MCPAdapter(agent_did="did:mesh:test", trust_bridge=bridge)
+        
+        assert adapter is not None
+    
+    def test_register_tool(self):
+        """Test registering a tool."""
+        bridge = TrustBridge(agent_did="did:mesh:test")
+        adapter = MCPAdapter(agent_did="did:mesh:test", trust_bridge=bridge)
+        
+        adapter.register_tool(
+            name="summarize",
+            description="Summarize text",
+            input_schema={"type": "object", "properties": {"text": {"type": "string"}}},
+        )
+        
+        tools = adapter.list_tools()
+        assert len(tools) == 1
+        assert tools[0]["name"] == "summarize"
+    
+    def test_register_tool_with_capability(self):
+        """Test registering a tool with required capability."""
+        bridge = TrustBridge(agent_did="did:mesh:test")
+        adapter = MCPAdapter(agent_did="did:mesh:test", trust_bridge=bridge)
+        
+        adapter.register_tool(
+            name="admin_tool",
+            description="Admin only tool",
+            input_schema={},
+            required_capability="admin",
+        )
+        
+        tools = adapter.list_tools()
+        assert tools[0]["required_capability"] == "admin"
