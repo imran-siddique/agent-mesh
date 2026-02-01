@@ -9,7 +9,7 @@ The "Yellow Pages" of agents. Stores:
 """
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -124,7 +124,7 @@ class AgentRegistry:
                 raise ValueError(f"Agent {did} not found")
 
             entry.trust_score = new_score
-            entry.updated_at = datetime.utcnow()
+            entry.updated_at = datetime.now(timezone.utc)
 
             # Update trust tier based on score
             if new_score >= 900:
@@ -162,7 +162,7 @@ class AgentRegistry:
 
             entry.status = status
             entry.revocation_reason = reason
-            entry.updated_at = datetime.utcnow()
+            entry.updated_at = datetime.now(timezone.utc)
 
     async def record_activity(self, did: str) -> None:
         """
@@ -174,7 +174,7 @@ class AgentRegistry:
         async with self._lock:
             entry = self._agents.get(did)
             if entry:
-                entry.last_seen_at = datetime.utcnow()
+                entry.last_seen_at = datetime.now(timezone.utc)
 
     async def list_agents(
         self,
