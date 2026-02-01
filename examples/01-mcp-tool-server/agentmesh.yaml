@@ -1,0 +1,59 @@
+agent:
+  name: "mcp-tool-server"
+  version: "1.0.0"
+  did: "did:agentmesh:mcp-tool-server"
+
+sponsor:
+  email: "devops@company.com"
+  name: "DevOps Team"
+
+identity:
+  ttl_minutes: 15
+  auto_rotate: true
+  key_type: "ed25519"
+
+trust:
+  protocols:
+    - "mcp"
+    - "iatp"
+  min_peer_score: 500
+  handshake_timeout_ms: 200
+
+governance:
+  policies_dir: "policies/"
+  audit_enabled: true
+  shadow_mode: false
+  compliance_frameworks:
+    - "soc2"
+
+reward:
+  dimensions:
+    policy_compliance: 0.30
+    resource_efficiency: 0.15
+    output_quality: 0.20
+    security_posture: 0.25
+    collaboration_health: 0.10
+  
+  thresholds:
+    credential_revocation: 400
+    warning: 600
+    trusted: 800
+
+capabilities:
+  - "tool:filesystem:read"
+  - "tool:database:query"
+  - "tool:api:call"
+
+resources:
+  allowed_paths:
+    - "/data/*"
+    - "/tmp/*"
+  
+  blocked_paths:
+    - "/etc/passwd"
+    - "/etc/shadow"
+    - "/.ssh/*"
+  
+  api_endpoints:
+    - "https://api.weather.com/*"
+    - "https://api.example.com/*"
