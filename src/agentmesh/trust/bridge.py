@@ -3,6 +3,8 @@ Trust Bridge
 
 Unified trust layer across all protocols (A2A, MCP, IATP, ACP).
 Ensures consistent trust model regardless of underlying protocol.
+
+Integrates with agent-os IATP module for trust verification.
 """
 
 from datetime import datetime
@@ -12,6 +14,17 @@ import asyncio
 
 from .handshake import TrustHandshake, HandshakeResult
 from .capability import CapabilityScope
+
+# Import IATP from agent-os (the source of truth for trust protocol)
+try:
+    from modules.iatp import IATPClient, IATPMessage, TrustLevel
+    from modules.nexus import NexusClient, ReputationEngine
+    AGENT_OS_AVAILABLE = True
+except ImportError:
+    # Fallback if agent-os not installed yet (for development)
+    AGENT_OS_AVAILABLE = False
+    IATPClient = None
+    NexusClient = None
 
 
 class PeerInfo(BaseModel):
