@@ -246,6 +246,43 @@ class ProtocolBridge(BaseModel):
             "parameters": params.get("arguments", {}),
         }
     
+    def add_verification_footer(
+        self,
+        content: str,
+        trust_score: int,
+        agent_did: str,
+        metadata: Optional[dict] = None
+    ) -> str:
+        """
+        Add AgentMesh verification footer to content.
+        
+        This creates the "viral" verification message that shows
+        AgentMesh is securing the interaction.
+        
+        Args:
+            content: Original content
+            trust_score: Current trust score
+            agent_did: Agent DID
+            metadata: Optional metadata to include
+            
+        Returns:
+            Content with verification footer appended
+        """
+        footer = (
+            f"\n\n> 🔒 Verified by AgentMesh (Trust Score: {trust_score}/1000)\n"
+            f"> Agent: {agent_did[:40]}...\n"
+        )
+        
+        if metadata:
+            if "policy" in metadata:
+                footer += f"> Policy: {metadata['policy']}\n"
+            if "audit" in metadata:
+                footer += f"> Audit: {metadata['audit']}\n"
+            if "view_log" in metadata:
+                footer += f"> [View Audit Log]({metadata['view_log']})\n"
+        
+        return content + footer
+    
     async def _send(self, peer_did: str, message: Any, protocol: str) -> Any:
         """Send message via protocol handler."""
         # In production, would dispatch to actual protocol handlers
