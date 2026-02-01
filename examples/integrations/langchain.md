@@ -73,7 +73,35 @@ def search(query: str) -> str:
 @governed_tool
 def calculator(expression: str) -> str:
     """Calculate a mathematical expression."""
-    return str(eval(expression))
+    # Safe evaluation - DO NOT use eval() in production
+    # Use a safe math parser like simpleeval or ast.literal_eval with validation
+    try:
+        # For demo purposes only - replace with safe parser in production
+        # Example with simpleeval: return str(simpleeval.simple_eval(expression))
+        import ast
+        import operator
+        
+        # Define safe operations
+        safe_ops = {
+            ast.Add: operator.add,
+            ast.Sub: operator.sub,
+            ast.Mult: operator.mul,
+            ast.Div: operator.truediv,
+            ast.Pow: operator.pow,
+        }
+        
+        def safe_eval(node):
+            if isinstance(node, ast.Num):
+                return node.n
+            elif isinstance(node, ast.BinOp):
+                return safe_ops[type(node.op)](safe_eval(node.left), safe_eval(node.right))
+            else:
+                raise ValueError("Unsafe operation")
+        
+        tree = ast.parse(expression, mode='eval')
+        return str(safe_eval(tree.body))
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 # Create LangChain tools
 tools = [

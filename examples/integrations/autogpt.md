@@ -44,6 +44,12 @@ reward_engine = RewardEngine()
 class GovernedAutoGPT(AutoGPTAgent):
     """AutoGPT with AgentMesh governance."""
     
+    # Trust score adjustment constants
+    TRUST_SCORE_SUCCESS_INCREMENT = 1
+    TRUST_SCORE_FAILURE_DECREMENT = 5
+    TRUST_SCORE_MIN_THRESHOLD = 500
+    TRUST_SCORE_MAX = 1000
+    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.agentmesh_identity = identity
@@ -81,7 +87,10 @@ class GovernedAutoGPT(AutoGPTAgent):
             )
             
             # Update trust score (successful execution)
-            self.trust_score = min(1000, self.trust_score + 1)
+            self.trust_score = min(
+                self.TRUST_SCORE_MAX,
+                self.trust_score + self.TRUST_SCORE_SUCCESS_INCREMENT
+            )
             
             return result
             
@@ -94,14 +103,17 @@ class GovernedAutoGPT(AutoGPTAgent):
             )
             
             # Decrease trust score on failure
-            self.trust_score = max(0, self.trust_score - 5)
+            self.trust_score = max(
+                0,
+                self.trust_score - self.TRUST_SCORE_FAILURE_DECREMENT
+            )
             
             raise
     
     def check_trust_score(self):
         """Check if trust score is above threshold."""
-        if self.trust_score < 500:
-            print(f"⚠️  Trust score critical: {self.trust_score}/1000")
+        if self.trust_score < self.TRUST_SCORE_MIN_THRESHOLD:
+            print(f"⚠️  Trust score critical: {self.trust_score}/{self.TRUST_SCORE_MAX}")
             print("Revoking credentials and stopping agent.")
             self.agentmesh_identity.revoke_credentials()
             raise SecurityError("Trust score below minimum threshold")
