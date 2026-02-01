@@ -68,10 +68,7 @@ class MCPProxy:
         self.policy_engine = PolicyEngine()
         self._load_default_policies()
         
-        self.audit_log = AuditLog(
-            agent_id=self.identity.did,
-            merkle_chain=True
-        )
+        self.audit_log = AuditLog()
         
         self.reward_engine = RewardEngine()
         self.trust_score = 800  # Starting score
@@ -91,16 +88,23 @@ description: "Strict policy for MCP tool calls"
 agents: ["*"]
 default_action: "deny"
 rules:
-  - name: "block-dangerous-filesystem-ops"
-    description: "Block dangerous filesystem operations"
-    condition: "action.tool in ['filesystem_write', 'filesystem_delete']"
+  - name: "block-etc-access"
+    description: "Block access to /etc"
+    condition: "action.path == '/etc/passwd' or action.path == '/etc/shadow'"
     action: "deny"
     priority: 100
     enabled: true
-  
-  - name: "block-sensitive-paths"
-    description: "Block access to sensitive paths"
-    condition: "action.path.startswith('/etc') or action.path.startswith('/root')"
+
+  - name: "block-root-access"
+    description: "Block access to /root"
+    condition: "action.path == '/root/.ssh'"
+    action: "deny"
+    priority: 100
+    enabled: true
+
+  - name: "block-dangerous-filesystem-ops"
+    description: "Block dangerous filesystem operations"
+    condition: "action.tool == 'filesystem_write' or action.tool == 'filesystem_delete'"
     action: "deny"
     priority: 90
     enabled: true
@@ -324,12 +328,15 @@ rules: []
         if isinstance(result, dict) and "content" in result:
             content_list = result.get("content", [])
             
+            # Get DID as string
+            did_str = str(self.identity.did) if hasattr(self.identity.did, '__str__') else self.identity.did
+            
             # Add footer as a new content item
             footer = {
                 "type": "text",
                 "text": (
                     f"\n\n> 🔒 Verified by AgentMesh (Trust Score: {self.trust_score}/1000)\n"
-                    f"> Agent: {self.identity.did[:40]}...\n"
+                    f"> Agent: {did_str[:40]}...\n"
                     f"> Policy: {self.policy_level} | Audit: Enabled"
                 )
             }
