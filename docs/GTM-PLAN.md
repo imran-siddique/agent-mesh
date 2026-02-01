@@ -10,18 +10,28 @@ AgentMesh is the first platform purpose-built for the **Governed Agent Mesh** - 
 
 ```
 PyPI Packages:
-├── agent-os (1.2.0)
+├── agent-os-kernel (1.2.0) ✅ PUBLISHED
 │   ├── Core kernel
 │   ├── [nexus] - Trust Exchange
 │   ├── [iatp] - Inter-Agent Trust Protocol
 │   └── [full] - All components
 │
-└── agentmesh (1.0.0-alpha)
-    ├── Depends on: agent-os[nexus,iatp]
+└── agentmesh-platform (1.0.0a1) ✅ PUBLISHED
+    ├── Depends on: agent-os-kernel[nexus,iatp]
     ├── Layer 1: Identity
     ├── Layer 2: Trust
     ├── Layer 3: Governance
     └── Layer 4: Reward
+```
+
+## Installation
+
+```bash
+# Install the complete governance platform
+pip install agentmesh-platform
+
+# Or install just the kernel
+pip install agent-os-kernel[nexus,iatp]
 ```
 
 ## GTM Timeline

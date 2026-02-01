@@ -56,8 +56,8 @@ AgentMesh provides:
 ## Quick Start
 
 ```bash
-# Install AgentMesh CLI
-pip install agentmesh
+# Install AgentMesh
+pip install agentmesh-platform
 
 # Initialize a governed agent in 30 seconds
 agentmesh init --name my-agent --sponsor alice@company.com
@@ -72,12 +72,15 @@ agentmesh run
 ## Installation
 
 ```bash
-pip install agentmesh
+pip install agentmesh-platform
 ```
 
-Or from source:
+Or install with extra dependencies:
 
 ```bash
+pip install agentmesh-platform[server]  # FastAPI server
+pip install agentmesh-platform[dev]     # Development tools
+```
 git clone https://github.com/imran-siddique/agent-mesh.git
 cd agent-mesh
 pip install -e .
