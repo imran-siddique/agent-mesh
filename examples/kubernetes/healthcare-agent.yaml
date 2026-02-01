@@ -1,0 +1,77 @@
+---
+apiVersion: mesh.agentmesh.ai/v1
+kind: GovernedAgent
+metadata:
+  name: healthcare-agent
+  namespace: healthcare
+  labels:
+    app: healthcare-agent
+    compliance: hipaa
+    data-classification: phi
+spec:
+  image: my-hospital/healthcare-agent:v1.5.0
+  sponsor: "compliance@hospital.com"
+  
+  # Limited capabilities for HIPAA compliance
+  capabilities:
+    - "ehr:read"
+    - "ehr:search"
+    # Note: No write capabilities for compliance
+  
+  # Strict policy for healthcare data
+  policy: strict
+  
+  replicas: 2
+  
+  resources:
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+    requests:
+      cpu: "500m"
+      memory: "512Mi"
+  
+  env:
+    - name: COMPLIANCE_MODE
+      value: "HIPAA"
+    - name: DATA_CLASSIFICATION
+      value: "PHI"
+    - name: EHR_API_URL
+      valueFrom:
+        secretKeyRef:
+          name: ehr-credentials
+          key: api-url
+    - name: AUDIT_LOG_LEVEL
+      value: "VERBOSE"
+  
+  sidecar:
+    enabled: true
+    resources:
+      # Increased resources for intensive audit logging
+      limits:
+        cpu: "200m"
+        memory: "256Mi"
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+  
+  trustScore:
+    initialScore: 700  # Higher for compliance-critical system
+    minimumScore: 600  # Higher minimum for healthcare
+  
+  observability:
+    # Full observability required for HIPAA compliance
+    traces: true
+    metrics: true
+    logs: true
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ehr-credentials
+  namespace: healthcare
+type: Opaque
+stringData:
+  api-url: "https://ehr.hospital.internal/api"
+  api-key: "YOUR_EHR_API_KEY"
