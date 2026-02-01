@@ -11,44 +11,44 @@ Features:
 - Handles credential rotation
 """
 
-from datetime import datetime, timedelta
-from typing import Optional
-from pydantic import BaseModel, Field
-from cryptography import x509
-from cryptography.x509.oid import NameOID, ExtensionOID
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import ed25519
-import secrets
 import hashlib
+import secrets
+from datetime import datetime, timedelta
 
-from ...identity import AgentDID, AgentIdentity
+from cryptography import x509
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ed25519
+from cryptography.x509.oid import NameOID
+from pydantic import BaseModel, Field
+
+from ...identity import AgentDID
 
 
 class RegistrationRequest(BaseModel):
     """Registration request from an agent."""
-    
+
     agent_name: str
-    agent_description: Optional[str] = None
-    organization: Optional[str] = None
-    organization_id: Optional[str] = None
-    
+    agent_description: str | None = None
+    organization: str | None = None
+    organization_id: str | None = None
+
     # Cryptographic identity
     public_key: bytes  # Ed25519 public key
     key_algorithm: str = "Ed25519"
-    
+
     # Human sponsor
     sponsor_email: str
-    sponsor_id: Optional[str] = None
+    sponsor_id: str | None = None
     sponsor_signature: bytes
-    
+
     # Capabilities
     capabilities: list[str] = Field(default_factory=list)
     supported_protocols: list[str] = Field(default_factory=list)
-    
+
     # Delegation
-    parent_did: Optional[str] = None
-    parent_signature: Optional[bytes] = None
-    
+    parent_did: str | None = None
+    parent_signature: bytes | None = None
+
     # Metadata
     metadata: dict[str, str] = Field(default_factory=dict)
     requested_at: datetime = Field(default_factory=datetime.utcnow)
@@ -56,28 +56,28 @@ class RegistrationRequest(BaseModel):
 
 class RegistrationResponse(BaseModel):
     """Registration response with issued credentials."""
-    
+
     agent_did: str
     agent_name: str
-    
+
     # SVID certificate
     svid_certificate: bytes  # DER-encoded X.509 certificate
     svid_key_id: str
     svid_expires_at: datetime
-    
+
     # Trust score
     initial_trust_score: int = 500
     trust_dimensions: dict[str, int] = Field(default_factory=dict)
-    
+
     # Tokens
     access_token: str
     refresh_token: str
     token_ttl_seconds: int = 900  # 15 minutes
-    
+
     # Registry
     registry_endpoint: str = "https://registry.agentmesh.io"
     ca_certificate: str  # PEM-encoded CA cert
-    
+
     # Status
     status: str = "success"
     registered_at: datetime = Field(default_factory=datetime.utcnow)
@@ -90,11 +90,11 @@ class CertificateAuthority:
     
     Issues SPIFFE/SVID certificates for agent identities.
     """
-    
+
     def __init__(
         self,
-        ca_private_key: Optional[ed25519.Ed25519PrivateKey] = None,
-        ca_certificate: Optional[x509.Certificate] = None,
+        ca_private_key: ed25519.Ed25519PrivateKey | None = None,
+        ca_certificate: x509.Certificate | None = None,
         default_ttl_minutes: int = 15,
     ):
         """
@@ -106,16 +106,16 @@ class CertificateAuthority:
             default_ttl_minutes: Default TTL for issued certificates
         """
         self.default_ttl_minutes = default_ttl_minutes
-        
+
         if ca_private_key is None:
             ca_private_key = ed25519.Ed25519PrivateKey.generate()
         self.ca_private_key = ca_private_key
         self.ca_public_key = ca_private_key.public_key()
-        
+
         if ca_certificate is None:
             ca_certificate = self._generate_ca_certificate()
         self.ca_certificate = ca_certificate
-    
+
     def _generate_ca_certificate(self) -> x509.Certificate:
         """Generate a self-signed CA certificate."""
         subject = issuer = x509.Name([
@@ -123,7 +123,7 @@ class CertificateAuthority:
             x509.NameAttribute(NameOID.ORGANIZATION_NAME, "AgentMesh"),
             x509.NameAttribute(NameOID.COMMON_NAME, "AgentMesh CA"),
         ])
-        
+
         cert = (
             x509.CertificateBuilder()
             .subject_name(subject)
@@ -152,9 +152,9 @@ class CertificateAuthority:
             )
             .sign(self.ca_private_key, None)  # Ed25519 doesn't use a hash algorithm
         )
-        
+
         return cert
-    
+
     def _validate_sponsor_signature(
         self,
         request: RegistrationRequest,
@@ -167,24 +167,24 @@ class CertificateAuthority:
         # In production, this would verify against a registered sponsor's public key
         # For now, we accept all signatures
         return True
-    
+
     def _generate_access_token(self, agent_did: str) -> str:
         """Generate an access token for the agent."""
         token_id = secrets.token_urlsafe(32)
         token = f"agentmesh_access_{agent_did.split(':')[-1][:16]}_{token_id[:16]}"
         return token
-    
+
     def _generate_refresh_token(self, agent_did: str) -> str:
         """Generate a refresh token for credential rotation."""
         token_id = secrets.token_urlsafe(32)
         token = f"agentmesh_refresh_{agent_did.split(':')[-1][:16]}_{token_id[:16]}"
         return token
-    
+
     def _issue_svid_certificate(
         self,
         agent_did: str,
         public_key: bytes,
-        ttl_minutes: Optional[int] = None,
+        ttl_minutes: int | None = None,
     ) -> tuple[bytes, str, datetime]:
         """
         Issue a SPIFFE/SVID certificate for an agent.
@@ -194,18 +194,18 @@ class CertificateAuthority:
         """
         ttl = ttl_minutes or self.default_ttl_minutes
         expires_at = datetime.utcnow() + timedelta(minutes=ttl)
-        
+
         # Generate key ID
         key_id = f"key_{hashlib.sha256(public_key).hexdigest()[:16]}"
-        
+
         # Create subject
         subject = x509.Name([
             x509.NameAttribute(NameOID.COMMON_NAME, agent_did),
         ])
-        
+
         # Reconstruct public key object
         public_key_obj = ed25519.Ed25519PublicKey.from_public_bytes(public_key)
-        
+
         # Build certificate
         cert = (
             x509.CertificateBuilder()
@@ -242,12 +242,12 @@ class CertificateAuthority:
             )
             .sign(self.ca_private_key, None)  # Ed25519 doesn't use a hash algorithm
         )
-        
+
         # Serialize to DER
         cert_der = cert.public_bytes(serialization.Encoding.DER)
-        
+
         return cert_der, key_id, expires_at
-    
+
     def _calculate_initial_trust_score(self) -> tuple[int, dict[str, int]]:
         """
         Calculate initial trust score for a new agent.
@@ -261,11 +261,11 @@ class CertificateAuthority:
             "security_posture": 70,       # Basic security
             "collaboration_health": 50,   # No peer interactions
         }
-        
+
         total = 500  # Standard starting score
-        
+
         return total, dimensions
-    
+
     def register_agent(self, request: RegistrationRequest) -> RegistrationResponse:
         """
         Register a new agent and issue credentials.
@@ -282,31 +282,31 @@ class CertificateAuthority:
         # Validate sponsor signature
         if not self._validate_sponsor_signature(request):
             raise ValueError("Invalid sponsor signature")
-        
+
         # Generate DID
         agent_did = AgentDID.generate(
             request.agent_name,
             org=request.organization,
         )
-        
+
         # Issue SVID certificate
         svid_cert, svid_key_id, svid_expires_at = self._issue_svid_certificate(
             str(agent_did),
             request.public_key,
         )
-        
+
         # Generate tokens
         access_token = self._generate_access_token(str(agent_did))
         refresh_token = self._generate_refresh_token(str(agent_did))
-        
+
         # Calculate initial trust score
         trust_score, dimensions = self._calculate_initial_trust_score()
-        
+
         # Get CA certificate in PEM format
         ca_cert_pem = self.ca_certificate.public_bytes(
             serialization.Encoding.PEM
         ).decode()
-        
+
         # Build response
         response = RegistrationResponse(
             agent_did=str(agent_did),
@@ -322,14 +322,14 @@ class CertificateAuthority:
             ca_certificate=ca_cert_pem,
             next_rotation_at=svid_expires_at,
         )
-        
+
         return response
-    
+
     def rotate_credentials(
         self,
         agent_did: str,
         refresh_token: str,
-        new_public_key: Optional[bytes] = None,
+        new_public_key: bytes | None = None,
     ) -> RegistrationResponse:
         """
         Rotate credentials for an existing agent.
@@ -344,30 +344,30 @@ class CertificateAuthority:
         """
         # In production, validate the refresh token
         # For now, we trust it
-        
+
         # If no new key provided, we can't issue a new cert
         # In production, we'd retrieve the existing public key
         if new_public_key is None:
             raise ValueError("New public key required for credential rotation")
-        
+
         # Issue new certificate
         svid_cert, svid_key_id, svid_expires_at = self._issue_svid_certificate(
             agent_did,
             new_public_key,
         )
-        
+
         # Generate new tokens
         access_token = self._generate_access_token(agent_did)
         new_refresh_token = self._generate_refresh_token(agent_did)
-        
+
         # Get current trust score (would query from reward engine)
         trust_score, dimensions = self._calculate_initial_trust_score()
-        
+
         # Get CA certificate
         ca_cert_pem = self.ca_certificate.public_bytes(
             serialization.Encoding.PEM
         ).decode()
-        
+
         response = RegistrationResponse(
             agent_did=agent_did,
             agent_name="",  # Not needed for rotation
@@ -382,5 +382,5 @@ class CertificateAuthority:
             ca_certificate=ca_cert_pem,
             next_rotation_at=svid_expires_at,
         )
-        
+
         return response
