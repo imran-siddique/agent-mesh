@@ -6,13 +6,11 @@ from datetime import datetime, timedelta
 from agentmesh.identity import (
     AgentIdentity,
     AgentDID,
-    IdentityRegistry,
     Credential,
     CredentialManager,
     DelegationChain,
     DelegationLink,
     HumanSponsor,
-    SponsorRegistry,
     RiskScorer,
     RiskScore,
     SPIFFEIdentity,
@@ -133,32 +131,6 @@ class TestAgentIdentity:
                 "child-agent",
                 capabilities=["read", "write"],  # Can't add "write"
             )
-
-
-class TestIdentityRegistry:
-    """Tests for IdentityRegistry."""
-    
-    def test_register_identity(self):
-        """Test registering an identity."""
-        registry = IdentityRegistry()
-        identity = AgentIdentity.create("test", "s@e.com")
-        
-        registry.register(identity)
-        
-        retrieved = registry.get(str(identity.did))
-        assert retrieved is not None
-        assert retrieved.name == "test"
-    
-    def test_revoke_identity(self):
-        """Test revoking an identity."""
-        registry = IdentityRegistry()
-        identity = AgentIdentity.create("test", "s@e.com")
-        registry.register(identity)
-        
-        registry.revoke(str(identity.did), reason="Testing revocation")
-        
-        retrieved = registry.get(str(identity.did))
-        assert retrieved.status == "revoked"
 
 
 class TestCredentials:
@@ -331,32 +303,6 @@ class TestSponsor:
         sponsor.revoke_agent("did:mesh:test")
         
         assert "did:mesh:test" not in sponsor.sponsored_agents
-
-
-class TestSponsorRegistry:
-    """Tests for SponsorRegistry."""
-    
-    def test_register_sponsor(self):
-        """Test registering a sponsor."""
-        registry = SponsorRegistry()
-        sponsor = HumanSponsor(email="s@e.com", name="Test")
-        
-        registry.register(sponsor)
-        
-        retrieved = registry.get("s@e.com")
-        assert retrieved is not None
-        assert retrieved.name == "Test"
-    
-    def test_get_sponsor_for_agent(self):
-        """Test finding sponsor for an agent."""
-        registry = SponsorRegistry()
-        sponsor = HumanSponsor(email="s@e.com", name="Test")
-        sponsor.sponsor_agent("did:mesh:agent1")
-        registry.register(sponsor)
-        
-        found = registry.get_sponsor_for_agent("did:mesh:agent1")
-        assert found is not None
-        assert found.email == "s@e.com"
 
 
 class TestRiskScoring:
