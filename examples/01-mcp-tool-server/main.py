@@ -211,11 +211,17 @@ class GovernedMCPServer:
         # 3. SQL injection prevention
         if action == "database_query":
             query = params.get("query", "")
-            dangerous_keywords = ["DROP", "DELETE", "TRUNCATE"]
-            if any(keyword in query.upper() for keyword in dangerous_keywords):
+            # Comprehensive dangerous SQL keywords (case-insensitive)
+            dangerous_keywords = [
+                "DROP", "DELETE", "TRUNCATE", "ALTER", 
+                "UPDATE", "INSERT", "EXEC", "EXECUTE",
+                "CREATE", "GRANT", "REVOKE"
+            ]
+            query_upper = query.upper()
+            if any(keyword in query_upper for keyword in dangerous_keywords):
                 return {
                     "allowed": False,
-                    "reason": "Dangerous SQL keywords detected"
+                    "reason": f"Dangerous SQL keywords detected in query"
                 }
         
         return {"allowed": True, "reason": None}
