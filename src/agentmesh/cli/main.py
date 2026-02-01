@@ -3,6 +3,7 @@ AgentMesh CLI - Main Entry Point
 
 Commands:
 - init: Scaffold a governed agent in 30 seconds
+- proxy: Start an MCP proxy with governance
 - register: Register an agent with AgentMesh
 - run: Run a governed agent
 - status: Check agent status and trust score
@@ -16,6 +17,7 @@ from rich.table import Table
 from rich.panel import Panel
 from rich import box
 from pathlib import Path
+from typing import Optional
 import json
 import yaml
 import os
@@ -394,6 +396,135 @@ def audit(agent: str, limit: int, fmt: str):
             )
         
         console.print(table)
+
+
+# Import proxy command from proxy module
+from .proxy import proxy
+app.add_command(proxy)
+
+
+@app.command()
+@click.option("--claude", is_flag=True, help="Generate Claude Desktop config")
+@click.option("--config-path", type=click.Path(), help="Path to claude_desktop_config.json")
+@click.option("--backup/--no-backup", default=True, help="Backup existing config")
+def init_integration(claude: bool, config_path: str, backup: bool):
+    """
+    Initialize AgentMesh integration with existing tools.
+    
+    Examples:
+    
+        # Setup Claude Desktop to use AgentMesh proxy
+        agentmesh init-integration --claude
+        
+        # Specify custom config path
+        agentmesh init-integration --claude --config-path ~/custom/config.json
+    """
+    if claude:
+        _init_claude_integration(config_path, backup)
+    else:
+        console.print("[yellow]Please specify an integration type (e.g., --claude)[/yellow]")
+
+
+def _init_claude_integration(config_path: Optional[str], backup: bool):
+    """Initialize Claude Desktop integration."""
+    console.print("\n[bold blue]🔧 Setting up Claude Desktop Integration[/bold blue]\n")
+    
+    # Determine config path
+    if not config_path:
+        # Default Claude Desktop config locations
+        import platform
+        system = platform.system()
+        
+        if system == "Darwin":  # macOS
+            default_path = Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
+        elif system == "Windows":
+            default_path = Path.home() / "AppData" / "Roaming" / "Claude" / "claude_desktop_config.json"
+        else:  # Linux
+            default_path = Path.home() / ".config" / "claude" / "claude_desktop_config.json"
+        
+        config_path = default_path
+    else:
+        config_path = Path(config_path)
+    
+    console.print(f"Config path: {config_path}")
+    
+    # Check if config exists
+    if not config_path.exists():
+        console.print(f"[yellow]Config file not found at {config_path}[/yellow]")
+        console.print("Creating new config file...")
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        config = {"mcpServers": {}}
+    else:
+        # Backup existing config
+        if backup:
+            backup_path = config_path.with_suffix(".json.backup")
+            import shutil
+            shutil.copy(config_path, backup_path)
+            console.print(f"[dim]✓ Backed up existing config to {backup_path}[/dim]")
+        
+        # Load existing config
+        with open(config_path) as f:
+            config = json.load(f)
+    
+    # Ensure mcpServers exists
+    if "mcpServers" not in config:
+        config["mcpServers"] = {}
+    
+    # Add example AgentMesh proxy configuration
+    example_server = {
+        "filesystem-protected": {
+            "command": "agentmesh",
+            "args": [
+                "proxy",
+                "--target", "npx",
+                "--target", "-y",
+                "--target", "@modelcontextprotocol/server-filesystem",
+                "--target", str(Path.home())
+            ],
+            "env": {},
+        }
+    }
+    
+    # Check if already configured
+    has_agentmesh = any(
+        "agentmesh" in str(server.get("command", ""))
+        for server in config["mcpServers"].values()
+    )
+    
+    if not has_agentmesh:
+        config["mcpServers"].update(example_server)
+        console.print("\n[green]✓ Added AgentMesh-protected filesystem server example[/green]")
+    else:
+        console.print("\n[yellow]⚠️  AgentMesh proxy already configured[/yellow]")
+    
+    # Save updated config
+    with open(config_path, "w") as f:
+        json.dump(config, f, indent=2)
+    
+    console.print(f"\n[green]✓ Updated {config_path}[/green]")
+    
+    # Show instructions
+    console.print()
+    console.print(Panel(
+        """[bold]Next Steps:[/bold]
+
+1. Restart Claude Desktop
+2. AgentMesh will now intercept all tool calls to the protected server
+3. View logs in the terminal where Claude Desktop was launched
+
+[bold]Customization:[/bold]
+Edit {path} to:
+- Add more protected servers
+- Change policy level (--policy strict|moderate|permissive)
+- Disable verification footers (--no-footer)
+
+[bold]Example Usage:[/bold]
+In Claude Desktop, try: "Read the contents of my home directory"
+AgentMesh will enforce policies and add trust verification to outputs.
+        """.format(path=config_path),
+        title="🎉 Claude Desktop Integration Ready",
+        border_style="green",
+    ))
 
 
 def main():
