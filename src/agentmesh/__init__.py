@@ -86,6 +86,7 @@ __all__ = [
     "HandshakeResult",
     "CapabilityScope",
     "CapabilityGrant",
+    "CapabilityRegistry",
     
     # Layer 3: Governance
     "PolicyEngine",

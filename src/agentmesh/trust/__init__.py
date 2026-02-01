@@ -7,7 +7,7 @@ Native A2A and MCP support with transparent protocol translation.
 
 from .bridge import TrustBridge, ProtocolBridge
 from .handshake import TrustHandshake, HandshakeResult
-from .capability import CapabilityScope, CapabilityGrant
+from .capability import CapabilityScope, CapabilityGrant, CapabilityRegistry
 
 __all__ = [
     "TrustBridge",
@@ -16,4 +16,5 @@ __all__ = [
     "HandshakeResult",
     "CapabilityScope",
     "CapabilityGrant",
+    "CapabilityRegistry",
 ]
