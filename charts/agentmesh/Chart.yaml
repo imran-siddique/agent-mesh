@@ -1,0 +1,27 @@
+apiVersion: v2
+name: agentmesh
+description: The Secure Nervous System for Cloud-Native Agent Ecosystems
+type: application
+version: 1.0.0-alpha1
+appVersion: "1.0.0a1"
+keywords:
+  - ai
+  - agents
+  - security
+  - governance
+  - identity
+  - zero-trust
+maintainers:
+  - name: Imran Siddique
+    email: imran.siddique@microsoft.com
+sources:
+  - https://github.com/imran-siddique/agent-mesh
+dependencies:
+  - name: redis
+    version: "18.4.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
+  - name: postgresql
+    version: "13.2.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled

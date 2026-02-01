@@ -1,0 +1,72 @@
+# AgentMesh Sidecar Dockerfile
+# Lightweight proxy for agent governance
+
+FROM python:3.11-slim as builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy requirements
+COPY pyproject.toml /tmp/
+WORKDIR /tmp
+
+# Install minimal dependencies for sidecar
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
+    pydantic>=2.5.0 \
+    cryptography>=42.0.0 \
+    httpx>=0.26.0 \
+    aiohttp>=3.9.0 \
+    structlog>=24.1.0 \
+    opentelemetry-api>=1.20.0 \
+    opentelemetry-sdk>=1.20.0 \
+    prometheus-client>=0.19.0
+
+# Production stage
+FROM python:3.11-slim
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Create non-root user
+RUN useradd -m -u 1000 agentmesh && \
+    mkdir -p /app /var/run/agentmesh && \
+    chown -R agentmesh:agentmesh /app /var/run/agentmesh
+
+USER agentmesh
+WORKDIR /app
+
+# Copy application code (minimal subset for sidecar)
+COPY --chown=agentmesh:agentmesh src/agentmesh/cli /app/agentmesh/cli/
+COPY --chown=agentmesh:agentmesh src/agentmesh/governance /app/agentmesh/governance/
+COPY --chown=agentmesh:agentmesh src/agentmesh/identity /app/agentmesh/identity/
+COPY --chown=agentmesh:agentmesh src/agentmesh/trust /app/agentmesh/trust/
+COPY --chown=agentmesh:agentmesh src/agentmesh/__init__.py /app/agentmesh/
+
+# Expose ports
+EXPOSE 8081 9091
+
+# Health check
+HEALTHCHECK --interval=15s --timeout=3s --start-period=5s --retries=3 \
+    CMD python -c "import os; os.path.exists('/var/run/agentmesh/healthy')" || exit 1
+
+# Environment variables
+ENV AGENTMESH_MODE=sidecar \
+    AGENTMESH_LOG_LEVEL=INFO \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
+
+# Run sidecar proxy
+CMD ["python", "-m", "agentmesh.cli.proxy", "--listen", "0.0.0.0:8081", "--metrics-port", "9091"]

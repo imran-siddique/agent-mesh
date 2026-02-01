@@ -1,0 +1,197 @@
+# Default values for agentmesh
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 3
+
+image:
+  server:
+    repository: agentmesh/server
+    pullPolicy: IfNotPresent
+    tag: "1.0.0-alpha1"
+  sidecar:
+    repository: agentmesh/sidecar
+    pullPolicy: IfNotPresent
+    tag: "1.0.0-alpha1"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9090"
+  prometheus.io/path: "/metrics"
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+
+service:
+  type: ClusterIP
+  port: 8080
+  metricsPort: 9090
+  annotations: {}
+
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: agentmesh.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: agentmesh-tls
+      hosts:
+        - agentmesh.example.com
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - agentmesh
+          topologyKey: kubernetes.io/hostname
+
+# Storage configuration
+storage:
+  backend: redis  # Options: memory, redis, postgres
+  cacheEnabled: true
+  cacheTTL: 300
+
+# Redis configuration (if using redis backend)
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: true
+    password: "change-me-in-production"
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi
+  metrics:
+    enabled: true
+
+# PostgreSQL configuration (if using postgres backend)
+postgresql:
+  enabled: false
+  auth:
+    username: agentmesh
+    password: "change-me-in-production"
+    database: agentmesh
+  primary:
+    persistence:
+      enabled: true
+      size: 20Gi
+  metrics:
+    enabled: true
+
+# Identity configuration
+identity:
+  caKeySecret: agentmesh-ca-key
+  spireEnabled: false
+  spireSocketPath: /run/spire/sockets/agent.sock
+
+# Observability
+observability:
+  opentelemetry:
+    enabled: true
+    endpoint: "http://otel-collector:4317"
+    serviceName: "agentmesh"
+  prometheus:
+    enabled: true
+  logs:
+    level: INFO
+    format: json
+
+# Governance
+governance:
+  defaultPolicy: standard
+  shadowMode: false
+  auditRetentionDays: 90
+
+# Sidecar injection
+sidecarInjector:
+  enabled: true
+  namespaceSelector:
+    matchLabels:
+      agentmesh-inject: enabled
+  webhook:
+    port: 9443
+    failurePolicy: Ignore
+
+# SPIRE integration
+spire:
+  enabled: false
+  trustDomain: agentmesh.local
+  socketPath: /run/spire/sockets/agent.sock
+
+# Network policies
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+      - podSelector:
+          matchLabels:
+            agentmesh-inject: enabled
+  egress:
+    - to:
+      - podSelector:
+          matchLabels:
+            app.kubernetes.io/name: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    - to:
+      - podSelector:
+          matchLabels:
+            app.kubernetes.io/name: postgresql
+      ports:
+        - protocol: TCP
+          port: 5432
