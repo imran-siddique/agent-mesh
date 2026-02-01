@@ -1,0 +1,219 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: governedagents.mesh.agentmesh.ai
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.13.0
+spec:
+  group: mesh.agentmesh.ai
+  names:
+    kind: GovernedAgent
+    listKind: GovernedAgentList
+    plural: governedagents
+    singular: governedagent
+    shortNames:
+      - ga
+      - agent
+  scope: Namespaced
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: GovernedAgent is a specification for deploying an AI agent with AgentMesh governance
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              required:
+                - image
+                - sponsor
+              properties:
+                image:
+                  type: string
+                  description: Container image for the agent
+                sponsor:
+                  type: string
+                  description: Email of the human sponsor responsible for this agent
+                  # Note: This regex is intentionally permissive. Full email validation
+                  # should be done at the application layer with proper email validator.
+                  pattern: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+                capabilities:
+                  type: array
+                  description: List of capabilities this agent is authorized to use
+                  items:
+                    type: string
+                  example:
+                    - "s3:read"
+                    - "api:stripe"
+                policy:
+                  type: string
+                  description: Name of the policy to apply (default, strict, permissive, custom)
+                  default: standard
+                  enum:
+                    - standard
+                    - strict
+                    - permissive
+                    - custom
+                replicas:
+                  type: integer
+                  description: Number of agent replicas
+                  default: 1
+                  minimum: 0
+                  maximum: 100
+                resources:
+                  type: object
+                  description: Resource requirements for the agent
+                  properties:
+                    limits:
+                      type: object
+                      properties:
+                        cpu:
+                          type: string
+                        memory:
+                          type: string
+                    requests:
+                      type: object
+                      properties:
+                        cpu:
+                          type: string
+                        memory:
+                          type: string
+                env:
+                  type: array
+                  description: Environment variables for the agent
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      value:
+                        type: string
+                      valueFrom:
+                        type: object
+                sidecar:
+                  type: object
+                  description: Sidecar configuration
+                  properties:
+                    enabled:
+                      type: boolean
+                      default: true
+                    image:
+                      type: string
+                      default: agentmesh/sidecar:latest
+                    resources:
+                      type: object
+                      properties:
+                        limits:
+                          type: object
+                          properties:
+                            cpu:
+                              type: string
+                              default: "100m"
+                            memory:
+                              type: string
+                              default: "128Mi"
+                        requests:
+                          type: object
+                          properties:
+                            cpu:
+                              type: string
+                              default: "50m"
+                            memory:
+                              type: string
+                              default: "64Mi"
+                trustScore:
+                  type: object
+                  description: Trust score configuration
+                  properties:
+                    initialScore:
+                      type: integer
+                      default: 500
+                      minimum: 0
+                      maximum: 1000
+                    minimumScore:
+                      type: integer
+                      default: 300
+                      minimum: 0
+                      maximum: 1000
+                observability:
+                  type: object
+                  description: Observability configuration
+                  properties:
+                    traces:
+                      type: boolean
+                      default: true
+                    metrics:
+                      type: boolean
+                      default: true
+                    logs:
+                      type: boolean
+                      default: true
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  description: Current phase of the agent
+                  enum:
+                    - Pending
+                    - Running
+                    - Suspended
+                    - Failed
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      reason:
+                        type: string
+                      message:
+                        type: string
+                agentDID:
+                  type: string
+                  description: Decentralized Identifier for the agent
+                trustScore:
+                  type: integer
+                  description: Current trust score
+                  minimum: 0
+                  maximum: 1000
+                lastActivity:
+                  type: string
+                  format: date-time
+                  description: Last activity timestamp
+                policyViolations:
+                  type: integer
+                  description: Number of policy violations
+                  default: 0
+      additionalPrinterColumns:
+        - name: Sponsor
+          type: string
+          jsonPath: .spec.sponsor
+        - name: Policy
+          type: string
+          jsonPath: .spec.policy
+        - name: Trust Score
+          type: integer
+          jsonPath: .status.trustScore
+        - name: Phase
+          type: string
+          jsonPath: .status.phase
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      subresources:
+        status: {}
