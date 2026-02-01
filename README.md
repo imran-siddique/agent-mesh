@@ -81,10 +81,31 @@ Or install with extra dependencies:
 pip install agentmesh-platform[server]  # FastAPI server
 pip install agentmesh-platform[dev]     # Development tools
 ```
+
+Or from source:
+
+```bash
 git clone https://github.com/imran-siddique/agent-mesh.git
 cd agent-mesh
 pip install -e .
 ```
+
+## Examples & Integrations
+
+**Real-world examples** to get started quickly:
+
+| Example | Use Case | Key Features |
+|---------|----------|--------------|
+| [MCP Tool Server](./examples/01-mcp-tool-server/) | Secure MCP server with governance | Rate limiting, output sanitization, audit logs |
+| [Multi-Agent Customer Service](./examples/02-customer-service/) | Customer support automation | Delegation chains, trust handshakes, A2A |
+| [Healthcare HIPAA](./examples/03-healthcare-hipaa/) | HIPAA-compliant data analysis | Compliance automation, PHI protection, Merkle audit |
+| [GitHub PR Review](./examples/05-github-integration/) | Code review agent | Output policies, shadow mode, trust decay |
+
+**Framework integrations:**
+- [LangChain Integration](./examples/integrations/langchain.md) - Secure LangChain agents with policies
+- [CrewAI Integration](./examples/integrations/crewai.md) - Multi-agent crew governance
+
+📚 **[Browse all examples →](./examples/)**
 
 ## Core Concepts
 
