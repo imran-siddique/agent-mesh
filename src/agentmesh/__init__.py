@@ -15,29 +15,25 @@ __version__ = "1.0.0-alpha"
 from .identity import (
     AgentIdentity,
     AgentDID,
-    IdentityRegistry,
     Credential,
     CredentialManager,
     DelegationChain,
     DelegationLink,
     HumanSponsor,
-    SponsorRegistry,
     RiskScorer,
     RiskScore,
     SPIFFEIdentity,
+    SVID,
 )
 
 # Layer 2: Trust & Protocol Bridge
 from .trust import (
     TrustBridge,
     ProtocolBridge,
-    A2AAdapter,
-    MCPAdapter,
     TrustHandshake,
     HandshakeResult,
     CapabilityScope,
     CapabilityGrant,
-    CapabilityRegistry,
 )
 
 # Layer 3: Governance & Compliance Plane
@@ -45,10 +41,10 @@ from .governance import (
     PolicyEngine,
     Policy,
     PolicyRule,
-    PolicyResult,
+    PolicyDecision,
     ComplianceEngine,
     ComplianceFramework,
-    ComplianceControl,
+    ComplianceReport,
     AuditLog,
     AuditEntry,
     MerkleAuditChain,
@@ -73,36 +69,32 @@ __all__ = [
     # Layer 1: Identity
     "AgentIdentity",
     "AgentDID",
-    "IdentityRegistry",
     "Credential",
     "CredentialManager",
     "DelegationChain",
     "DelegationLink",
     "HumanSponsor",
-    "SponsorRegistry",
     "RiskScorer",
     "RiskScore",
     "SPIFFEIdentity",
+    "SVID",
     
     # Layer 2: Trust
     "TrustBridge",
     "ProtocolBridge",
-    "A2AAdapter",
-    "MCPAdapter",
     "TrustHandshake",
     "HandshakeResult",
     "CapabilityScope",
     "CapabilityGrant",
-    "CapabilityRegistry",
     
     # Layer 3: Governance
     "PolicyEngine",
     "Policy",
     "PolicyRule",
-    "PolicyResult",
+    "PolicyDecision",
     "ComplianceEngine",
     "ComplianceFramework",
-    "ComplianceControl",
+    "ComplianceReport",
     "AuditLog",
     "AuditEntry",
     "MerkleAuditChain",

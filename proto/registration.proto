@@ -1,0 +1,162 @@
+// AgentMesh Registration Handshake Protocol
+// Version: 1.0.0
+//
+// This defines the interface for agent registration with the AgentMesh
+// Identity Core. The handshake establishes a cryptographic chain of custody
+// linking each agent back to a human sponsor.
+
+syntax = "proto3";
+
+package agentmesh.identity.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// RegistrationRequest is sent by an agent to register with AgentMesh.
+//
+// The agent must provide:
+// 1. A public key for identity verification
+// 2. Sponsor information (human accountability)
+// 3. Capabilities list (what the agent can do)
+// 4. Optional metadata
+message RegistrationRequest {
+  // Agent metadata
+  string agent_name = 1;                    // Human-readable agent name
+  string agent_description = 2;             // Optional description
+  string organization = 3;                  // Organization name (optional)
+  string organization_id = 4;               // Organization identifier (optional)
+
+  // Cryptographic identity
+  bytes public_key = 5;                     // Ed25519 public key (32 bytes)
+  string key_algorithm = 6;                 // "Ed25519" (for extensibility)
+  
+  // Human sponsor (accountability chain)
+  string sponsor_email = 7;                 // Email of human sponsor
+  string sponsor_id = 8;                    // Unique sponsor identifier
+  bytes sponsor_signature = 9;              // Sponsor's signature over agent details
+  
+  // Capabilities (what this agent is allowed to do)
+  repeated string capabilities = 10;        // e.g., ["read:data", "write:reports"]
+  
+  // Protocol support
+  repeated string supported_protocols = 11; // e.g., ["a2a", "mcp", "iatp"]
+  
+  // Delegation (if this is a child agent)
+  string parent_did = 12;                   // Parent agent DID if delegated
+  bytes parent_signature = 13;              // Parent's signature for delegation
+  
+  // Metadata
+  map<string, string> metadata = 14;        // Custom metadata
+  google.protobuf.Timestamp requested_at = 15;
+}
+
+// RegistrationResponse is returned by AgentMesh after successful registration.
+//
+// The response contains:
+// 1. Signed SVID (SPIFFE Verifiable Identity Document)
+// 2. Initial trust score
+// 3. Credential details
+message RegistrationResponse {
+  // Agent identity
+  string agent_did = 1;                     // did:mesh:<unique-id>
+  string agent_name = 2;                    // Confirmed agent name
+  
+  // SVID (SPIFFE Verifiable Identity Document)
+  bytes svid_certificate = 3;               // X.509 certificate in DER format
+  bytes svid_private_key = 4;               // Private key (encrypted)
+  string svid_key_id = 5;                   // Key identifier
+  google.protobuf.Timestamp svid_expires_at = 6;  // Certificate expiration (15 min default)
+  
+  // Trust score
+  int32 initial_trust_score = 7;            // 0-1000 scale (default: 500)
+  TrustScoreDimensions trust_dimensions = 8;
+  
+  // Credentials
+  string access_token = 9;                  // Short-lived access token
+  string refresh_token = 10;                // For credential rotation
+  int32 token_ttl_seconds = 11;             // Token time-to-live (900 seconds default)
+  
+  // Registry info
+  string registry_endpoint = 12;            // AgentMesh registry endpoint
+  string ca_certificate = 13;               // CA certificate for mTLS
+  
+  // Status
+  RegistrationStatus status = 14;
+  google.protobuf.Timestamp registered_at = 15;
+  google.protobuf.Timestamp next_rotation_at = 16;
+}
+
+// TrustScoreDimensions breaks down the trust score into components
+message TrustScoreDimensions {
+  int32 policy_compliance = 1;              // 0-100
+  int32 resource_efficiency = 2;            // 0-100
+  int32 output_quality = 3;                 // 0-100
+  int32 security_posture = 4;               // 0-100
+  int32 collaboration_health = 5;           // 0-100
+}
+
+// RegistrationStatus indicates the result of registration
+enum RegistrationStatus {
+  REGISTRATION_STATUS_UNSPECIFIED = 0;
+  REGISTRATION_STATUS_SUCCESS = 1;
+  REGISTRATION_STATUS_PENDING_SPONSOR_APPROVAL = 2;
+  REGISTRATION_STATUS_REJECTED_INVALID_SPONSOR = 3;
+  REGISTRATION_STATUS_REJECTED_INVALID_KEY = 4;
+  REGISTRATION_STATUS_REJECTED_DUPLICATE = 5;
+  REGISTRATION_STATUS_REJECTED_POLICY_VIOLATION = 6;
+}
+
+// RegistrationError provides detailed error information
+message RegistrationError {
+  string error_code = 1;                    // Machine-readable error code
+  string error_message = 2;                 // Human-readable error message
+  repeated string validation_errors = 3;    // Field-level validation errors
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+// CredentialRotationRequest is sent to rotate expiring credentials
+message CredentialRotationRequest {
+  string agent_did = 1;                     // Agent's DID
+  string current_access_token = 2;          // Current (expiring) token
+  string refresh_token = 3;                 // Refresh token
+  bytes new_public_key = 4;                 // Optional: rotate key pair
+}
+
+// CredentialRotationResponse returns new credentials
+message CredentialRotationResponse {
+  bytes new_svid_certificate = 1;           // New X.509 certificate
+  bytes new_svid_private_key = 2;           // New private key (if rotated)
+  string new_access_token = 3;              // New access token
+  string new_refresh_token = 4;             // New refresh token
+  google.protobuf.Timestamp expires_at = 5;
+  int32 ttl_seconds = 6;
+}
+
+// TrustVerificationRequest checks if a peer agent can be trusted
+message TrustVerificationRequest {
+  string requester_did = 1;                 // Agent making the request
+  string peer_did = 2;                      // Peer to verify
+  int32 required_trust_score = 3;           // Minimum trust score required
+  repeated string required_capabilities = 4;// Required capabilities
+}
+
+// TrustVerificationResponse indicates if peer is trustworthy
+message TrustVerificationResponse {
+  bool verified = 1;                        // Whether peer meets requirements
+  int32 peer_trust_score = 2;               // Peer's current trust score
+  repeated string peer_capabilities = 3;    // Peer's capabilities
+  string peer_name = 4;                     // Peer's name
+  string rejection_reason = 5;              // Reason if not verified
+  google.protobuf.Timestamp verified_at = 6;
+}
+
+// AgentMeshIdentityService handles agent registration and identity management
+service AgentMeshIdentityService {
+  // Register a new agent with AgentMesh
+  rpc Register(RegistrationRequest) returns (RegistrationResponse);
+  
+  // Rotate expiring credentials
+  rpc RotateCredentials(CredentialRotationRequest) returns (CredentialRotationResponse);
+  
+  // Verify trust of a peer agent
+  rpc VerifyPeerTrust(TrustVerificationRequest) returns (TrustVerificationResponse);
+}
