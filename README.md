@@ -55,10 +55,23 @@ AgentMesh provides:
 
 ## Quick Start
 
+### Option 1: Secure Claude Desktop (Recommended)
+
 ```bash
 # Install AgentMesh
 pip install agentmesh-platform
 
+# Set up Claude Desktop to use AgentMesh governance
+agentmesh init-integration --claude
+
+# Restart Claude Desktop - all MCP tools are now secured!
+```
+
+Claude will now route tool calls through AgentMesh for policy enforcement and trust scoring.
+
+### Option 2: Create a Governed Agent
+
+```bash
 # Initialize a governed agent in 30 seconds
 agentmesh init --name my-agent --sponsor alice@company.com
 
@@ -67,6 +80,18 @@ agentmesh register
 
 # Start with governance enabled
 agentmesh run
+```
+
+### Option 3: Wrap Any MCP Server
+
+```bash
+# Proxy any MCP server with governance
+agentmesh proxy --target npx --target -y \
+  --target @modelcontextprotocol/server-filesystem \
+  --target /path/to/directory
+
+# Use strict policy (blocks writes/deletes)
+agentmesh proxy --policy strict --target <your-mcp-server>
 ```
 
 ## Installation
@@ -102,10 +127,58 @@ pip install -e .
 | [GitHub PR Review](./examples/05-github-integration/) | Code review agent | Output policies, shadow mode, trust decay |
 
 **Framework integrations:**
+- **[Claude Desktop](./docs/integrations/claude-desktop.md)** - Secure MCP tools with one command
 - [LangChain Integration](./examples/integrations/langchain.md) - Secure LangChain agents with policies
 - [CrewAI Integration](./examples/integrations/crewai.md) - Multi-agent crew governance
 
 📚 **[Browse all examples →](./examples/)**
+
+## The AgentMesh Proxy: "SSL for AI Agents"
+
+**Problem:** AI agents like Claude Desktop have unfettered access to your filesystem, database, and APIs through MCP servers. One hallucination could be catastrophic.
+
+**Solution:** AgentMesh acts as a transparent governance proxy:
+
+```bash
+# Before: Unsafe direct access
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users/me"]
+    }
+  }
+}
+
+# After: Protected by AgentMesh
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "agentmesh",
+      "args": [
+        "proxy", "--policy", "strict",
+        "--target", "npx", "--target", "-y",
+        "--target", "@modelcontextprotocol/server-filesystem",
+        "--target", "/Users/me"
+      ]
+    }
+  }
+}
+```
+
+**What you get:**
+- 🔒 **Policy Enforcement** - Block dangerous operations before they execute
+- 📊 **Trust Scoring** - Behavioral monitoring (800-1000 scale)  
+- 📝 **Audit Logs** - Tamper-evident record of every action
+- ✅ **Verification Footers** - Visual confirmation in outputs
+
+**Set it up in 10 seconds:**
+```bash
+agentmesh init-integration --claude
+# Restart Claude Desktop - done!
+```
+
+Learn more: **[Claude Desktop Integration Guide](./docs/integrations/claude-desktop.md)**
 
 ## Core Concepts
 
