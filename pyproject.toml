@@ -1,0 +1,93 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentmesh"
+version = "0.1.0"
+description = "The Secure Nervous System for Cloud-Native Agent Ecosystems"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Imran Siddique", email = "imran@example.com"}
+]
+keywords = [
+    "ai",
+    "agents",
+    "security",
+    "governance",
+    "identity",
+    "trust",
+    "a2a",
+    "mcp",
+    "iatp",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.5.0",
+    "cryptography>=42.0.0",
+    "pynacl>=1.5.0",
+    "httpx>=0.26.0",
+    "aiohttp>=3.9.0",
+    "pyyaml>=6.0",
+    "structlog>=24.1.0",
+    "click>=8.1.0",
+    "rich>=13.0.0",
+    # agent-os dependency for IATP/Nexus
+    # "agent-os @ git+https://github.com/imran-siddique/agent-os.git",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "black>=24.1.0",
+    "ruff>=0.1.0",
+    "mypy>=1.8.0",
+]
+server = [
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+]
+
+[project.scripts]
+agentmesh = "agentmesh.cli.main:cli"
+
+[project.urls]
+Homepage = "https://github.com/imran-siddique/agent-mesh"
+Documentation = "https://github.com/imran-siddique/agent-mesh/docs"
+Repository = "https://github.com/imran-siddique/agent-mesh"
+Issues = "https://github.com/imran-siddique/agent-mesh/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
