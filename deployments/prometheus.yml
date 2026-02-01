@@ -30,11 +30,11 @@ scrape_configs:
         action: keep
         regex: true
       # Use custom port if specified
-      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_port]
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_port, __address__]
         action: replace
         target_label: __address__
-        regex: (.+)
-        replacement: $1:__meta_kubernetes_pod_annotation_prometheus_io_port
+        regex: ([^:]+)(?::\d+)?;(.+)
+        replacement: ${2}:${1}
       # Use custom path if specified
       - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
         action: replace

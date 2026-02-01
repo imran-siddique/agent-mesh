@@ -12,6 +12,7 @@ import os
 def setup_tracing(
     service_name: str = "agentmesh",
     endpoint: Optional[str] = None,
+    insecure: bool = False,
 ) -> None:
     """
     Setup OpenTelemetry tracing.
@@ -19,6 +20,7 @@ def setup_tracing(
     Args:
         service_name: Service name for traces
         endpoint: OTLP endpoint (default: from OTEL_EXPORTER_OTLP_ENDPOINT env)
+        insecure: Whether to use insecure connection (default: False, use TLS)
     """
     try:
         from opentelemetry import trace
@@ -47,7 +49,7 @@ def setup_tracing(
     provider = TracerProvider(resource=resource)
     
     # Create OTLP exporter
-    otlp_exporter = OTLPSpanExporter(endpoint=endpoint, insecure=True)
+    otlp_exporter = OTLPSpanExporter(endpoint=endpoint, insecure=insecure)
     
     # Add span processor
     provider.add_span_processor(BatchSpanProcessor(otlp_exporter))

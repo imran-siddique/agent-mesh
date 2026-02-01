@@ -42,6 +42,8 @@ spec:
                 sponsor:
                   type: string
                   description: Email of the human sponsor responsible for this agent
+                  # Note: This regex is intentionally permissive. Full email validation
+                  # should be done at the application layer with proper email validator.
                   pattern: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
                 capabilities:
                   type: array
