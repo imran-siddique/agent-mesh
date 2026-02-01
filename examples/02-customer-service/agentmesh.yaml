@@ -1,0 +1,52 @@
+agent:
+  name: "customer-service-system"
+  version: "1.0.0"
+  type: "multi-agent"
+
+supervisor:
+  name: "supervisor-agent"
+  sponsor: "support-manager@company.com"
+  capabilities:
+    - "read:tickets"
+    - "write:tickets"
+    - "read:docs"
+    - "read:billing"
+    - "write:billing"
+    - "notify:managers"
+
+specialists:
+  technical:
+    name: "technical-support-agent"
+    capabilities:
+      - "read:docs"
+      - "write:tickets"
+  
+  billing:
+    name: "billing-agent"
+    capabilities:
+      - "read:billing"
+      - "write:billing"
+  
+  escalation:
+    name: "escalation-agent"
+    capabilities:
+      - "notify:managers"
+      - "write:tickets"
+
+trust:
+  min_supervisor_score: 800
+  min_specialist_score: 700
+  handshake_timeout_ms: 200
+
+governance:
+  policies_dir: "policies/"
+  audit_enabled: true
+  cross_agent_audit: true
+
+reward:
+  dimensions:
+    policy_compliance: 0.25
+    response_time: 0.20
+    resolution_quality: 0.25
+    collaboration_health: 0.20
+    customer_satisfaction: 0.10
