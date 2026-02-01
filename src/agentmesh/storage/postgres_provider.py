@@ -79,9 +79,11 @@ class PostgresStorageProvider(AbstractStorageProvider):
     
     async def _init_schema(self) -> None:
         """Initialize database schema."""
+        from sqlalchemy import text
+        
         # Create tables for key-value, hashes, lists, etc.
         async with self._engine.begin() as conn:
-            await conn.execute(
+            await conn.execute(text(
                 """
                 CREATE TABLE IF NOT EXISTS agentmesh_kv (
                     key VARCHAR(512) PRIMARY KEY,
@@ -113,7 +115,7 @@ class PostgresStorageProvider(AbstractStorageProvider):
                 );
                 CREATE INDEX IF NOT EXISTS idx_zset_score ON agentmesh_zset(key, score);
                 """
-            )
+            ))
     
     async def disconnect(self) -> None:
         """Close connection to PostgreSQL."""
@@ -124,8 +126,9 @@ class PostgresStorageProvider(AbstractStorageProvider):
         """Check if PostgreSQL is healthy."""
         try:
             if self._engine:
+                from sqlalchemy import text
                 async with self._engine.begin() as conn:
-                    await conn.execute("SELECT 1")
+                    await conn.execute(text("SELECT 1"))
                 return True
         except Exception:
             pass
@@ -152,17 +155,20 @@ class PostgresStorageProvider(AbstractStorageProvider):
     ) -> bool:
         """Set value with optional TTL."""
         async with self._session_factory() as session:
-            expires_clause = (
-                "NOW() + INTERVAL ':ttl seconds'"
-                if ttl_seconds
-                else "NULL"
-            )
-            await session.execute(
-                f"INSERT INTO agentmesh_kv (key, value, expires_at) "
-                f"VALUES (:key, :value, {expires_clause}) "
-                f"ON CONFLICT (key) DO UPDATE SET value = :value, expires_at = {expires_clause}",
-                {"key": key, "value": value, "ttl": ttl_seconds},
-            )
+            if ttl_seconds:
+                await session.execute(
+                    "INSERT INTO agentmesh_kv (key, value, expires_at) "
+                    "VALUES (:key, :value, NOW() + INTERVAL '1 second' * :ttl) "
+                    "ON CONFLICT (key) DO UPDATE SET value = :value, expires_at = NOW() + INTERVAL '1 second' * :ttl",
+                    {"key": key, "value": value, "ttl": ttl_seconds},
+                )
+            else:
+                await session.execute(
+                    "INSERT INTO agentmesh_kv (key, value, expires_at) "
+                    "VALUES (:key, :value, NULL) "
+                    "ON CONFLICT (key) DO UPDATE SET value = :value, expires_at = NULL",
+                    {"key": key, "value": value},
+                )
             await session.commit()
         return True
     

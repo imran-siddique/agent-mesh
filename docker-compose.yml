@@ -1,5 +1,11 @@
 version: '3.8'
 
+# SECURITY WARNING: This docker-compose.yml contains hardcoded passwords for development.
+# For production:
+# 1. Copy .env.example to .env and update with secure passwords
+# 2. Use Docker secrets for sensitive data
+# 3. Never commit .env to version control
+
 services:
   # PostgreSQL - Primary data store
   postgres:
@@ -103,7 +109,7 @@ services:
     image: prom/prometheus:latest
     container_name: agentmesh-prometheus
     ports:
-      - "9090:9090"
+      - "9093:9090"  # Changed from 9090 to avoid conflict with server metrics
     volumes:
       - ./deployments/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
