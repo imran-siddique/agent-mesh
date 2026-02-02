@@ -7,9 +7,10 @@ ENVIRONMENT = "production"
 
 [[kv_namespaces]]
 binding = "SCORES"
-id = "your-kv-namespace-id"
+id = "776a26147a3a4b8eb95c65a0fb98b120"
 
-[[d1_databases]]
-binding = "DB"
-database_name = "agentmesh-benchmark"
-database_id = "your-d1-database-id"
+# D1 database - optional, KV is sufficient for MVP
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "agentmesh-benchmark"
+# database_id = "your-d1-database-id"
