@@ -84,3 +84,5 @@ secrets.json
 # Local config
 .agentmesh/
 config.local.yaml
+
+node_modules/
