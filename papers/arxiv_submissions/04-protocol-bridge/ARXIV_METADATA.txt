@@ -1,0 +1,37 @@
+arXiv Submission Metadata
+========================
+Generated: 2026-02-01 10:08:13
+Paper: 04-protocol-bridge
+
+TITLE (use initial caps, no LaTeX):
+Unified Trust Bridge for Heterogeneous Agent Protocols: Consistent Governance Across A2A, MCP, and IATP
+
+AUTHORS (comma-separated, no "and"):
+Imran Siddique
+
+ABSTRACT (plain text, no LaTeX, no line breaks):
+The AI agent ecosystem is fragmenting across incompatible protocols. Google's Agent-to-Agent (A2A) handles inter-agent coordination. Anthropic's Model Context Protocol (MCP) governs tool access. The Inter-Agent Trust Protocol (IATP) defines trust handshakes. Each protocol solves a slice of the problem—none provides trust across protocol boundaries. We present TrustBridge, a unified governance layer that speaks A2A, MCP, and IATP natively while enforcing a consistent trust model. When Agent A (on A2A) delegates to Agent B (on MCP), TrustBridge translates the request, performs capability verification, and ensures the audit trail spans both protocols seamlessly. Key innovations include: (1) Protocol-agnostic trust handshakes completing in <200ms cross-protocol, (2) Capability scope translation preserving security invariants across protocol boundaries, and (3) Unified audit trails enabling compliance reporting regardless of underlying protocol. Experiments on multi-protocol agent workflows demonstrate: 98.7% handshake success rate, 147ms median cross-protocol latency (vs. 892ms for naive gateway), and zero capability escalation across 10,000 cross-protocol delegations.
+
+PRIMARY CATEGORY:
+cs.NI
+
+CROSS-LIST CATEGORIES:
+cs.AI, cs.DC
+
+COMMENTS:
+Part of the AgentMesh project: https://github.com/imran-siddique/agent-mesh
+
+LICENSE:
+CC BY 4.0
+
+---
+Submission Checklist:
+[ ] Upload submission.tar
+[ ] Verify all files extracted correctly
+[ ] Check compiled PDF for errors
+[ ] Copy title exactly as above
+[ ] Copy authors exactly as above  
+[ ] Copy abstract (remove any remaining line breaks)
+[ ] Select primary category: cs.NI
+[ ] Add cross-list categories
+[ ] Add comments field

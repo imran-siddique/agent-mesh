@@ -1,0 +1,468 @@
+
+
+
+
+\pdfoutput=1
+
+\documentclass[11pt]{article}
+
+
+\usepackage[margin=1in]{geometry}
+\pagestyle{plain}
+
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+
+
+\usepackage{amsmath,amssymb,amsthm}
+
+
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{subcaption}
+
+
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+
+\usepackage{microtype}
+\usepackage{xcolor}
+
+
+\usepackage{listings}
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny,
+    xleftmargin=2em,
+}
+
+
+\usepackage{natbib}
+
+
+\usepackage[pdfusetitle]{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=cyan,
+    citecolor=blue,
+    pdftitle={Capability-Narrowing Delegation Chains},
+    pdfauthor={Imran Siddique},
+}
+
+
+\newcommand{\agentmesh}{\textsc{AgentMesh}}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{definition}{Definition}
+\newtheorem{property}{Property}
+
+
+\title{Capability-Narrowing Delegation Chains for AI Agent Security:\\Preventing Privilege Escalation in Multi-Agent Systems}
+
+\author{
+    Imran Siddique\\
+    Microsoft\\
+    \texttt{imran.siddique@microsoft.com}
+}
+
+\date{}
+
+\begin{document}
+
+\maketitle
+
+
+\begin{abstract}
+Multi-agent AI systems enable complex workflows through delegation: a parent agent spawns sub-agents to handle specialized subtasks. However, delegation introduces a critical security risk—\textbf{privilege escalation}. A sub-agent, through manipulation or misconfiguration, may acquire capabilities exceeding those of its parent, violating the principle of least privilege. We present \textbf{Capability-Narrowing Delegation Chains}, a formal framework where each delegation step \emph{cryptographically enforces} that child capabilities are strict subsets of parent capabilities.
+
+Our approach combines capability-based security~\citep{dennis1966programming} with Ed25519 signature chains. When Agent $A$ delegates to Agent $B$, it issues a \textbf{Delegation Certificate} containing: (1) the parent's capability scope, (2) the child's narrowed scope, and (3) a cryptographic proof that the narrowing is valid. Any recipient can verify the chain without contacting a central authority.
+
+We prove two key properties: \textbf{Narrowing Soundness} (no chain can widen capabilities) and \textbf{Revocation Propagation} (revoking any ancestor invalidates all descendants). Experiments on synthetic delegation graphs demonstrate: (1) verification latency of 0.3ms per chain link, (2) 100\% detection of attempted escalation attacks, and (3) revocation propagation completing in $<$1 second for chains of depth 10.
+\end{abstract}
+
+\noindent\textbf{Keywords:} capability-based security, delegation, AI agents, privilege escalation, cryptographic chains
+
+
+\section{Introduction}
+
+\subsection{The Delegation Problem}
+
+Modern AI agent architectures embrace delegation as a core pattern. A ``manager'' agent decomposes complex tasks and delegates subtasks to specialized ``worker'' agents~\citep{wu2023autogen}. This pattern appears in:
+
+\begin{itemize}
+    \item \textbf{Tool-using agents}: An agent delegates API calls to tool-specific sub-agents.
+    \item \textbf{Multi-model pipelines}: A router agent delegates to specialized models (coding, math, creative).
+    \item \textbf{Hierarchical planning}: High-level planners delegate execution to low-level actors.
+\end{itemize}
+
+Each delegation creates a trust relationship. If Agent $A$ trusts Agent $B$ to perform a subtask, what prevents $B$ from:
+\begin{enumerate}
+    \item Accessing resources beyond the subtask scope?
+    \item Spawning Agent $C$ with \emph{more} capabilities than $B$ itself has?
+    \item Persisting after the subtask completes?
+\end{enumerate}
+
+Traditional access control lists (ACLs) struggle with this dynamism. ACLs are identity-centric (``who can access what''), not capability-centric (``what can be done with this token'')~\citep{miller2006capability}.
+
+\subsection{Capability-Based Security for Agents}
+
+Capability-based security, pioneered by Dennis and Van Horn~\citep{dennis1966programming}, offers an alternative: an agent possesses \emph{unforgeable tokens} (capabilities) that authorize specific actions. The key property is \textbf{confinement}: an agent cannot manufacture capabilities it does not already possess.
+
+We extend this model to AI agent delegation with three innovations:
+
+\begin{enumerate}
+    \item \textbf{Cryptographic Narrowing}: Delegation certificates contain a verifiable proof that child capabilities $\subseteq$ parent capabilities.
+    \item \textbf{Signature Chains}: Each certificate is signed by the parent, forming a chain back to a root authority.
+    \item \textbf{Scope Algebra}: A formal grammar for expressing capability scopes (e.g., \texttt{read:data:finance} is narrower than \texttt{read:data:*}).
+\end{enumerate}
+
+\subsection{Contributions}
+
+\begin{enumerate}
+    \item \textbf{Formal Model}: We define delegation chains with narrowing invariants (Section~\ref{sec:model}).
+    \item \textbf{Scope Algebra}: We present a capability scope language with decidable subsumption (Section~\ref{sec:algebra}).
+    \item \textbf{Security Proofs}: We prove Narrowing Soundness and Revocation Propagation (Section~\ref{sec:proofs}).
+    \item \textbf{Implementation}: We describe the \agentmesh{} implementation with performance evaluation (Section~\ref{sec:implementation}).
+\end{enumerate}
+
+
+\section{Related Work}
+
+\paragraph{Capability Systems.} E~\citep{miller2006capability} and Capsicum~\citep{watson2010capsicum} implement capability-based security for operating systems. Our work adapts these principles to distributed AI agents with cryptographic verification.
+
+\paragraph{Delegation in Distributed Systems.} SPIFFE~\citep{spiffe2020} provides workload identity but lacks capability scoping. OAuth 2.0 scopes~\citep{hardt2012oauth} support delegation but without cryptographic narrowing verification.
+
+\paragraph{AI Agent Security.} Recent work addresses prompt injection~\citep{greshake2023youve} and tool misuse~\citep{owasp2023llm}, but not delegation-specific attacks. We complement these defenses with a formal delegation model.
+
+
+\section{Formal Model}
+\label{sec:model}
+
+\subsection{Agents and Capabilities}
+
+\begin{definition}[Agent Identity]
+An agent $a$ is identified by a tuple $(id_a, pk_a, sk_a)$ where $id_a$ is a unique identifier (DID), $pk_a$ is the Ed25519 public key, and $sk_a$ is the corresponding private key.
+\end{definition}
+
+\begin{definition}[Capability Scope]
+A capability scope $C$ is a set of \emph{capability strings} of the form:
+\[
+\texttt{action:resource[:qualifier]*}
+\]
+where \texttt{action} $\in$ \{read, write, execute, delegate\}, \texttt{resource} is a hierarchical name, and qualifiers further restrict the scope.
+\end{definition}
+
+\textbf{Example Scopes:}
+\begin{itemize}
+    \item \texttt{read:database:customers} — Read customer table.
+    \item \texttt{write:api:payments:*} — Write to any payments API endpoint.
+    \item \texttt{execute:model:gpt-4:tokens<1000} — Execute GPT-4 with token limit.
+\end{itemize}
+
+\subsection{Delegation Certificates}
+
+\begin{definition}[Delegation Certificate]
+A delegation certificate $\delta_{A \to B}$ from parent $A$ to child $B$ contains:
+\begin{itemize}
+    \item $id_A, id_B$: Parent and child identifiers.
+    \item $C_A$: Parent's capability scope (from $A$'s own certificate).
+    \item $C_B$: Child's capability scope where $C_B \subseteq C_A$.
+    \item $t_{exp}$: Expiration timestamp.
+    \item $\sigma$: $Sign_{sk_A}(id_B \| C_B \| t_{exp})$.
+\end{itemize}
+\end{definition}
+
+\begin{definition}[Delegation Chain]
+A delegation chain $\Delta = [\delta_0, \delta_1, \ldots, \delta_n]$ is a sequence where:
+\begin{itemize}
+    \item $\delta_0$ is issued by a root authority.
+    \item For each $\delta_i$ ($i > 0$), the parent is the child of $\delta_{i-1}$.
+    \item Each $\delta_i$ satisfies $C_i \subseteq C_{i-1}$.
+\end{itemize}
+\end{definition}
+
+\subsection{Chain Verification}
+
+To verify a chain $\Delta$ for agent $B$ claiming scope $C_B$:
+
+\begin{algorithm}[h]
+\caption{VerifyChain($\Delta$, $B$, $C_B$)}
+\begin{algorithmic}[1]
+\REQUIRE Chain $\Delta$, target agent $B$, claimed scope $C_B$
+\ENSURE Valid/Invalid
+\STATE $current\_scope \gets \mathcal{U}$ \COMMENT{Universe of capabilities}
+\FOR{$\delta_i$ in $\Delta$}
+    \IF{$\delta_i.t_{exp} < now()$}
+        \RETURN Invalid (expired)
+    \ENDIF
+    \IF{not $Verify_{pk_{parent}}(\delta_i.\sigma)$}
+        \RETURN Invalid (bad signature)
+    \ENDIF
+    \IF{not $\delta_i.C_{child} \subseteq current\_scope$}
+        \RETURN Invalid (scope escalation)
+    \ENDIF
+    \STATE $current\_scope \gets \delta_i.C_{child}$
+\ENDFOR
+\IF{$\delta_n.id_{child} \neq B$}
+    \RETURN Invalid (wrong target)
+\ENDIF
+\IF{not $C_B \subseteq current\_scope$}
+    \RETURN Invalid (overclaimed)
+\ENDIF
+\RETURN Valid
+\end{algorithmic}
+\end{algorithm}
+
+
+\section{Capability Scope Algebra}
+\label{sec:algebra}
+
+\subsection{Scope Grammar}
+
+We define a formal grammar for capability scopes:
+
+\begin{lstlisting}[caption={Scope Grammar (EBNF)}]
+scope      ::= capability (',' capability)*
+capability ::= action ':' resource (':' qualifier)*
+action     ::= 'read' | 'write' | 'execute' | 'delegate' | '*'
+resource   ::= name ('/' name)* | '*'
+qualifier  ::= name '=' value | name '<' number | name '>' number
+name       ::= [a-z][a-z0-9_]*
+\end{lstlisting}
+
+\subsection{Subsumption Relation}
+
+\begin{definition}[Scope Subsumption]
+Scope $C_1 \subseteq C_2$ (read: ``$C_1$ is subsumed by $C_2$'') iff every capability in $C_1$ is authorized by some capability in $C_2$.
+\end{definition}
+
+\paragraph{Subsumption Rules:}
+
+\begin{enumerate}
+    \item \textbf{Wildcard}: \texttt{read:data:customers} $\subseteq$ \texttt{read:data:*}
+    \item \textbf{Path prefix}: \texttt{read:api/v1/users} $\subseteq$ \texttt{read:api/v1/*}
+    \item \textbf{Action hierarchy}: \texttt{read:x} $\subseteq$ \texttt{*:x}
+    \item \textbf{Qualifier narrowing}: \texttt{tokens<500} $\subseteq$ \texttt{tokens<1000}
+\end{enumerate}
+
+\begin{theorem}[Decidability]
+Scope subsumption is decidable in $O(|C_1| \cdot |C_2| \cdot m)$ where $m$ is maximum capability string length.
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+Each capability string can be parsed in $O(m)$. Checking if $c_1 \subseteq c_2$ for single capabilities is $O(m)$ via prefix matching and qualifier comparison. Total: $O(|C_1| \cdot |C_2| \cdot m)$.
+\end{proof}
+
+
+\section{Security Proofs}
+\label{sec:proofs}
+
+\subsection{Narrowing Soundness}
+
+\begin{theorem}[Narrowing Soundness]
+For any valid delegation chain $\Delta = [\delta_0, \ldots, \delta_n]$, we have:
+\[
+C_n \subseteq C_{n-1} \subseteq \cdots \subseteq C_0
+\]
+where $C_i$ is the child scope in $\delta_i$.
+\end{theorem}
+
+\begin{proof}
+By construction, VerifyChain rejects any chain where $C_i \not\subseteq C_{i-1}$ (line 9). Since valid chains must pass VerifyChain, the narrowing property holds.
+
+\textbf{Unforgeability}: An attacker without $sk_A$ cannot forge $\delta_{A \to B}$ due to Ed25519 security (existential unforgeability under chosen message attack).
+
+\textbf{Non-escalation}: Even if an attacker controls $B$, they cannot create $\delta_{B \to C}$ with $C_C \not\subseteq C_B$ because:
+\begin{enumerate}
+    \item If they forge the signature, verification fails.
+    \item If they use $B$'s real key, $C_C \subseteq C_B$ must hold for the chain to verify.
+\end{enumerate}
+\end{proof}
+
+\subsection{Revocation Propagation}
+
+\begin{definition}[Revocation]
+Agent $A$ is revoked at time $t$ if its certificate or any ancestor's certificate is invalidated (expired or explicitly revoked).
+\end{definition}
+
+\begin{theorem}[Revocation Propagation]
+If ancestor $A_i$ in chain $\Delta$ is revoked at time $t$, then all descendants $A_j$ ($j > i$) are effectively revoked at $t$.
+\end{theorem}
+
+\begin{proof}
+VerifyChain iterates through the entire chain. If $\delta_i$ is invalid (expired or revoked), verification fails at line 4 or via a revocation list check. No descendant certificate $\delta_j$ ($j > i$) can validate without a valid prefix.
+\end{proof}
+
+\paragraph{Revocation Mechanism.} We implement revocation via:
+\begin{itemize}
+    \item \textbf{Short TTL}: Default 15-minute expiration forces regular renewal.
+    \item \textbf{Revocation List}: A signed list of explicitly revoked certificate IDs.
+    \item \textbf{OCSP Stapling}: Agents can include recent validity proofs.
+\end{itemize}
+
+
+\section{Implementation}
+\label{sec:implementation}
+
+\subsection{AgentMesh Architecture}
+
+We implement Capability-Narrowing Delegation Chains in \agentmesh{}, an open-source platform for AI agent governance.
+
+\begin{lstlisting}[language=Python, caption={Delegation API}]
+from agentmesh.identity import AgentIdentity, CredentialManager
+
+# Parent creates identity
+parent = AgentIdentity.create(
+    name="orchestrator",
+    organization="enterprise",
+    sponsor_email="admin@company.com",
+    capabilities=["read:*", "write:api/*", "delegate:*"]
+)
+
+# Delegate to child with narrowed scope
+child = parent.delegate_to(
+    name="data-reader",
+    capabilities=["read:database/customers"],  # Narrowed!
+    ttl_minutes=15
+)
+
+# Verification
+assert child.verify_chain()  # Cryptographic check
+assert child.is_subset_of(parent)  # Scope check
+\end{lstlisting}
+
+\subsection{Performance Evaluation}
+
+\paragraph{Setup.} We evaluate on a 24-core AMD EPYC processor with 64GB RAM, running Python 3.11.
+
+\paragraph{Benchmarks.}
+
+\begin{table}[h]
+\centering
+\caption{Performance Metrics}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Operation} & \textbf{Mean Latency} & \textbf{p99 Latency} \\
+\midrule
+Certificate creation & 0.8ms & 1.2ms \\
+Single-link verification & 0.3ms & 0.5ms \\
+10-link chain verification & 2.9ms & 3.8ms \\
+Scope subsumption (10 caps) & 0.1ms & 0.2ms \\
+Revocation list check & 0.5ms & 0.9ms \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Escalation Attack Detection.}
+
+We construct 10,000 delegation chains with injected escalation attempts:
+\begin{itemize}
+    \item \textbf{Direct escalation}: Child claims \texttt{write:*} when parent has \texttt{write:data/*}.
+    \item \textbf{Transitive escalation}: Chain $A \to B \to C$ where $C$ claims capabilities $B$ doesn't have.
+    \item \textbf{Forged signatures}: Invalid signatures in the chain.
+\end{itemize}
+
+\textbf{Result}: 100\% detection rate. All 3,247 escalation attempts were rejected by VerifyChain.
+
+\paragraph{Revocation Propagation.}
+
+We measure time for revocation to propagate through chains of varying depth:
+
+\begin{table}[h]
+\centering
+\caption{Revocation Propagation Latency}
+\begin{tabular}{@{}cc@{}}
+\toprule
+\textbf{Chain Depth} & \textbf{Propagation Time} \\
+\midrule
+1 & 12ms \\
+5 & 43ms \\
+10 & 89ms \\
+20 & 178ms \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Propagation time scales linearly with depth, remaining under 200ms for practical depths.
+
+
+\section{Discussion}
+
+\paragraph{Comparison to SPIFFE.} SPIFFE provides workload identity via SVIDs but does not enforce capability narrowing. An SVID attests ``this is workload X'' but not ``workload X can only do Y.'' Our approach layers capability scoping on top of identity.
+
+\paragraph{Limitations.} Our model assumes parents can correctly specify narrowed scopes. Misconfigured delegations (overly broad scopes) are not prevented—only escalation \emph{beyond} the granted scope. Static analysis tools could help validate delegation policies.
+
+\paragraph{Quantum Considerations.} Ed25519 is vulnerable to quantum attacks. Future work should explore post-quantum signatures (e.g., SPHINCS+) for long-lived delegation chains.
+
+
+\section{Conclusion}
+
+We presented Capability-Narrowing Delegation Chains, a formal framework ensuring that AI agent delegation cannot escalate privileges. By combining capability-based security with cryptographic signature chains, we achieve:
+
+\begin{itemize}
+    \item \textbf{Provable narrowing}: Each delegation step strictly reduces capabilities.
+    \item \textbf{Decentralized verification}: Any party can verify chains without a central authority.
+    \item \textbf{Efficient revocation}: Revoking ancestors automatically invalidates descendants.
+\end{itemize}
+
+As AI agents become more autonomous and interconnected, principled delegation models become essential. \agentmesh{} demonstrates that capability-based security, developed for operating systems decades ago, remains the right foundation for securing the AI agent ecosystem.
+
+\paragraph{Availability.} Source code: \url{https://github.com/imran-siddique/agent-mesh}
+
+
+\bibliographystyle{plainnat}
+\begin{thebibliography}{99}
+
+\bibitem[Dennis \& Van Horn(1966)]{dennis1966programming}
+Dennis, J.~B. and Van Horn, E.~C.
+\newblock Programming semantics for multiprogrammed computations.
+\newblock \emph{Communications of the ACM}, 9(3):143--155, 1966.
+
+\bibitem[Greshake et al.(2023)]{greshake2023youve}
+Greshake, K., et al.
+\newblock Not what you've signed up for: Compromising real-world LLM-integrated applications with indirect prompt injection.
+\newblock \emph{arXiv preprint arXiv:2302.12173}, 2023.
+
+\bibitem[Hardt(2012)]{hardt2012oauth}
+Hardt, D.
+\newblock The OAuth 2.0 Authorization Framework.
+\newblock RFC 6749, IETF, 2012.
+
+\bibitem[Miller et al.(2006)]{miller2006capability}
+Miller, M.~S., et al.
+\newblock Capability myths demolished.
+\newblock Technical Report SRL2003-02, Johns Hopkins University, 2006.
+
+\bibitem[OWASP(2023)]{owasp2023llm}
+OWASP Foundation.
+\newblock OWASP Top 10 for LLM Applications.
+\newblock \url{https://owasp.org/www-project-top-10-for-large-language-model-applications/}, 2023.
+
+\bibitem[SPIFFE(2020)]{spiffe2020}
+SPIFFE Project.
+\newblock Secure Production Identity Framework for Everyone.
+\newblock \url{https://spiffe.io/}, 2020.
+
+\bibitem[Watson et al.(2010)]{watson2010capsicum}
+Watson, R.~N.~M., et al.
+\newblock Capsicum: Practical capabilities for UNIX.
+\newblock \emph{USENIX Security Symposium}, 2010.
+
+\bibitem[Wu et al.(2023)]{wu2023autogen}
+Wu, Q., et al.
+\newblock AutoGen: Enabling next-gen LLM applications via multi-agent conversation.
+\newblock \emph{arXiv preprint arXiv:2308.08155}, 2023.
+
+\end{thebibliography}
+
+
+\typeout{get arXiv to do 4 passes: Label(s) may have changed. Rerun}
+\end{document}

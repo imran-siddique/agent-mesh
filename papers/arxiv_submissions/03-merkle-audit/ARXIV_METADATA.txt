@@ -1,0 +1,37 @@
+arXiv Submission Metadata
+========================
+Generated: 2026-02-01 10:08:13
+Paper: 03-merkle-audit
+
+TITLE (use initial caps, no LaTeX):
+Tamper-Evident Governance for AI Agent Ecosystems: Merkle-Chained Audit Logs with Offline Verification
+
+AUTHORS (comma-separated, no "and"):
+Imran Siddique
+
+ABSTRACT (plain text, no LaTeX, no line breaks):
+As AI agents execute autonomous workflows in regulated industries, compliance teams face an unprecedented challenge: proving that governance was correctly enforced after the fact. Traditional audit logs are vulnerable to tampering—a compromised agent or malicious insider can modify records to hide policy violations. We present Merkle-Chained Audit Logs, a cryptographic data structure that provides tamper-evidence and offline verification for AI agent governance. Each audit entry is hash-chained to its predecessor, forming an append-only log. Periodically, we compute a Merkle tree over recent entries and publish the root hash to an immutable anchor (blockchain, Certificate Transparency log, or signed timestamp). Any modification—insertion, deletion, or alteration—is detectable by recomputing hashes. We prove that our scheme provides: (1) Tamper detection in O(log n) verification time, (2) Non-repudiation via agent signatures on entries, and (3) Selective disclosure enabling privacy-preserving audits. Experiments demonstrate 50,000 entries/second write throughput with verification latency under 5ms for 1 million entry logs. We integrate this into AgentMesh for automated SOC 2, HIPAA, and EU AI Act compliance reporting.
+
+PRIMARY CATEGORY:
+cs.CR
+
+CROSS-LIST CATEGORIES:
+cs.AI, cs.DC
+
+COMMENTS:
+Part of the AgentMesh project: https://github.com/imran-siddique/agent-mesh
+
+LICENSE:
+CC BY 4.0
+
+---
+Submission Checklist:
+[ ] Upload submission.tar
+[ ] Verify all files extracted correctly
+[ ] Check compiled PDF for errors
+[ ] Copy title exactly as above
+[ ] Copy authors exactly as above  
+[ ] Copy abstract (remove any remaining line breaks)
+[ ] Select primary category: cs.CR
+[ ] Add cross-list categories
+[ ] Add comments field

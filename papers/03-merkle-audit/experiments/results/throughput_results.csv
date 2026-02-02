@@ -1,0 +1,4 @@
+method,total_entries,total_time_seconds,throughput_per_second,latency_mean_ms,latency_p50_ms,latency_p95_ms,latency_p99_ms,memory_mb
+AuditLog,5000,90.566,55.2,18.112,17.615,38.860,63.463,0.00
+SimpleChainAuditLog,5000,0.042,119731.2,0.008,0.007,0.007,0.009,0.00
+NoChainAuditLog,5000,0.011,440536.4,0.002,0.002,0.002,0.003,0.00

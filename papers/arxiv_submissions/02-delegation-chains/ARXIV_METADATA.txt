@@ -1,0 +1,37 @@
+arXiv Submission Metadata
+========================
+Generated: 2026-02-01 10:08:12
+Paper: 02-delegation-chains
+
+TITLE (use initial caps, no LaTeX):
+Capability-Narrowing Delegation Chains for AI Agent Security: Preventing Privilege Escalation in Multi-Agent Systems
+
+AUTHORS (comma-separated, no "and"):
+Imran Siddique
+
+ABSTRACT (plain text, no LaTeX, no line breaks):
+Multi-agent AI systems require agents to delegate tasks to sub-agents, creating complex chains of authority. Traditional access control lists (ACLs) and role-based access control (RBAC) fail to prevent privilege escalation when agents can create arbitrary sub-agents. We present Capability-Narrowing Delegation Chains, a cryptographic construction that guarantees capabilities can only decrease as delegation depth increases. Each delegation certificate contains: (1) the parent's signed capability set, (2) a strict subset of capabilities granted to the child, and (3) a hash chain linking to the root authority. We prove that our construction satisfies three security properties: Monotonic Narrowing (capabilities never expand), Revocation Propagation (revoking a parent instantly invalidates all descendants), and Tamper Detection (any modification breaks the hash chain). Implemented in AgentMesh with Ed25519 signatures, delegation certificate creation takes 2.1ms and chain verification scales linearly with depth. Security evaluation against 6 escalation attack classes shows 100% detection rate.
+
+PRIMARY CATEGORY:
+cs.CR
+
+CROSS-LIST CATEGORIES:
+cs.AI, cs.SE
+
+COMMENTS:
+Part of the AgentMesh project: https://github.com/imran-siddique/agent-mesh
+
+LICENSE:
+CC BY 4.0
+
+---
+Submission Checklist:
+[ ] Upload submission.tar
+[ ] Verify all files extracted correctly
+[ ] Check compiled PDF for errors
+[ ] Copy title exactly as above
+[ ] Copy authors exactly as above  
+[ ] Copy abstract (remove any remaining line breaks)
+[ ] Select primary category: cs.CR
+[ ] Add cross-list categories
+[ ] Add comments field

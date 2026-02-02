@@ -1,0 +1,37 @@
+arXiv Submission Metadata
+========================
+Generated: 2026-02-01 10:08:12
+Paper: 01-reward-engine
+
+TITLE (use initial caps, no LaTeX):
+Continuous Trust Scoring for Autonomous AI Agents: Multi-Dimensional Reward Learning with Automatic Revocation
+
+AUTHORS (comma-separated, no "and"):
+Imran Siddique
+
+ABSTRACT (plain text, no LaTeX, no line breaks):
+As AI agent deployments scale from single assistants to multi-agent ecosystems, traditional binary access control (allow/deny) becomes insufficient. Agents exhibit continuous behavioral variation—an agent trusted yesterday may behave anomalously today due to model drift, adversarial manipulation, or capability degradation. We present RewardEngine, a continuous trust scoring framework that evaluates agent behavior across five orthogonal dimensions: policy compliance, resource efficiency, output quality, security posture, and collaboration health. Unlike static rule-based systems, RewardEngine learns from runtime signals using exponential moving averages with recency weighting, updating scores every ≤30 seconds. Key innovations include: (1) Multi-dimensional trust representation replacing binary decisions, (2) Automatic credential revocation within <5 seconds when trust drops below configurable thresholds, (3) Adaptive weight learning that tunes dimension importance based on deployment context. Evaluated on simulated agent workloads with 1000 agents over 24 hours, RewardEngine achieves 94.2% precision in detecting degrading agents with 12.3% false positive rate, compared to 66.2% precision for single-dimension baselines. We integrate RewardEngine into AgentMesh for production deployment.
+
+PRIMARY CATEGORY:
+cs.AI
+
+CROSS-LIST CATEGORIES:
+cs.LG, cs.CR
+
+COMMENTS:
+Part of the AgentMesh project: https://github.com/imran-siddique/agent-mesh
+
+LICENSE:
+CC BY 4.0
+
+---
+Submission Checklist:
+[ ] Upload submission.tar
+[ ] Verify all files extracted correctly
+[ ] Check compiled PDF for errors
+[ ] Copy title exactly as above
+[ ] Copy authors exactly as above  
+[ ] Copy abstract (remove any remaining line breaks)
+[ ] Select primary category: cs.AI
+[ ] Add cross-list categories
+[ ] Add comments field
