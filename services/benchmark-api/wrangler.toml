@@ -1,0 +1,15 @@
+name = "agentmesh-benchmark"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[vars]
+ENVIRONMENT = "production"
+
+[[kv_namespaces]]
+binding = "SCORES"
+id = "your-kv-namespace-id"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "agentmesh-benchmark"
+database_id = "your-d1-database-id"

@@ -1,0 +1,29 @@
+{
+  "name": "agentmesh-benchmark-api",
+  "version": "1.0.0",
+  "description": "AgentMesh Benchmark API - Test and score AI agents",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "keywords": [
+    "agentmesh",
+    "benchmark",
+    "ai-agents",
+    "leaderboard"
+  ],
+  "author": "AgentMesh Team",
+  "license": "MIT",
+  "dependencies": {
+    "hono": "^4.0.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240117.0",
+    "typescript": "^5.3.0",
+    "wrangler": "^3.0.0"
+  }
+}
