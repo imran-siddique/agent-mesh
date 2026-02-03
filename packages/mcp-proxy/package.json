@@ -1,0 +1,63 @@
+{
+  "name": "agentmesh-mcp-proxy",
+  "version": "1.0.0",
+  "description": "Security proxy for MCP servers - The Firewall for Model Context Protocol",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "security",
+    "proxy",
+    "ai-safety",
+    "agentmesh",
+    "firewall",
+    "policy-engine"
+  ],
+  "author": "Imran Siddique <imran.siddique@microsoft.com>",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/imran-siddique/agent-mesh.git",
+    "directory": "packages/mcp-proxy"
+  },
+  "homepage": "https://github.com/imran-siddique/agent-mesh/tree/main/packages/mcp-proxy",
+  "bugs": {
+    "url": "https://github.com/imran-siddique/agent-mesh/issues"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "agentmesh": "dist/cli.js",
+    "agentmesh-mcp": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "policies",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/cli.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "commander": "^12.0.0",
+    "chalk": "^5.3.0",
+    "yaml": "^2.4.0",
+    "winston": "^3.11.0",
+    "crypto-js": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.4.0",
+    "eslint": "^8.57.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
