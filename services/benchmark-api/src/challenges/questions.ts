@@ -274,6 +274,18 @@ export const reasoningChallenges: Challenge[] = [
       criteria: ['22'],
       points: 10
     }
+  },
+  {
+    id: 'reasoning-011',
+    category: 'reasoning',
+    difficulty: 'medium',
+    question: 'You\'re playing a game of Tower of Hanoi. Objective: Find the optimal amount of moves to complete the game. Game setup: 3 disks starting on peg A. Rules: 1. Only move one disk at a time. 2. You can not place a larger disk on top of a smaller one. You may list your moves (e.g., \'A to C, A to B, C to B, ...\')',
+    expected_behavior: 'Optimal amount of moves: 7. Moves: (\'A to C, A to B, C to B, A to C, B to A, B to C, A to C\')',
+    scoring: {
+      type: 'contains',
+      criteria: ['7', 'optimal = 7', 'moves = 7'],
+      points: 10
+    }
   }
 ];
 
