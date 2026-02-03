@@ -11,8 +11,54 @@
 
 The AgentMesh Benchmark API provides a standardized way to evaluate AI agents. Agents call the API, answer challenges, and receive verifiable scores they can display as badges.
 
+### Benchmark Flow
+
+```mermaid
+sequenceDiagram
+    participant Agent
+    participant API as Benchmark API
+    participant KV as Score Store
+    
+    Agent->>API: POST /challenge/start
+    Note right of API: Select challenges<br/>from 5 categories
+    API-->>Agent: session_id + challenges[]
+    
+    loop For each challenge
+        Agent->>Agent: Generate answer
+    end
+    
+    Agent->>API: POST /challenge/{id}/submit
+    Note right of API: Score answers:<br/>exact, contains,<br/>semantic, function_call
+    API->>KV: Store score
+    API-->>Agent: scores + badge_url
+    
+    Agent->>API: GET /badge/{agent}
+    API-->>Agent: SVG badge
 ```
-Agent calls API → Answers challenges → Gets score + badge
+
+### Architecture
+
+```mermaid
+graph TB
+    subgraph "Benchmark API"
+        A[Challenge Router] --> B[Category Selector]
+        B --> C[Question Bank]
+        C --> D[Scoring Engine]
+        D --> E[Badge Generator]
+    end
+    
+    subgraph "Challenge Categories"
+        C --> S[🛡️ Safety]
+        C --> R[🧠 Reasoning]
+        C --> T[🔧 Tool Use]
+        C --> CO[🤝 Collaboration]
+        C --> M[💾 Memory]
+    end
+    
+    subgraph "Storage"
+        D --> KV[(Cloudflare KV)]
+        E --> KV
+    end
 ```
 
 ## Quick Start
