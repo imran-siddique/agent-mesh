@@ -1,0 +1,53 @@
+# Publish to PyPI on release
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (leave empty to use pyproject.toml version)'
+        required: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write  # Required for trusted publishing
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Update version (if specified)
+        if: github.event.inputs.version != ''
+        run: |
+          sed -i "s/version = \".*\"/version = \"${{ github.event.inputs.version }}\"/" pyproject.toml
+
+      - name: Build package
+        run: python -m build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        # Uses trusted publishing - no token needed if configured on PyPI
+        # Fallback to token if trusted publishing not set up:
+        # with:
+        #   password: ${{ secrets.PYPI_API_TOKEN }}
+
+      - name: Create GitHub Release Notes
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          VERSION=$(grep 'version = ' pyproject.toml | head -1 | cut -d'"' -f2)
+          echo "Published agentmesh-platform v${VERSION} to PyPI"
+          echo "Install with: pip install agentmesh-platform==${VERSION}"
