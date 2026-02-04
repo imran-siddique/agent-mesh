@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & Discussion
+    url: https://github.com/imran-siddique/agent-mesh/discussions
+    about: Ask questions and discuss ideas in GitHub Discussions
+  - name: Agent OS Integration
+    url: https://github.com/imran-siddique/agent-os
+    about: For IATP and kernel-related issues, see Agent OS
