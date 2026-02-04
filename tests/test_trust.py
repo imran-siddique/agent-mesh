@@ -243,7 +243,7 @@ class TestCapabilities:
         )
         
         assert grant.is_valid()
-        assert not grant.is_expired()
+        assert grant.active
 
 
 # Note: A2AAdapter and MCPAdapter tests removed as they're not exported from the trust module

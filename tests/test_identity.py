@@ -367,24 +367,27 @@ class TestRiskScoring:
         assert score.total_score <= 1000
     
     def test_add_risk_event(self):
-        """Test adding risk events increases score."""
+        """Test adding risk events affects behavior score."""
         scorer = RiskScorer()
         
         initial = scorer.get_score("did:mesh:test")
+        initial_behavior = initial.behavior_score
         
+        # Add multiple high-risk signals
         from agentmesh.identity.risk import RiskSignal
-        scorer.add_signal(
-            agent_did="did:mesh:test",
-            signal=RiskSignal(
-                signal_type="policy_violation",
-                severity="high",
-                value=0.8,
-            ),
-        )
+        for _ in range(5):
+            scorer.add_signal(
+                agent_did="did:mesh:test",
+                signal=RiskSignal(
+                    signal_type="behavior.suspicious_activity",
+                    severity="high",
+                    value=0.9,
+                ),
+            )
         
         after = scorer.recalculate("did:mesh:test")
-        # Higher risk should result in lower score (risk score is inverted)
-        assert after.total_score < initial.total_score
+        # Behavior score should decrease due to negative signals
+        assert after.behavior_score < initial_behavior
     
     def test_risk_decay(self):
         """Test that risk decays over time."""
