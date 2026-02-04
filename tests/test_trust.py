@@ -119,7 +119,6 @@ class TestTrustHandshake:
         """Test initiating a handshake."""
         handshake = TrustHandshake(
             agent_did="did:mesh:agent-a",
-            timeout_ms=100,  # Short timeout for test
         )
         
         result = await handshake.initiate(
@@ -144,7 +143,7 @@ class TestHandshakeResult:
         
         assert result.verified
         assert result.trust_score == 750
-        assert result.error is None
+        assert result.rejection_reason is None
     
     def test_failed_result(self):
         """Test creating a failed result."""
@@ -152,11 +151,11 @@ class TestHandshakeResult:
             verified=False,
             peer_did="did:mesh:peer",
             trust_score=0,
-            error="Peer not found",
+            rejection_reason="Peer not found",
         )
         
         assert not result.verified
-        assert result.error == "Peer not found"
+        assert result.rejection_reason == "Peer not found"
 
 
 class TestCapabilities:
@@ -165,94 +164,86 @@ class TestCapabilities:
     def test_capability_scope_creation(self):
         """Test creating a capability scope."""
         scope = CapabilityScope(
-            name="file_access",
-            resources=["file:///data/*"],
-            actions=["read", "write"],
+            agent_did="did:mesh:test",
         )
         
-        assert scope.name == "file_access"
-        assert "read" in scope.actions
-        assert "write" in scope.actions
+        # Add a grant
+        from agentmesh.trust import CapabilityGrant
+        grant = CapabilityGrant.create(
+            capability="read:file",
+            granted_to="did:mesh:test",
+            granted_by="did:mesh:admin",
+        )
+        scope.add_grant(grant)
+        
+        assert scope.agent_did == "did:mesh:test"
+        assert len(scope.grants) == 1
     
     def test_capability_scope_allows(self):
         """Test checking if action is allowed."""
         scope = CapabilityScope(
-            name="limited",
-            resources=["api://data"],
-            actions=["read"],
+            agent_did="did:mesh:test",
         )
         
-        assert scope.allows("read")
-        assert not scope.allows("write")
-        assert not scope.allows("delete")
+        from agentmesh.trust import CapabilityGrant
+        grant = CapabilityGrant.create(
+            capability="read:api",
+            granted_to="did:mesh:test",
+            granted_by="did:mesh:admin",
+        )
+        scope.add_grant(grant)
+        
+        assert scope.has_capability("read:api")
+        assert not scope.has_capability("write:api")
+        assert not scope.has_capability("delete:api")
     
     def test_capability_registry_register(self):
         """Test registering capabilities."""
         registry = CapabilityRegistry()
         
-        scope = CapabilityScope(
-            name="api_access",
-            resources=["https://api.example.com/*"],
-            actions=["get", "post"],
+        # Grant capabilities
+        grant = registry.grant(
+            capability="get:api",
+            to_agent="did:mesh:test",
+            from_agent="did:mesh:admin",
         )
         
-        registry.register(
-            agent_did="did:mesh:test",
-            scope=scope,
-        )
-        
-        caps = registry.get_capabilities("did:mesh:test")
-        assert len(caps) == 1
-        assert caps[0].name == "api_access"
+        scope = registry.get_scope("did:mesh:test")
+        assert len(scope.grants) == 1
+        assert grant.capability == "get:api"
     
     def test_capability_registry_is_allowed(self):
         """Test checking if action is allowed for agent."""
         registry = CapabilityRegistry()
         
-        registry.register(
-            agent_did="did:mesh:test",
-            scope=CapabilityScope(
-                name="limited",
-                resources=["resource:A"],
-                actions=["read"],
-            ),
+        registry.grant(
+            capability="read:resource",
+            to_agent="did:mesh:test",
+            from_agent="did:mesh:admin",
         )
         
         # Should be allowed
-        assert registry.is_allowed(
+        assert registry.check(
             agent_did="did:mesh:test",
-            resource="resource:A",
-            action="read",
+            capability="read:resource",
         )
         
-        # Should be denied - wrong resource
-        assert not registry.is_allowed(
+        # Should be denied - wrong capability
+        assert not registry.check(
             agent_did="did:mesh:test",
-            resource="resource:B",
-            action="read",
-        )
-        
-        # Should be denied - wrong action
-        assert not registry.is_allowed(
-            agent_did="did:mesh:test",
-            resource="resource:A",
-            action="write",
+            capability="write:resource",
         )
     
     def test_capability_grant(self):
         """Test capability grant."""
-        grant = CapabilityGrant(
-            agent_did="did:mesh:test",
-            scope=CapabilityScope(
-                name="test",
-                resources=["*"],
-                actions=["read"],
-            ),
+        grant = CapabilityGrant.create(
+            capability="read:test",
+            granted_to="did:mesh:test",
             granted_by="did:mesh:admin",
         )
         
         assert grant.is_valid()
-        assert not grant.is_expired()
+        assert grant.active
 
 
 # Note: A2AAdapter and MCPAdapter tests removed as they're not exported from the trust module
