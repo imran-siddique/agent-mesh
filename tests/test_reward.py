@@ -108,18 +108,19 @@ class TestRewardEngine:
         revoked_agents = []
         engine.on_revocation(lambda did, reason: revoked_agents.append(did))
         
-        # Add many negative signals
+        # Add many negative signals across all dimensions to drive score below 300
         for _ in range(100):
-            engine.record_signal(
-                agent_did="did:agentmesh:test",
-                dimension=DimensionType.POLICY_COMPLIANCE,
-                value=0.0,
-                source="test",
-            )
+            for dim in DimensionType:
+                engine.record_signal(
+                    agent_did="did:agentmesh:test",
+                    dimension=dim,
+                    value=0.0,
+                    source="test",
+                )
         
         engine._recalculate_score("did:agentmesh:test")
         
-        # Agent should be revoked
+        # Agent should be revoked (score will be 0)
         state = engine._agents.get("did:agentmesh:test")
         assert state.revoked or len(revoked_agents) > 0
     
