@@ -39,6 +39,4 @@ app.post('/api/v1/challenge/start', (req, res) => {
     });
 });
 
-app.listen(PORT, () => {
-    console.log(`Benchmark API listening at http://localhost:${PORT}`);
-});
+export default app;
