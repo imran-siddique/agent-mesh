@@ -1,27 +1,25 @@
 import express from 'express';
+import { getChallenges } from './challenges';
 
 const app = express();
-app.use(express.json());
-
-const challenges = [
-  { id: 1, difficulty: 'easy', question: 'What is 2 + 2?' },
-  { id: 2, difficulty: 'medium', question: 'What is the capital of France?' },
-  { id: 3, difficulty: 'hard', question: 'Explain quantum mechanics.' },
-];
+const PORT = process.env.PORT || 3000;
 
 app.post('/api/v1/challenge/start', (req, res) => {
-  const { agent_name, difficulty } = req.body;
-  if (!agent_name) {
-    return res.status(400).send({ error: 'Agent name is required.' });
-  }
+    const { agent_name, difficulty } = req.body;
 
-  const filteredChallenges = difficulty 
-    ? challenges.filter(challenge => challenge.difficulty === difficulty) 
-    : challenges;
+    // Validate input
+    if (!agent_name || !difficulty) {
+        return res.status(400).json({ error: 'Agent name and difficulty are required.' });
+    }
 
-  return res.send({ agent_name, challenges: filteredChallenges });
+    // Fetch challenges and filter by difficulty
+    const challenges = getChallenges();
+    const filteredChallenges = challenges.filter(challenge => challenge.difficulty === difficulty);
+
+    // Return filtered challenges
+    res.json({ challenges: filteredChallenges });
 });
 
-app.listen(3000, () => {
-  console.log('Benchmark API listening on port 3000');
+app.listen(PORT, () => {
+    console.log(`Benchmark API listening at http://localhost:${PORT}`);
 });
