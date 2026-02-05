@@ -1,23 +1,27 @@
 import express from 'express';
-import { getChallenges } from './challenges';
 
 const app = express();
 app.use(express.json());
 
+const challenges = [
+  { id: 1, difficulty: 'easy', question: 'What is 2 + 2?' },
+  { id: 2, difficulty: 'medium', question: 'What is the capital of France?' },
+  { id: 3, difficulty: 'hard', question: 'Explain quantum mechanics.' },
+];
+
 app.post('/api/v1/challenge/start', (req, res) => {
   const { agent_name, difficulty } = req.body;
-
-  // Fetch challenges and filter by difficulty if specified
-  let challenges = getChallenges();
-  if (difficulty) {
-    challenges = challenges.filter(challenge => challenge.difficulty === difficulty);
+  if (!agent_name) {
+    return res.status(400).send({ error: 'Agent name is required.' });
   }
 
-  res.json({ challenges });
+  const filteredChallenges = difficulty 
+    ? challenges.filter(challenge => challenge.difficulty === difficulty) 
+    : challenges;
+
+  return res.send({ agent_name, challenges: filteredChallenges });
 });
 
-// Other existing routes...
-
 app.listen(3000, () => {
-  console.log('Benchmark API running on port 3000');
+  console.log('Benchmark API listening on port 3000');
 });
