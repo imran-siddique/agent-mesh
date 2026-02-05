@@ -341,13 +341,14 @@ def policy(policy_file: str, validate: bool):
             else:
                 policy_data = json.load(f)
         
-        from agentmesh.governance import PolicyEngine
+        from agentmesh.governance import PolicyEngine, Policy
         engine = PolicyEngine()
         
         policies = policy_data.get("policies", [])
         for p in policies:
-            engine.load_policy(p)
-            console.print(f"  [green]✓[/green] Loaded: {p['name']} ({len(p.get('rules', []))} rules)")
+            policy_obj = Policy(**p)
+            engine.load_policy(policy_obj)
+            console.print(f"  [green]✓[/green] Loaded: {policy_obj.name} ({len(policy_obj.rules)} rules)")
         
         console.print(f"\n[green]Successfully loaded {len(policies)} policies[/green]")
         
@@ -361,8 +362,6 @@ def policy(policy_file: str, validate: bool):
 @click.option("--format", "fmt", type=click.Choice(["table", "json"]), default="table")
 def audit(agent: str, limit: int, fmt: str):
     """View audit logs."""
-    console.print(f"\n[bold blue]📋 Audit Log[/bold blue]\n")
-    
     # Simulated audit entries
     entries = [
         {"timestamp": "2026-01-31T10:15:00Z", "agent": "agent-1", "action": "credential_issued", "status": "success"},
@@ -378,8 +377,9 @@ def audit(agent: str, limit: int, fmt: str):
     entries = entries[:limit]
     
     if fmt == "json":
-        console.print(json.dumps(entries, indent=2))
+        click.echo(json.dumps(entries, indent=2))
     else:
+        console.print(f"\n[bold blue]📋 Audit Log[/bold blue]\n")
         table = Table(box=box.SIMPLE)
         table.add_column("Timestamp", style="dim")
         table.add_column("Agent")
