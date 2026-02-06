@@ -5,7 +5,7 @@ IATP-compatible trust handshakes for cross-agent and cross-cloud
 communication. Handshake completes in <200ms.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, Literal
 from pydantic import BaseModel, Field
 import hashlib
@@ -145,13 +145,38 @@ class TrustHandshake:
     3. Capabilities (attestation)
     
     Target: <200ms for cross-cloud handshakes.
+    
+    Features (from A2A review):
+    - TTL-based verification caching
+    - Synchronous verification option
     """
     
     MAX_HANDSHAKE_MS = 200
+    DEFAULT_CACHE_TTL_SECONDS = 900  # 15 minutes
     
-    def __init__(self, agent_did: str):
+    def __init__(self, agent_did: str, cache_ttl_seconds: int = DEFAULT_CACHE_TTL_SECONDS):
         self.agent_did = agent_did
         self._pending_challenges: dict[str, HandshakeChallenge] = {}
+        self._verified_peers: dict[str, tuple[HandshakeResult, datetime]] = {}
+        self._cache_ttl = timedelta(seconds=cache_ttl_seconds)
+    
+    def _get_cached_result(self, peer_did: str) -> Optional[HandshakeResult]:
+        """Get cached verification result if still valid."""
+        if peer_did in self._verified_peers:
+            result, timestamp = self._verified_peers[peer_did]
+            if datetime.utcnow() - timestamp < self._cache_ttl:
+                return result
+            # Expired - remove from cache
+            del self._verified_peers[peer_did]
+        return None
+    
+    def _cache_result(self, peer_did: str, result: HandshakeResult) -> None:
+        """Cache a verification result with timestamp."""
+        self._verified_peers[peer_did] = (result, datetime.utcnow())
+    
+    def clear_cache(self) -> None:
+        """Clear all cached verification results."""
+        self._verified_peers.clear()
     
     async def initiate(
         self,
@@ -159,6 +184,7 @@ class TrustHandshake:
         protocol: str = "iatp",
         required_trust_score: int = 700,
         required_capabilities: Optional[list[str]] = None,
+        use_cache: bool = True,
     ) -> HandshakeResult:
         """
         Initiate a trust handshake with a peer.
@@ -167,7 +193,23 @@ class TrustHandshake:
         1. Challenge: Send nonce to peer
         2. Response: Peer signs nonce + attestation
         3. Verification: Verify signature + trust score
+        
+        Args:
+            peer_did: The peer's DID
+            protocol: Protocol to use (default: iatp)
+            required_trust_score: Minimum trust score required
+            required_capabilities: Required capabilities (optional)
+            use_cache: Whether to use cached results (default: True)
+            
+        Returns:
+            HandshakeResult with verification status
         """
+        # Check cache first
+        if use_cache:
+            cached = self._get_cached_result(peer_did)
+            if cached:
+                return cached
+        
         start = datetime.utcnow()
         
         try:
@@ -179,9 +221,10 @@ class TrustHandshake:
             response = await self._get_peer_response(peer_did, challenge)
             
             if not response:
-                return HandshakeResult.failure(
+                result = HandshakeResult.failure(
                     peer_did, "No response from peer", start
                 )
+                return result
             
             # Phase 3: Verify response
             verification = await self._verify_response(
@@ -189,16 +232,21 @@ class TrustHandshake:
             )
             
             if not verification["valid"]:
-                return HandshakeResult.failure(
+                result = HandshakeResult.failure(
                     peer_did, verification["reason"], start
                 )
+                return result
             
-            return HandshakeResult.success(
+            result = HandshakeResult.success(
                 peer_did=peer_did,
                 trust_score=response.trust_score,
                 capabilities=response.capabilities,
                 started=start,
             )
+            
+            # Cache successful result
+            self._cache_result(peer_did, result)
+            return result
             
         except asyncio.TimeoutError:
             return HandshakeResult.failure(
