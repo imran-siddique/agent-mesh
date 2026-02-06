@@ -1,0 +1,55 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "langchain-agentmesh"
+version = "0.1.0"
+description = "AgentMesh trust layer integration for LangChain - cryptographic identity and trust verification for AI agents"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.9"
+authors = [
+    { name = "Imran Siddique", email = "imran@agentmesh.dev" }
+]
+keywords = [
+    "langchain",
+    "agentmesh",
+    "trust",
+    "identity",
+    "ai-agents",
+    "security",
+    "cryptography",
+    "multi-agent"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Security :: Cryptography",
+]
+dependencies = [
+    "langchain-core>=0.1.0",
+    "cryptography>=41.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/imran-siddique/agent-mesh"
+Documentation = "https://github.com/imran-siddique/agent-mesh/tree/master/packages/langchain-agentmesh"
+Repository = "https://github.com/imran-siddique/agent-mesh"
+Issues = "https://github.com/imran-siddique/agent-mesh/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["langchain_agentmesh"]
