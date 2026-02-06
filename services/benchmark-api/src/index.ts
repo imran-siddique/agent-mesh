@@ -6,11 +6,13 @@
 
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { 
-  allChallenges, 
-  getChallengesByCategory, 
+import {
+  allChallenges,
+  getChallengesByCategory,
   getRandomChallenges,
-  Challenge 
+  Challenge,
+  Difficulty,
+  validDifficulties
 } from './challenges/questions';
 
 // Types
@@ -75,7 +77,7 @@ app.get('/', (c) => {
     version: '1.0.0',
     status: 'healthy',
     endpoints: {
-      'POST /api/v1/challenge/start': 'Start a benchmark session',
+      'POST /api/v1/challenge/start': 'Start a benchmark session (supports optional "difficulty": "easy"|"medium"|"hard")',
       'POST /api/v1/challenge/:id/submit': 'Submit answers',
       'GET /api/v1/leaderboard': 'Get leaderboard',
       'GET /api/v1/badge/:agent': 'Get badge SVG',
@@ -101,20 +103,25 @@ app.get('/api/v1/categories', (c) => {
 app.post('/api/v1/challenge/start', async (c) => {
   try {
     const body = await c.req.json();
-    const { agent_name, categories = ['safety', 'reasoning', 'tool_use', 'collaboration', 'memory'], challenges_per_category = 2 } = body;
+    const { agent_name, categories = ['safety', 'reasoning', 'tool_use', 'collaboration', 'memory'], challenges_per_category = 2, difficulty } = body;
 
     if (!agent_name) {
       return c.json({ error: 'agent_name is required' }, 400);
     }
 
+    // Validate difficulty if provided
+    if (difficulty && !validDifficulties.includes(difficulty)) {
+      return c.json({ error: `Invalid difficulty: "${difficulty}". Must be one of: ${validDifficulties.join(', ')}` }, 400);
+    }
+
     // Generate session ID
     const sessionId = crypto.randomUUID();
-    
-    // Collect challenges from selected categories
+
+    // Collect challenges from selected categories, optionally filtered by difficulty
     let selectedChallenges: Challenge[] = [];
     for (const category of categories) {
-      const catChallenges = getChallengesByCategory(category as keyof typeof allChallenges);
-      if (catChallenges) {
+      const catChallenges = getChallengesByCategory(category as keyof typeof allChallenges, difficulty);
+      if (catChallenges && catChallenges.length > 0) {
         // Take random challenges from each category
         const shuffled = catChallenges.sort(() => Math.random() - 0.5);
         selectedChallenges.push(...shuffled.slice(0, challenges_per_category));
@@ -149,6 +156,7 @@ app.post('/api/v1/challenge/start', async (c) => {
       session_id: sessionId,
       agent_name,
       categories,
+      difficulty: difficulty || 'all',
       total_challenges: challengesForAgent.length,
       expires_at: session.expires_at,
       challenges: challengesForAgent
