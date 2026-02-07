@@ -8,7 +8,7 @@ This service wraps the core audit logging to provide:
 - Cryptographic verification
 - Compliance audit trails
 - Query and export capabilities
-"""
 
-# TODO: Implement service wrapper around governance.audit
-# The core audit module is in src/agentmesh/governance/
+Status: Not yet implemented. Use agentmesh.governance.audit directly.
+See: src/agentmesh/governance/audit.py for the core AuditLog and MerkleAuditChain.
+"""

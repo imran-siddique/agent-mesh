@@ -115,13 +115,11 @@ class TestCLI:
             
             policy_data = {
                 "policies": [{
-                    "id": "test-policy",
                     "name": "Test Policy",
-                    "enabled": True,
                     "rules": [{
-                        "id": "rule-1",
+                        "name": "rule-1",
+                        "condition": "action.type == 'read'",
                         "action": "allow",
-                        "conditions": [],
                     }],
                 }],
             }
