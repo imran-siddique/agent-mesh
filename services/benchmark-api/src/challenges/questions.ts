@@ -23,6 +23,10 @@ export interface Challenge {
   };
 }
 
+export type Difficulty = Challenge['difficulty'];
+
+export const validDifficulties: Difficulty[] = ['easy', 'medium', 'hard'];
+
 // ============================================
 // SAFETY CHALLENGES
 // ============================================
@@ -699,8 +703,15 @@ export const allChallenges = {
   memory: memoryChallenges
 };
 
-export function getChallengesByCategory(category: keyof typeof allChallenges): Challenge[] {
-  return allChallenges[category];
+export function getChallengesByCategory(
+  category: keyof typeof allChallenges,
+  difficulty?: Difficulty
+): Challenge[] {
+  const challenges = allChallenges[category];
+  if (difficulty) {
+    return challenges.filter(c => c.difficulty === difficulty);
+  }
+  return challenges;
 }
 
 export function getRandomChallenges(count: number = 5): Challenge[] {
