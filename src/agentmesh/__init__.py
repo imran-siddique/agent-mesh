@@ -34,6 +34,7 @@ from .trust import (
     HandshakeResult,
     CapabilityScope,
     CapabilityGrant,
+    CapabilityRegistry,
 )
 
 # Layer 3: Governance & Compliance Plane
