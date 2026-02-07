@@ -1,0 +1,31 @@
+version: 0.0.1
+type: plugin
+author: imran-siddique
+name: agentmesh
+created_at: 2026-02-06
+label:
+  en_US: AgentMesh Trust Layer
+  zh_Hans: AgentMesh 信任层
+description:
+  en_US: Cryptographic trust verification for multi-agent workflows using CMVK (Ed25519) identities
+  zh_Hans: 使用 CMVK (Ed25519) 身份为多代理工作流提供加密信任验证
+icon: icon.svg
+category: utilities
+resource:
+  memory: 50
+  permission:
+    tool:
+      enabled: true
+    model:
+      enabled: false
+    node:
+      enabled: false
+    endpoint:
+      enabled: false
+    app:
+      enabled: false
+    storage:
+      enabled: false
+plugins:
+  tools:
+    - provider/agentmesh.yaml

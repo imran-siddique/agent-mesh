@@ -24,10 +24,10 @@ jobs:
         run: pip install build
       
       - name: Build package
-        working-directory: packages/langchain-agentmesh
+        working-directory: integrations/langchain-agentmesh
         run: python -m build
       
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: packages/langchain-agentmesh/dist/
+          packages-dir: integrations/langchain-agentmesh/dist/
