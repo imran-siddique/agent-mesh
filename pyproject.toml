@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentmesh-platform"
-version = "1.0.0a2"
+version = "1.0.0a3"
 description = "The Secure Nervous System for Cloud-Native Agent Ecosystems - Identity, Trust, Reward, Governance"
 readme = "README.md"
 license = {text = "Apache-2.0"}
