@@ -8,7 +8,7 @@ This service wraps the core reward engine to provide:
 - Multi-dimensional scoring
 - Auto-revocation triggers
 - Behavioral pattern detection
-"""
 
-# TODO: Implement service wrapper around reward.engine
-# The core reward engine is in src/agentmesh/reward/
+Status: Not yet implemented. Use agentmesh.reward.engine directly.
+See: src/agentmesh/reward/engine.py for the core RewardEngine.
+"""

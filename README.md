@@ -129,15 +129,20 @@ pip install -e .
 
 | Example | Use Case | Key Features |
 |---------|----------|--------------|
+| [Registration Hello World](./examples/00-registration-hello-world/) | Agent registration walkthrough | Identity, DID, sponsor handshake |
 | [MCP Tool Server](./examples/01-mcp-tool-server/) | Secure MCP server with governance | Rate limiting, output sanitization, audit logs |
 | [Multi-Agent Customer Service](./examples/02-customer-service/) | Customer support automation | Delegation chains, trust handshakes, A2A |
 | [Healthcare HIPAA](./examples/03-healthcare-hipaa/) | HIPAA-compliant data analysis | Compliance automation, PHI protection, Merkle audit |
+| [DevOps Automation](./examples/04-devops-automation/) | Just-in-time DevOps credentials | Ephemeral creds, capability scoping |
 | [GitHub PR Review](./examples/05-github-integration/) | Code review agent | Output policies, shadow mode, trust decay |
 
 **Framework integrations:**
 - **[Claude Desktop](./docs/integrations/claude-desktop.md)** - Secure MCP tools with one command
 - [LangChain Integration](./examples/integrations/langchain.md) - Secure LangChain agents with policies
 - [CrewAI Integration](./examples/integrations/crewai.md) - Multi-agent crew governance
+- [LangGraph](./src/agentmesh/integrations/langgraph/) - Trust checkpoints for graph workflows (built-in)
+- [OpenAI Swarm](./src/agentmesh/integrations/swarm/) - Trust-verified handoffs (built-in)
+- [Dify](./integrations/dify/) - Trust middleware for Dify workflows
 
 📚 **[Browse all examples →](./examples/)**
 
@@ -286,10 +291,10 @@ rules:
 
 | Protocol | Status | Description |
 |----------|--------|-------------|
-| A2A | ✅ Alpha | Agent-to-agent coordination |
-| MCP | ✅ Alpha | Tool and resource binding |
-| IATP | ✅ Alpha | Trust handshakes (via agent-os) |
-| ACP | 🔄 Beta | Lightweight messaging |
+| A2A | ✅ Alpha | Agent-to-agent coordination (full adapter in `integrations/a2a/`) |
+| MCP | ✅ Alpha | Tool and resource binding (trust-gated server/client in `integrations/mcp/`) |
+| IATP | ✅ Alpha | Trust handshakes (via [agent-os](https://github.com/imran-siddique/agent-os), graceful fallback if unavailable) |
+| ACP | 🔜 Planned | Lightweight messaging (protocol bridge supports routing, adapter not yet implemented) |
 | SPIFFE | ✅ Alpha | Workload identity |
 
 ## Architecture
@@ -297,34 +302,48 @@ rules:
 ```
 agentmesh/
 ├── identity/           # Layer 1: Identity & Zero-Trust
-│   ├── agent_id.py     # Agent identity management
-│   ├── credentials.py  # Ephemeral credential issuance
-│   ├── delegation.py   # Delegation chains
-│   └── spiffe.py       # SPIFFE/SVID integration
+│   ├── agent_id.py     # Agent identity management (DIDs, Ed25519 keys)
+│   ├── credentials.py  # Ephemeral credential issuance (15-min TTL)
+│   ├── delegation.py   # Cryptographic delegation chains
+│   ├── spiffe.py       # SPIFFE/SVID integration
+│   ├── risk.py         # Continuous risk scoring
+│   └── sponsor.py      # Human sponsor accountability
 │
 ├── trust/              # Layer 2: Trust & Protocol Bridge
-│   ├── bridge.py       # Protocol bridge
-│   ├── handshake.py    # Trust handshakes
+│   ├── bridge.py       # Multi-protocol trust bridge (A2A/MCP/IATP/ACP)
+│   ├── handshake.py    # IATP trust handshakes
+│   ├── cards.py        # Trusted agent cards
 │   └── capability.py   # Capability scoping
 │
-├── protocols/          # Protocol implementations
-│   ├── a2a/            # A2A support
-│   ├── mcp/            # MCP support
-│   └── iatp/           # IATP (uses agent-os)
-│
 ├── governance/         # Layer 3: Governance & Compliance
-│   ├── policy.py       # Policy engine
-│   ├── compliance.py   # Compliance mapping
+│   ├── policy.py       # Declarative policy engine (YAML/JSON)
+│   ├── compliance.py   # Compliance mapping (EU AI Act, SOC2, HIPAA, GDPR)
 │   ├── audit.py        # Merkle-chained audit logs
-│   └── shadow.py       # Shadow mode
+│   └── shadow.py       # Shadow mode for policy testing
 │
 ├── reward/             # Layer 4: Reward & Learning
-│   ├── engine.py       # Reward engine
-│   ├── scoring.py      # Multi-dimensional scoring
-│   └── learning.py     # Adaptive learning
+│   ├── engine.py       # Multi-dimensional reward engine
+│   ├── scoring.py      # 5-dimension trust scoring
+│   └── learning.py     # Adaptive learning & weight optimization
+│
+├── integrations/       # Protocol & framework adapters
+│   ├── a2a/            # Google A2A protocol support
+│   ├── mcp/            # Anthropic MCP trust-gated server/client
+│   ├── langgraph/      # LangGraph trust checkpoints
+│   └── swarm/          # OpenAI Swarm trust-verified handoffs
 │
 ├── cli/                # Command-line interface
-└── sdk/                # Python SDK
+│   ├── main.py         # agentmesh init/register/status/audit/policy
+│   └── proxy.py        # MCP governance proxy
+│
+├── core/               # Low-level services
+│   └── identity/ca.py  # Certificate Authority (SPIFFE/SVID)
+│
+├── storage/            # Storage abstraction (memory, Redis, PostgreSQL)
+│
+├── observability/      # OpenTelemetry tracing & Prometheus metrics
+│
+└── services/           # Service wrappers (registry, audit, reward)
 ```
 
 ## Compliance
@@ -337,14 +356,23 @@ AgentMesh automates compliance mapping for:
 - **GDPR** — Data processing, consent, right to explanation
 
 ```python
-from agentmesh import ComplianceEngine
+from agentmesh import ComplianceEngine, ComplianceFramework
 
-compliance = ComplianceEngine(frameworks=["soc2", "hipaa"])
+compliance = ComplianceEngine(frameworks=[ComplianceFramework.SOC2, ComplianceFramework.HIPAA])
+
+# Check an action for violations
+violations = compliance.check_compliance(
+    agent_did="did:agentmesh:healthcare-agent",
+    action_type="data_access",
+    context={"data_type": "phi", "encrypted": True},
+)
 
 # Generate compliance report
+from datetime import datetime, timedelta
 report = compliance.generate_report(
-    agent_id="did:mesh:healthcare-agent",
-    period="2026-01",
+    framework=ComplianceFramework.SOC2,
+    period_start=datetime.utcnow() - timedelta(days=30),
+    period_end=datetime.utcnow(),
 )
 ```
 
@@ -366,6 +394,40 @@ report = compliance.generate_report(
 | Beta | Q2 2026 | IATP handshake, Reward Engine v1, Dashboard |
 | GA | Q3 2026 | Compliance automation, Enterprise features |
 | Scale | Q4 2026 | Agent Marketplace, Partner integrations |
+
+## Known Limitations & Open Work
+
+> Transparency about what's done and what isn't.
+
+### Not Yet Implemented
+
+| Item | Location | Notes |
+|------|----------|-------|
+| ACP protocol adapter | `trust/bridge.py` | Bridge routes ACP messages, but no dedicated `ACPAdapter` class yet |
+| Service wrapper for audit | `services/audit/` | Core audit module (`governance/audit.py`) is complete; service layer wrapper is a TODO |
+| Service wrapper for reward engine | `services/reward_engine/` | Core reward engine (`reward/engine.py`) is complete; service layer wrapper is a TODO |
+| Mesh control plane | `services/mesh-control-plane/` | Directory structure exists; implementation is minimal |
+| Delegation chain cryptographic verification | `packages/langchain-agentmesh/trust.py` | Simulated verification; full cryptographic chain validation not yet implemented |
+
+### Integration Caveats (Dify)
+
+The [Dify integration](./integrations/dify/) has these documented limitations:
+- Request body signature verification (`X-Agent-Signature` header) is not yet verified by middleware
+- Trust score time decay is not yet implemented (scores don't decay over time)
+- Audit logs are in-memory only (not persistent across multi-worker deployments)
+- Environment variable configuration requires programmatic initialization (not auto-wired)
+
+### Infrastructure
+
+- **Redis/PostgreSQL storage providers**: Implemented but require real infrastructure for testing (unit tests use in-memory provider)
+- **Kubernetes Operator**: GovernedAgent CRD defined, but no controller/operator to reconcile it
+- **SPIRE Integration**: SPIFFE identity module exists; real SPIRE agent integration is stubbed
+- **Performance targets**: Latency overhead (<5ms) and throughput (10k reg/sec) are design targets, not yet benchmarked
+
+### Documentation
+
+- `docs/rfcs/` — Directory exists, no RFCs written yet
+- `docs/architecture/` — Directory exists, no architecture docs yet (see `IMPLEMENTATION-NOTES.md` for current notes)
 
 ## Dependencies
 
