@@ -31,3 +31,4 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: integrations/langchain-agentmesh/dist/
+          password: ${{ secrets.PYPI_API_TOKEN }}
