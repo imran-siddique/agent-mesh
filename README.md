@@ -406,7 +406,7 @@ report = compliance.generate_report(
 | ACP protocol adapter | `trust/bridge.py` | Bridge routes ACP messages, but no dedicated `ACPAdapter` class yet |
 | Service wrapper for audit | `services/audit/` | Core audit module (`governance/audit.py`) is complete; service layer wrapper is a TODO |
 | Service wrapper for reward engine | `services/reward_engine/` | Core reward engine (`reward/engine.py`) is complete; service layer wrapper is a TODO |
-| Mesh control plane | `services/mesh-control-plane/` | Directory structure exists; implementation is minimal |
+| Mesh control plane | `services/mesh-control-plane/` | Placeholder directory; no implementation yet |
 | Delegation chain cryptographic verification | `packages/langchain-agentmesh/trust.py` | Simulated verification; full cryptographic chain validation not yet implemented |
 
 ### Integration Caveats (Dify)
