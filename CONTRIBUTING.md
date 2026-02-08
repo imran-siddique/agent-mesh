@@ -50,8 +50,6 @@ agent-mesh/
 │   ├── governance/         # L3: Policies & compliance
 │   ├── reward/             # L4: Reputation & learning
 │   ├── services/           # Backend services
-│   ├── protocols/          # Protocol implementations
-│   ├── sdk/                # Python SDK
 │   └── cli/                # Command-line interface
 ├── schemas/                # JSON schemas for validation
 ├── proto/                  # Protocol buffer definitions
