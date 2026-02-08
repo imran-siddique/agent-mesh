@@ -73,6 +73,53 @@ class AuditEntry(BaseModel):
         """Verify this entry's hash is correct."""
         return self.entry_hash == self.compute_hash()
 
+    # ── CloudEvents v1.0 ──────────────────────────────────
+
+    # Mapping of internal event_type strings to CloudEvents type URIs.
+    _CE_TYPE_MAP: dict[str, str] = {
+        "tool_invocation":     "ai.agentmesh.tool.invoked",
+        "tool_blocked":        "ai.agentmesh.tool.blocked",
+        "policy_evaluation":   "ai.agentmesh.policy.evaluation",
+        "policy_violation":    "ai.agentmesh.policy.violation",
+        "trust_handshake":     "ai.agentmesh.trust.handshake",
+        "trust_score_updated": "ai.agentmesh.trust.score.updated",
+        "agent_registered":    "ai.agentmesh.agent.registered",
+        "agent_verified":      "ai.agentmesh.agent.verified",
+        "audit_integrity":     "ai.agentmesh.audit.integrity.verified",
+    }
+
+    def to_cloudevent(self) -> dict:
+        """
+        Serialize this entry as a CloudEvents v1.0 JSON envelope.
+
+        Compatible with Azure Event Grid, AWS EventBridge, and Splunk HEC.
+        See docs/CLOUDEVENTS_SCHEMA.md for the full specification.
+        """
+        ce_type = self._CE_TYPE_MAP.get(
+            self.event_type, f"ai.agentmesh.{self.event_type}"
+        )
+        return {
+            "specversion": "1.0",
+            "id": self.entry_id,
+            "type": ce_type,
+            "source": self.agent_did,
+            "time": self.timestamp.isoformat() + "Z",
+            "datacontenttype": "application/json",
+            "data": {
+                "action": self.action,
+                "resource": self.resource,
+                "outcome": self.outcome,
+                "policy_decision": self.policy_decision,
+                "matched_rule": self.matched_rule,
+                **self.data,
+            },
+            # AgentMesh extension attributes
+            "agentmeshentryhash": self.entry_hash,
+            "agentmeshprevioushash": self.previous_hash,
+            **({"traceid": self.trace_id} if self.trace_id else {}),
+            **({"sessionid": self.session_id} if self.session_id else {}),
+        }
+
 
 class MerkleNode(BaseModel):
     """Node in a Merkle tree for audit verification."""
@@ -379,3 +426,17 @@ class AuditLog:
             "entry_count": len(entries),
             "entries": [e.model_dump() for e in entries],
         }
+
+    def export_cloudevents(
+        self,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+    ) -> list[dict]:
+        """
+        Export audit entries as CloudEvents v1.0 JSON envelopes.
+
+        Each element is a standalone CloudEvents object suitable for
+        ingestion by Azure Event Grid, AWS EventBridge, or Splunk HEC.
+        """
+        entries = self.query(start_time=start_time, end_time=end_time, limit=10000)
+        return [e.to_cloudevent() for e in entries]

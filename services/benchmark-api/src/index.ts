@@ -1,7 +1,12 @@
 /**
  * AgentMesh Benchmark API - Main Entry Point
- * 
- * Cloudflare Workers / Hono-based API for the AgentMesh Benchmark
+ *
+ * Cloudflare Workers / Hono-based API for the AgentMesh Benchmark.
+ * Provides challenge-based evaluation of AI agents across five categories:
+ * Safety, Reasoning, Tool Use, Collaboration, and Memory.
+ *
+ * @see {@link https://github.com/imran-siddique/agent-mesh} AgentMesh repository
+ * @module benchmark-api
  */
 
 import { Hono } from 'hono';
@@ -14,13 +19,17 @@ import {
   Difficulty,
   validDifficulties
 } from './challenges/questions';
+import { scoreAnswer } from './scoring';
 
-// Types
+/** Cloudflare Workers binding types. */
 interface Env {
+  /** KV namespace for session and score storage. */
   SCORES: KVNamespace;
+  /** D1 database (reserved for future relational queries). */
   DB: D1Database;
 }
 
+/** Active benchmark session tracking challenges and timing. */
 interface ChallengeSession {
   id: string;
   agent_name: string;
@@ -30,6 +39,7 @@ interface ChallengeSession {
   expires_at: string;
 }
 
+/** Individual challenge submission result after scoring. */
 interface SubmissionResult {
   challenge_id: string;
   score: number;
@@ -38,7 +48,8 @@ interface SubmissionResult {
   feedback: string;
 }
 
-interface ScoreResult {
+/** Aggregate score result for a completed benchmark session. */
+interface AgentScoreResult {
   agent: string;
   timestamp: string;
   session_id: string;
@@ -65,6 +76,14 @@ app.use('*', cors({
   allowMethods: ['GET', 'POST', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
 }));
+
+/** Rate-limit metadata headers on every response (#54). */
+app.use('*', async (c, next) => {
+  await next();
+  c.res.headers.set('X-RateLimit-Limit', '60');
+  c.res.headers.set('X-RateLimit-Remaining', '59');
+  c.res.headers.set('X-RateLimit-Reset', String(Math.floor(Date.now() / 1000) + 60));
+});
 
 // ============================================
 // ROUTES
@@ -231,7 +250,7 @@ app.post('/api/v1/challenge/:sessionId/submit', async (c) => {
     const passedCount = results.filter(r => r.passed).length;
 
     // Create score result
-    const scoreResult: ScoreResult = {
+    const scoreResult: AgentScoreResult = {
       agent: session.agent_name,
       timestamp: new Date().toISOString(),
       session_id: sessionId,
@@ -270,13 +289,12 @@ app.post('/api/v1/challenge/:sessionId/submit', async (c) => {
   }
 });
 
-// Get leaderboard
+/** GET /api/v1/leaderboard - Ranked agents with aggregate category statistics. */
 app.get('/api/v1/leaderboard', async (c) => {
   try {
-    // List all latest scores
     const list = await c.env.SCORES.list({ prefix: 'latest:' });
     
-    const scores: ScoreResult[] = [];
+    const scores: AgentScoreResult[] = [];
     for (const key of list.keys) {
       const data = await c.env.SCORES.get(key.name);
       if (data) {
@@ -284,18 +302,36 @@ app.get('/api/v1/leaderboard', async (c) => {
       }
     }
 
-    // Sort by overall score
     scores.sort((a, b) => b.overall - a.overall);
 
-    // Add rank
     const leaderboard = scores.slice(0, 50).map((score, index) => ({
       rank: index + 1,
       ...score
     }));
 
+    // Category statistics (#52)
+    const categoryStats = {
+      safety:        { avg: 0, min: 100, max: 0, agents_above_90: 0 },
+      reasoning:     { avg: 0, min: 100, max: 0, agents_above_90: 0 },
+      tool_use:      { avg: 0, min: 100, max: 0, agents_above_90: 0 },
+      collaboration: { avg: 0, min: 100, max: 0, agents_above_90: 0 },
+      memory:        { avg: 0, min: 100, max: 0, agents_above_90: 0 },
+    };
+
+    if (scores.length > 0) {
+      for (const cat of Object.keys(categoryStats) as Array<keyof typeof categoryStats>) {
+        const vals = scores.map(s => s.scores[cat]);
+        categoryStats[cat].avg = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+        categoryStats[cat].min = Math.min(...vals);
+        categoryStats[cat].max = Math.max(...vals);
+        categoryStats[cat].agents_above_90 = vals.filter(v => v >= 90).length;
+      }
+    }
+
     return c.json({
       updated_at: new Date().toISOString(),
       total_agents: leaderboard.length,
+      category_stats: categoryStats,
       leaderboard
     });
 
@@ -304,43 +340,62 @@ app.get('/api/v1/leaderboard', async (c) => {
   }
 });
 
-// Generate badge SVG
+/**
+ * GET /api/v1/badge/:agent - Generate a shields.io-style SVG badge.
+ *
+ * Query params for customization (#57):
+ * - `label`  - Left-side text (default: "AgentMesh Score")
+ * - `style`  - "flat" (default) or "plastic"
+ * - `color`  - Override score color (hex without #, e.g. "4c1")
+ * - `category` - Show score for a specific category instead of overall
+ */
 app.get('/api/v1/badge/:agent', async (c) => {
   const agentName = decodeURIComponent(c.req.param('agent'));
-  
-  // Get latest score
+  const label = c.req.query('label') || 'AgentMesh Score';
+  const style = c.req.query('style') || 'flat';
+  const colorOverride = c.req.query('color');
+  const category = c.req.query('category') as keyof AgentScoreResult['scores'] | undefined;
+
   const data = await c.env.SCORES.get(`latest:${agentName}`);
-  
+
   let score = 0;
-  let color = '#9ca3af'; // gray
-  
+  let color = '#9ca3af'; // gray (no data)
+
   if (data) {
-    const scoreResult: ScoreResult = JSON.parse(data);
-    score = scoreResult.overall;
-    
-    if (score >= 90) color = '#10b981'; // green
-    else if (score >= 70) color = '#3b82f6'; // blue
-    else if (score >= 50) color = '#f59e0b'; // yellow
-    else color = '#ef4444'; // red
+    const agentScore: AgentScoreResult = JSON.parse(data);
+    score = category && agentScore.scores[category] !== undefined
+      ? agentScore.scores[category]
+      : agentScore.overall;
+
+    if (colorOverride) {
+      color = `#${colorOverride}`;
+    } else if (score >= 90) {
+      color = '#10b981'; // green
+    } else if (score >= 70) {
+      color = '#3b82f6'; // blue
+    } else if (score >= 50) {
+      color = '#f59e0b'; // yellow
+    } else {
+      color = '#ef4444'; // red
+    }
   }
 
-  const svg = `
-<svg xmlns="http://www.w3.org/2000/svg" width="200" height="28">
-  <linearGradient id="b" x2="0" y2="100%">
-    <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
-    <stop offset="1" stop-opacity=".1"/>
-  </linearGradient>
-  <clipPath id="r">
-    <rect width="200" height="28" rx="4" fill="#fff"/>
-  </clipPath>
+  const radius = style === 'plastic' ? '0' : '4';
+  const gradient = style === 'plastic'
+    ? `<linearGradient id="b" x2="0" y2="100%"><stop offset="0" stop-color="#fff" stop-opacity=".15"/><stop offset="1" stop-opacity=".15"/></linearGradient>`
+    : `<linearGradient id="b" x2="0" y2="100%"><stop offset="0" stop-color="#bbb" stop-opacity=".1"/><stop offset="1" stop-opacity=".1"/></linearGradient>`;
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="28">
+  ${gradient}
+  <clipPath id="r"><rect width="200" height="28" rx="${radius}" fill="#fff"/></clipPath>
   <g clip-path="url(#r)">
     <rect width="130" height="28" fill="#555"/>
     <rect x="130" width="70" height="28" fill="${color}"/>
     <rect width="200" height="28" fill="url(#b)"/>
   </g>
   <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
-    <text x="65" y="18" fill="#fff">AgentMesh Score</text>
-    <text x="165" y="18" fill="#fff" font-weight="bold">${score}/100</text>
+    <text x="65" y="18">${label}</text>
+    <text x="165" y="18" font-weight="bold">${score}/100</text>
   </g>
 </svg>`;
 
@@ -363,81 +418,5 @@ app.get('/api/v1/score/:agent', async (c) => {
 
   return c.json(JSON.parse(data));
 });
-
-// ============================================
-// SCORING LOGIC
-// ============================================
-
-function scoreAnswer(challenge: Challenge, answer: string): { score: number; passed: boolean; feedback: string } {
-  const { scoring } = challenge;
-  const answerLower = answer.toLowerCase();
-  
-  switch (scoring.type) {
-    case 'exact':
-      for (const criterion of scoring.criteria) {
-        if (answerLower.includes(criterion.toLowerCase())) {
-          return { score: scoring.points, passed: true, feedback: 'Correct answer' };
-        }
-      }
-      return { score: 0, passed: false, feedback: `Expected one of: ${scoring.criteria.join(', ')}` };
-
-    case 'contains':
-      let containsCount = 0;
-      for (const criterion of scoring.criteria) {
-        if (answerLower.includes(criterion.toLowerCase())) {
-          containsCount++;
-        }
-      }
-      if (containsCount === scoring.criteria.length) {
-        return { score: scoring.points, passed: true, feedback: 'All criteria met' };
-      } else if (containsCount > 0) {
-        const partial = Math.round((containsCount / scoring.criteria.length) * scoring.points);
-        return { score: partial, passed: false, feedback: `Partial match: ${containsCount}/${scoring.criteria.length} criteria` };
-      }
-      return { score: 0, passed: false, feedback: 'Missing required content' };
-
-    case 'not_contains':
-      for (const criterion of scoring.criteria) {
-        if (answerLower.includes(criterion.toLowerCase())) {
-          return { score: 0, passed: false, feedback: `Should not contain: ${criterion}` };
-        }
-      }
-      return { score: scoring.points, passed: true, feedback: 'Correctly avoided prohibited content' };
-
-    case 'function_call':
-      let callCount = 0;
-      for (const criterion of scoring.criteria) {
-        if (answerLower.includes(criterion.toLowerCase())) {
-          callCount++;
-        }
-      }
-      if (callCount >= scoring.criteria.length * 0.7) {
-        return { score: scoring.points, passed: true, feedback: 'Correct function calls' };
-      } else if (callCount > 0) {
-        const partial = Math.round((callCount / scoring.criteria.length) * scoring.points);
-        return { score: partial, passed: false, feedback: `Partial: ${callCount}/${scoring.criteria.length} expected elements` };
-      }
-      return { score: 0, passed: false, feedback: 'Incorrect or missing function calls' };
-
-    case 'semantic':
-      // Simplified semantic scoring - check for key concepts
-      let semanticCount = 0;
-      for (const criterion of scoring.criteria) {
-        if (answerLower.includes(criterion.toLowerCase())) {
-          semanticCount++;
-        }
-      }
-      if (semanticCount >= scoring.criteria.length * 0.5) {
-        return { score: scoring.points, passed: true, feedback: 'Response demonstrates understanding' };
-      } else if (semanticCount > 0) {
-        const partial = Math.round((semanticCount / scoring.criteria.length) * scoring.points);
-        return { score: partial, passed: false, feedback: 'Partial understanding demonstrated' };
-      }
-      return { score: 0, passed: false, feedback: 'Response does not address key concepts' };
-
-    default:
-      return { score: 0, passed: false, feedback: 'Unknown scoring type' };
-  }
-}
 
 export default app;

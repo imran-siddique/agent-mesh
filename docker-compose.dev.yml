@@ -1,0 +1,71 @@
+# AgentMesh – Local Development Environment
+#
+# Start:   docker compose -f docker-compose.dev.yml up
+# Stop:    docker compose -f docker-compose.dev.yml down
+# Rebuild: docker compose -f docker-compose.dev.yml up --build
+
+services:
+  # ── AgentMesh Core ──────────────────────────────────────
+  agentmesh:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - LOG_LEVEL=debug
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: >
+      python -m agentmesh.cli serve --host 0.0.0.0 --port 8000
+
+  # ── Redis (cache & pub/sub) ─────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ── Example Agent ───────────────────────────────────────
+  example-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    environment:
+      - AGENTMESH_URL=http://agentmesh:8000
+      - AGENT_NAME=example-echo-agent
+    depends_on:
+      - agentmesh
+    command: >
+      python -c "
+      from agentmesh import Agent, MeshClient
+      import time, os
+
+      client = MeshClient(os.environ['AGENTMESH_URL'])
+      agent = Agent(name=os.environ['AGENT_NAME'], capabilities=['echo'])
+      client.register(agent)
+      print(f'✅ {agent.name} registered')
+
+      while True:
+          time.sleep(30)
+          print(f'💓 {agent.name} heartbeat')
+      "
+
+  # ── Grafana (optional dashboards) ──────────────────────
+  grafana:
+    image: grafana/grafana-oss:11.0.0
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    profiles:
+      - monitoring
