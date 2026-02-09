@@ -24,6 +24,10 @@
 
 ---
 
+<p align="center">
+  <img src="assets/demo-terminal.svg" alt="AgentMesh Terminal Demo" width="700"/>
+</p>
+
 ## Overview
 
 AgentMesh is the first platform purpose-built for the **Governed Agent Mesh** — the cloud-native, multi-vendor network of AI agents that will define enterprise operations.
