@@ -13,6 +13,7 @@ from .swarm import TrustedSwarm, TrustPolicy, TrustedAgent, HandoffVerifier
 from .langflow import TrustGatedFlow, TrustVerificationComponent, IdentityComponent
 from .flowise import TrustGatedFlowiseClient, FlowiseNodeIdentity, FlowiseTrustPolicy
 from .haystack import TrustedPipeline, TrustGateComponent, TrustAgentComponent
+from .http_middleware import TrustMiddleware, TrustConfig
 
 __all__ = [
     # A2A
@@ -41,4 +42,7 @@ __all__ = [
     "TrustedPipeline",
     "TrustGateComponent",
     "TrustAgentComponent",
+    # HTTP Middleware
+    "TrustMiddleware",
+    "TrustConfig",
 ]
