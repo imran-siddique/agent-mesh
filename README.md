@@ -1,3 +1,5 @@
+<div align="center">
+
 # AgentMesh
 
 **The Secure Nervous System for Cloud-Native Agent Ecosystems**
@@ -10,10 +12,15 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
 [![Agent-OS Compatible](https://img.shields.io/badge/agent--os-compatible-green.svg)](https://github.com/imran-siddique/agent-os)
+[![Featured in awesome-llm-apps](https://img.shields.io/badge/Featured%20in-awesome--llm--apps-orange)](https://github.com/Shubhamsaboo/awesome-llm-apps)
 
 > ⭐ **If this project helps you, please star it!** It helps others discover AgentMesh.
 
 > 🔗 **Part of the Agent Ecosystem** — Works seamlessly with [Agent-OS](https://github.com/imran-siddique/agent-os) for IATP trust protocol
+
+[Quick Start](#quick-start) • [MCP Proxy](#the-agentmesh-proxy-ssl-for-ai-agents) • [Examples](#examples--integrations) • [Agent-OS](https://github.com/imran-siddique/agent-os)
+
+</div>
 
 ---
 
