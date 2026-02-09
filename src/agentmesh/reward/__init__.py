@@ -8,6 +8,7 @@ against a multi-dimensional governance rubric.
 from .engine import RewardEngine
 from .scoring import TrustScore, RewardDimension, RewardSignal
 from .learning import AdaptiveLearner, WeightOptimizer
+from .anomaly import BehavioralAnomalyDetector, AnomalyReport
 
 __all__ = [
     "RewardEngine",
@@ -16,4 +17,6 @@ __all__ = [
     "RewardSignal",
     "AdaptiveLearner",
     "WeightOptimizer",
+    "BehavioralAnomalyDetector",
+    "AnomalyReport",
 ]
