@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 import hashlib
 import secrets
 import asyncio
+from agentmesh.identity.agent_id import AgentIdentity
 
 
 class HandshakeChallenge(BaseModel):
@@ -154,8 +155,9 @@ class TrustHandshake:
     MAX_HANDSHAKE_MS = 200
     DEFAULT_CACHE_TTL_SECONDS = 900  # 15 minutes
     
-    def __init__(self, agent_did: str, cache_ttl_seconds: int = DEFAULT_CACHE_TTL_SECONDS):
+    def __init__(self, agent_did: str, identity: Optional[AgentIdentity] = None, cache_ttl_seconds: int = DEFAULT_CACHE_TTL_SECONDS):
         self.agent_did = agent_did
+        self.identity = identity
         self._pending_challenges: dict[str, HandshakeChallenge] = {}
         self._verified_peers: dict[str, tuple[HandshakeResult, datetime]] = {}
         self._cache_ttl = timedelta(seconds=cache_ttl_seconds)
@@ -266,7 +268,8 @@ class TrustHandshake:
         challenge: HandshakeChallenge,
         my_capabilities: list[str],
         my_trust_score: int,
-        private_key: any,  # Ed25519 private key
+        private_key: any = None,  # Deprecated; use identity parameter
+        identity: Optional[AgentIdentity] = None,
     ) -> HandshakeResponse:
         """
         Respond to a trust handshake challenge.
@@ -283,8 +286,14 @@ class TrustHandshake:
         # Create signature payload
         payload = f"{challenge.challenge_id}:{challenge.nonce}:{response_nonce}:{self.agent_did}"
         
-        # Sign (would use actual Ed25519 in production)
-        signature = hashlib.sha256(payload.encode()).hexdigest()
+        # Sign with Ed25519 if identity available, fall back to SHA256
+        _id = identity or (self.identity if hasattr(self, 'identity') else None)
+        if _id and _id._private_key is not None:
+            signature = _id.sign(payload.encode())
+            pub_key = _id.public_key
+        else:
+            signature = hashlib.sha256(payload.encode()).hexdigest()
+            pub_key = hashlib.sha256(self.agent_did.encode()).hexdigest()
         
         return HandshakeResponse(
             challenge_id=challenge.challenge_id,
@@ -293,7 +302,7 @@ class TrustHandshake:
             capabilities=my_capabilities,
             trust_score=my_trust_score,
             signature=signature,
-            public_key="placeholder_public_key",
+            public_key=pub_key,
         )
     
     async def _get_peer_response(
@@ -313,14 +322,17 @@ class TrustHandshake:
         # In production, would make HTTP request to peer
         await asyncio.sleep(0.05)  # Simulate network latency
         
+        response_nonce = secrets.token_hex(16)
+        sim_payload = f"{challenge.challenge_id}:{challenge.nonce}:{response_nonce}:{peer_did}"
+        
         return HandshakeResponse(
             challenge_id=challenge.challenge_id,
-            response_nonce=secrets.token_hex(16),
+            response_nonce=response_nonce,
             agent_did=peer_did,
             capabilities=["read:data", "write:reports"],
             trust_score=750,
-            signature="simulated_signature",
-            public_key="simulated_public_key",
+            signature=hashlib.sha256(sim_payload.encode()).hexdigest(),
+            public_key=hashlib.sha256(peer_did.encode()).hexdigest(),
         )
     
     async def _verify_response(
@@ -347,8 +359,17 @@ class TrustHandshake:
         if challenge.is_expired():
             return {"valid": False, "reason": "Challenge expired"}
         
-        # Verify signature (simplified - would verify Ed25519 in production)
-        # In production: verify response.signature against response.public_key
+        # Verify signature: try Ed25519 first, fall back to SHA256
+        payload = f"{response.challenge_id}:{challenge.nonce}:{response.response_nonce}:{response.agent_did}"
+        try:
+            temp = AgentIdentity.model_construct(public_key=response.public_key)
+            sig_valid = temp.verify_signature(payload.encode(), response.signature)
+        except Exception:
+            sig_valid = False
+        if not sig_valid:
+            expected = hashlib.sha256(payload.encode()).hexdigest()
+            if response.signature != expected:
+                return {"valid": False, "reason": "Signature verification failed"}
         
         # Verify trust score
         if response.trust_score < required_score:

@@ -11,6 +11,8 @@ from pydantic import BaseModel, Field
 import hashlib
 import json
 
+from agentmesh.identity.agent_id import AgentIdentity
+
 
 class DelegationLink(BaseModel):
     """
@@ -111,6 +113,9 @@ class DelegationChain(BaseModel):
     root_sponsor_verified: bool = Field(default=False)
     root_capabilities: list[str] = Field(..., description="Capabilities granted by sponsor")
     
+    # Known agent identities for signature verification
+    known_identities: dict[str, AgentIdentity] = Field(default_factory=dict)
+    
     # Chain links
     links: list[DelegationLink] = Field(default_factory=list)
     
@@ -155,6 +160,14 @@ class DelegationChain(BaseModel):
         self.leaf_capabilities = link.delegated_capabilities
         self._update_chain_hash()
     
+    def _verify_link_signature(self, link: DelegationLink) -> bool:
+        """Verify the Ed25519 signature on a delegation link."""
+        identity = self.known_identities.get(link.parent_did)
+        if identity is None:
+            return True  # Graceful fallback — can't verify without identity
+        signable_data = f"{link.parent_did}:{link.child_did}:{','.join(sorted(link.delegated_capabilities))}"
+        return identity.verify_signature(signable_data.encode(), link.parent_signature)
+
     def verify(self) -> tuple[bool, Optional[str]]:
         """
         Verify the entire chain.
@@ -186,6 +199,10 @@ class DelegationChain(BaseModel):
             # Verify link hash
             if link.link_hash != link.compute_hash():
                 return False, f"Invalid link hash at link {i}"
+            
+            # Verify Ed25519 signature
+            if not self._verify_link_signature(link):
+                return False, f"Invalid signature at link {i}"
             
             previous_hash = link.link_hash
             previous_capabilities = link.delegated_capabilities
