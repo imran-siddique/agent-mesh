@@ -9,6 +9,7 @@ from .policy import PolicyEngine, Policy, PolicyRule, PolicyDecision
 from .compliance import ComplianceEngine, ComplianceFramework, ComplianceReport
 from .audit import AuditLog, AuditEntry, MerkleAuditChain
 from .shadow import ShadowMode, ShadowResult
+from .opa import OPAEvaluator, OPADecision, load_rego_into_engine
 
 __all__ = [
     "PolicyEngine",
@@ -23,4 +24,7 @@ __all__ = [
     "MerkleAuditChain",
     "ShadowMode",
     "ShadowResult",
+    "OPAEvaluator",
+    "OPADecision",
+    "load_rego_into_engine",
 ]
