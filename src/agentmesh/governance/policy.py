@@ -218,6 +218,7 @@ class PolicyEngine:
     def __init__(self):
         self._policies: dict[str, Policy] = {}
         self._rate_limits: dict[str, dict] = {}  # rule_name -> {count, reset_at}
+        self._rego_evaluators: list[tuple[str, Any]] = []  # [(package, OPAEvaluator)]
     
     def load_policy(self, policy: Policy) -> None:
         """Load a policy into the engine."""
@@ -234,66 +235,6 @@ class PolicyEngine:
         policy = Policy.from_json(json_content)
         self.load_policy(policy)
         return policy
-    
-    def evaluate(
-        self,
-        agent_did: str,
-        context: dict,
-    ) -> PolicyDecision:
-        """
-        Evaluate all applicable policies for an action.
-        
-        Args:
-            agent_did: The agent performing the action
-            context: Context for evaluation (action, data, etc.)
-            
-        Returns:
-            PolicyDecision with allow/deny and details
-        """
-        start = datetime.utcnow()
-        
-        # Get applicable policies
-        applicable = [p for p in self._policies.values() if p.applies_to(agent_did)]
-        
-        if not applicable:
-            # No policies = default allow
-            return PolicyDecision(
-                allowed=True,
-                action="allow",
-                reason="No applicable policies",
-                evaluated_at=start,
-            )
-        
-        # Evaluate rules in priority order
-        all_rules = []
-        for policy in applicable:
-            for rule in policy.rules:
-                all_rules.append((policy, rule))
-        
-        all_rules.sort(key=lambda x: x[1].priority, reverse=True)
-        
-        for policy, rule in all_rules:
-            if rule.evaluate(context):
-                # Rule matched
-                decision = self._apply_rule(rule, policy, context)
-                
-                # Calculate timing
-                elapsed = (datetime.utcnow() - start).total_seconds() * 1000
-                decision.evaluation_ms = elapsed
-                
-                return decision
-        
-        # No rules matched - use default action
-        default = applicable[0].default_action if applicable else "allow"
-        elapsed = (datetime.utcnow() - start).total_seconds() * 1000
-        
-        return PolicyDecision(
-            allowed=(default == "allow"),
-            action=default,
-            reason="No matching rules, using default",
-            evaluated_at=start,
-            evaluation_ms=elapsed,
-        )
     
     def _apply_rule(self, rule: PolicyRule, policy: Policy, context: dict = None) -> PolicyDecision:
         """Apply a matched rule and generate actionable error messages."""
@@ -431,3 +372,84 @@ class PolicyEngine:
             del self._policies[name]
             return True
         return False
+
+    # ── OPA/Rego integration ──────────────────────────────────
+
+    def load_rego(self, rego_path: str = None, rego_content: str = None, package: str = "agentmesh") -> "OPAEvaluator":
+        """
+        Load a .rego file alongside YAML/JSON policies.
+
+        The OPA evaluator runs in parallel: YAML rules are checked first,
+        and if no rule matches, the Rego policy is consulted.
+
+        Args:
+            rego_path: Path to a .rego file
+            rego_content: Inline Rego policy string
+            package: Rego package name (used to build query path)
+
+        Returns:
+            OPAEvaluator instance for direct use
+        """
+        from agentmesh.governance.opa import OPAEvaluator
+        evaluator = OPAEvaluator(mode="local", rego_path=rego_path, rego_content=rego_content)
+        self._rego_evaluators.append((package, evaluator))
+        return evaluator
+
+    def evaluate(
+        self,
+        agent_did: str,
+        context: dict,
+    ) -> PolicyDecision:
+        """
+        Evaluate all applicable policies for an action.
+
+        Order: YAML/JSON rules first, then Rego policies.
+        """
+        start = datetime.utcnow()
+
+        # 1. Check YAML/JSON policies first
+        applicable = [p for p in self._policies.values() if p.applies_to(agent_did)]
+
+        if applicable:
+            all_rules = []
+            for policy in applicable:
+                for rule in policy.rules:
+                    all_rules.append((policy, rule))
+
+            all_rules.sort(key=lambda x: x[1].priority, reverse=True)
+
+            for policy, rule in all_rules:
+                if rule.evaluate(context):
+                    decision = self._apply_rule(rule, policy, context)
+                    elapsed = (datetime.utcnow() - start).total_seconds() * 1000
+                    decision.evaluation_ms = elapsed
+                    return decision
+
+        # 2. Check Rego policies
+        for package, evaluator in self._rego_evaluators:
+            query = f"data.{package}.allow"
+            opa_result = evaluator.evaluate(query, context)
+            if opa_result.error is None:
+                elapsed = (datetime.utcnow() - start).total_seconds() * 1000
+                return PolicyDecision(
+                    allowed=opa_result.allowed,
+                    action="allow" if opa_result.allowed else "deny",
+                    reason=f"OPA/Rego policy ({package}): {'allowed' if opa_result.allowed else 'denied'}",
+                    evaluated_at=start,
+                    evaluation_ms=elapsed,
+                )
+
+        # 3. No rules matched - use default
+        if applicable:
+            default = applicable[0].default_action
+        else:
+            default = "allow"  # No policies = default allow
+
+        elapsed = (datetime.utcnow() - start).total_seconds() * 1000
+        return PolicyDecision(
+            allowed=(default == "allow"),
+            action=default,
+            reason="No matching rules, using default",
+            evaluated_at=start,
+            evaluation_ms=elapsed,
+        )
