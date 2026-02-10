@@ -9,6 +9,7 @@ from .engine import RewardEngine
 from .scoring import TrustScore, RewardDimension, RewardSignal
 from .learning import AdaptiveLearner, WeightOptimizer
 from .anomaly import BehavioralAnomalyDetector, AnomalyReport
+from .trust_decay import NetworkTrustEngine, TrustEvent, RegimeChangeAlert
 
 __all__ = [
     "RewardEngine",
@@ -19,4 +20,7 @@ __all__ = [
     "WeightOptimizer",
     "BehavioralAnomalyDetector",
     "AnomalyReport",
+    "NetworkTrustEngine",
+    "TrustEvent",
+    "RegimeChangeAlert",
 ]
