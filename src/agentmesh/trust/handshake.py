@@ -12,6 +12,7 @@ import hashlib
 import secrets
 import asyncio
 from agentmesh.identity.agent_id import AgentIdentity
+from agentmesh.identity.delegation import UserContext
 
 
 class HandshakeChallenge(BaseModel):
@@ -50,7 +51,10 @@ class HandshakeResponse(BaseModel):
     # Cryptographic proof
     signature: str  # Signature over challenge + response
     public_key: str  # For verification
-    
+
+    # User context for OBO flows
+    user_context: Optional[dict] = Field(None, description="End-user context for OBO flows")
+
     # Metadata
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
@@ -68,7 +72,10 @@ class HandshakeResult(BaseModel):
     
     # Capabilities
     capabilities: list[str] = Field(default_factory=list)
-    
+
+    # User context (propagated from OBO flow)
+    user_context: Optional[UserContext] = Field(None, description="End-user context if acting on behalf of a user")
+
     # Timing
     handshake_started: datetime = Field(default_factory=datetime.utcnow)
     handshake_completed: Optional[datetime] = None
@@ -85,6 +92,7 @@ class HandshakeResult(BaseModel):
         capabilities: list[str],
         peer_name: Optional[str] = None,
         started: Optional[datetime] = None,
+        user_context: Optional[UserContext] = None,
     ) -> "HandshakeResult":
         """Create a successful handshake result."""
         now = datetime.utcnow()
@@ -108,6 +116,7 @@ class HandshakeResult(BaseModel):
             trust_score=trust_score,
             trust_level=level,
             capabilities=capabilities,
+            user_context=user_context,
             handshake_started=start,
             handshake_completed=now,
             latency_ms=latency,
@@ -239,11 +248,17 @@ class TrustHandshake:
                 )
                 return result
             
+            # Reconstruct UserContext from response if present
+            response_user_ctx = None
+            if response.user_context:
+                response_user_ctx = UserContext(**response.user_context)
+
             result = HandshakeResult.success(
                 peer_did=peer_did,
                 trust_score=response.trust_score,
                 capabilities=response.capabilities,
                 started=start,
+                user_context=response_user_ctx,
             )
             
             # Cache successful result
@@ -270,6 +285,7 @@ class TrustHandshake:
         my_trust_score: int,
         private_key: any = None,  # Deprecated; use identity parameter
         identity: Optional[AgentIdentity] = None,
+        user_context: Optional[UserContext] = None,
     ) -> HandshakeResponse:
         """
         Respond to a trust handshake challenge.
@@ -303,6 +319,7 @@ class TrustHandshake:
             trust_score=my_trust_score,
             signature=signature,
             public_key=pub_key,
+            user_context=user_context.model_dump() if user_context else None,
         )
     
     async def _get_peer_response(

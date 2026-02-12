@@ -1,6 +1,7 @@
 """Tests for AgentMesh LangChain integration."""
 
 import pytest
+from datetime import datetime, timedelta, timezone
 from langchain_agentmesh import (
     CMVKIdentity,
     CMVKSignature,
@@ -11,6 +12,8 @@ from langchain_agentmesh import (
     TrustedToolExecutor,
     TrustCallbackHandler,
     DelegationChain,
+    UserContext,
+    AgentDirectory,
 )
 
 
@@ -272,3 +275,200 @@ class TestTrustCallbackHandler:
         assert "total_events" in summary
         assert "verified_events" in summary
         assert "verification_rate" in summary
+
+
+class TestCMVKIdentityTTL:
+    """Tests for CMVKIdentity TTL support."""
+
+    def test_generate_without_ttl(self):
+        """Identity without TTL never expires."""
+        identity = CMVKIdentity.generate("no-ttl-agent")
+        assert identity.expires_at is None
+        assert not identity.is_expired()
+
+    def test_generate_with_ttl(self):
+        """Identity with TTL has expiration set."""
+        identity = CMVKIdentity.generate("ttl-agent", ttl_seconds=3600)
+        assert identity.expires_at is not None
+        assert not identity.is_expired()
+        # Should expire roughly 1 hour from now
+        delta = identity.expires_at - datetime.now(timezone.utc)
+        assert 3500 < delta.total_seconds() < 3700
+
+    def test_expired_identity(self):
+        """Manually expired identity reports correctly."""
+        identity = CMVKIdentity.generate("expired-agent", ttl_seconds=1)
+        # Force expiration
+        identity.expires_at = datetime.now(timezone.utc) - timedelta(seconds=10)
+        assert identity.is_expired()
+
+    def test_ttl_survives_serialization(self):
+        """TTL round-trips through to_dict/from_dict."""
+        identity = CMVKIdentity.generate("serial-agent", ttl_seconds=900)
+        data = identity.to_dict()
+        assert "expires_at" in data
+
+        restored = CMVKIdentity.from_dict(data)
+        assert restored.expires_at is not None
+        assert not restored.is_expired()
+
+    def test_ttl_in_public_identity(self):
+        """Public identity preserves expiration."""
+        identity = CMVKIdentity.generate("pub-agent", ttl_seconds=600)
+        public = identity.public_identity()
+        assert public.expires_at == identity.expires_at
+        assert public.private_key is None
+
+
+class TestUserContext:
+    """Tests for UserContext OBO support."""
+
+    def test_create_user_context(self):
+        """Test basic user context creation."""
+        ctx = UserContext.create(
+            user_id="user-123",
+            user_email="alice@example.com",
+            roles=["admin"],
+            permissions=["read:data", "write:reports"],
+            ttl_seconds=1800,
+        )
+        assert ctx.user_id == "user-123"
+        assert ctx.is_valid()
+        assert ctx.has_role("admin")
+        assert ctx.has_permission("read:data")
+        assert not ctx.has_permission("delete:data")
+
+    def test_expired_user_context(self):
+        """Expired context reports invalid."""
+        ctx = UserContext.create(user_id="user-456", ttl_seconds=1)
+        ctx.expires_at = datetime.now(timezone.utc) - timedelta(seconds=10)
+        assert not ctx.is_valid()
+
+    def test_wildcard_permission(self):
+        """Wildcard permission grants everything."""
+        ctx = UserContext.create(user_id="admin", permissions=["*"])
+        assert ctx.has_permission("anything")
+
+    def test_user_context_serialization(self):
+        """UserContext round-trips through to_dict/from_dict."""
+        ctx = UserContext.create(
+            user_id="user-789",
+            user_email="bob@example.com",
+            roles=["viewer"],
+        )
+        data = ctx.to_dict()
+        restored = UserContext.from_dict(data)
+        assert restored.user_id == "user-789"
+        assert restored.user_email == "bob@example.com"
+        assert restored.roles == ["viewer"]
+
+    def test_user_context_on_agent_card(self):
+        """UserContext propagates through TrustedAgentCard."""
+        identity = CMVKIdentity.generate("obo-agent", ["read:data"])
+        ctx = UserContext.create(user_id="end-user-1", roles=["analyst"])
+
+        card = TrustedAgentCard(
+            name="OBO Agent",
+            description="Acting on behalf of user",
+            capabilities=["read:data"],
+            user_context=ctx,
+        )
+        card.sign(identity)
+
+        # Verify round-trip
+        json_data = card.to_json()
+        assert "user_context" in json_data
+
+        restored = TrustedAgentCard.from_json(json_data)
+        assert restored.user_context is not None
+        assert restored.user_context.user_id == "end-user-1"
+        assert restored.user_context.has_role("analyst")
+
+
+class TestAgentDirectory:
+    """Tests for AgentDirectory service discovery."""
+
+    def test_register_and_find(self):
+        """Register an agent and find by DID."""
+        directory = AgentDirectory()
+        identity = CMVKIdentity.generate("discoverable-agent", ["search"])
+
+        card = TrustedAgentCard(
+            name="Discoverable",
+            description="Can be found",
+            capabilities=["search"],
+        )
+        card.sign(identity)
+
+        assert directory.register(card)
+        found = directory.find_by_did(identity.did)
+        assert found is not None
+        assert found.name == "Discoverable"
+
+    def test_find_by_capability(self):
+        """Find agents by capability."""
+        directory = AgentDirectory()
+
+        for name, caps in [("agent-a", ["read"]), ("agent-b", ["write"]), ("agent-c", ["read", "write"])]:
+            identity = CMVKIdentity.generate(name, caps)
+            card = TrustedAgentCard(name=name, description="", capabilities=caps)
+            card.sign(identity)
+            directory.register(card)
+
+        readers = directory.find_by_capability("read")
+        assert len(readers) == 2
+
+        writers = directory.find_by_capability("write")
+        assert len(writers) == 2
+
+    def test_list_trusted(self):
+        """Filter agents by trust score."""
+        directory = AgentDirectory()
+
+        identity = CMVKIdentity.generate("trusted-agent")
+        card = TrustedAgentCard(
+            name="Trusted",
+            description="High trust",
+            capabilities=[],
+            trust_score=0.9,
+        )
+        card.sign(identity)
+        directory.register(card)
+
+        identity_low = CMVKIdentity.generate("low-trust-agent")
+        card_low = TrustedAgentCard(
+            name="Low Trust",
+            description="Below threshold",
+            capabilities=[],
+            trust_score=0.3,
+        )
+        card_low.sign(identity_low)
+        directory.register(card_low)
+
+        trusted = directory.list_trusted(min_trust_score=0.7)
+        assert len(trusted) == 1
+        assert trusted[0].name == "Trusted"
+
+    def test_reject_unsigned_card(self):
+        """Unsigned cards are rejected."""
+        directory = AgentDirectory()
+        card = TrustedAgentCard(
+            name="Unsigned",
+            description="No signature",
+            capabilities=[],
+        )
+        assert not directory.register(card)
+        assert directory.count() == 0
+
+    def test_remove(self):
+        """Remove an agent from directory."""
+        directory = AgentDirectory()
+        identity = CMVKIdentity.generate("removable-agent")
+        card = TrustedAgentCard(name="Remove Me", description="", capabilities=[])
+        card.sign(identity)
+        directory.register(card)
+
+        assert directory.count() == 1
+        assert directory.remove(identity.did)
+        assert directory.count() == 0
+        assert not directory.remove("nonexistent")

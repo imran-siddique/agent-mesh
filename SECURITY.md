@@ -149,6 +149,44 @@ When using AgentMesh:
 - Set up alerts for policy violations
 - Use `verify_integrity()` to detect log tampering
 
+## Security Architecture
+
+### Identity & Credential Lifecycle
+
+AgentMesh separates **identity** (long-lived) from **credentials** (ephemeral):
+
+| Layer | TTL | Rotation | Status |
+|-------|-----|----------|--------|
+| **Agent Identity** (`AgentIdentity`) | Optional `expires_at` field | Manual revocation/reactivation | ✅ Implemented |
+| **Ephemeral Credentials** (`Credential`) | 15 minutes (configurable) | Automatic via `rotate_if_needed()` | ✅ Implemented |
+| **SVID Certificates** (`SVID`) | 15 minutes (configurable) | Via CA `rotate_credentials()` | ✅ Implemented |
+| **Integration Identity** (`CMVKIdentity`) | Optional `ttl_seconds` param | Manual (identity-layer only) | ✅ Implemented |
+
+Credential rotation is zero-downtime — old credentials are marked `"rotated"` and remain valid during a brief overlap period. Revocation propagates in ≤5 seconds.
+
+### On-Behalf-Of (OBO) User Context
+
+When agents act on behalf of end users, `UserContext` propagates through the trust layer:
+
+- **Core**: `UserContext` model in `agentmesh.identity.delegation` with `user_id`, `user_email`, `roles`, `permissions`, and TTL
+- **Handshake**: `HandshakeResponse` and `HandshakeResult` carry `user_context` so downstream agents know which user triggered the request
+- **Integration**: `TrustedAgentCard` includes `user_context`; `ToolInvocationRecord` logs it for audit
+- **Future Roadmap**: Per-user data access policies (e.g., "Agent B trusts Agent A, but User X cannot access file Y")
+
+### Service Discovery
+
+Trusted agents find each other through a layered discovery model:
+
+| Layer | Component | Description | Status |
+|-------|-----------|-------------|--------|
+| **Core Registry** | `AgentRegistry` | Central "Yellow Pages" with DIDs, capabilities, trust scores | ✅ Implemented |
+| **Card Registry** | `CardRegistry` | Signed agent cards with TTL-based verification caching | ✅ Implemented |
+| **SPIFFE Registry** | `SPIFFERegistry` | Maps agent DIDs to SPIFFE workload identities | ✅ Implemented |
+| **Integration Discovery** | `AgentDirectory` | Framework-level peer lookup by DID or capability | ✅ Implemented |
+| **Network Discovery** | DID resolution to endpoints | Resolve DIDs to HTTP endpoints for cross-cloud handshakes | 🚧 Future Roadmap |
+
+The integration layer (`AgentDirectory`) provides local discovery for framework users. Production deployments pair this with the core `AgentRegistry` service for centralized, network-wide discovery.
+
 ## Security Features
 
 AgentMesh includes several security features:
