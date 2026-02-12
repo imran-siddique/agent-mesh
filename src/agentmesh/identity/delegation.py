@@ -5,13 +5,67 @@ Cryptographic delegation chains that ensure sub-agents can never
 have more capabilities than their parent. Scope always narrows.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 from pydantic import BaseModel, Field
 import hashlib
 import json
 
 from agentmesh.identity.agent_id import AgentIdentity
+
+
+class UserContext(BaseModel):
+    """
+    User context for On-Behalf-Of (OBO) flows.
+
+    When an agent acts on behalf of an end user, this context propagates
+    through the delegation chain so downstream agents can enforce
+    user-level access control.
+    """
+
+    user_id: str = Field(..., description="Unique user identifier")
+    user_email: Optional[str] = Field(None, description="User email for audit trails")
+    roles: list[str] = Field(default_factory=list, description="User roles for RBAC")
+    permissions: list[str] = Field(default_factory=list, description="Fine-grained permissions")
+    issued_at: datetime = Field(default_factory=datetime.utcnow)
+    expires_at: Optional[datetime] = Field(None, description="OBO context expiration")
+    metadata: dict = Field(default_factory=dict, description="Additional user attributes")
+
+    def is_valid(self) -> bool:
+        """Check if the user context is still valid."""
+        if self.expires_at and datetime.utcnow() > self.expires_at:
+            return False
+        return True
+
+    def has_permission(self, permission: str) -> bool:
+        """Check if the user has a specific permission."""
+        if "*" in self.permissions:
+            return True
+        return permission in self.permissions
+
+    def has_role(self, role: str) -> bool:
+        """Check if the user has a specific role."""
+        return role in self.roles
+
+    @classmethod
+    def create(
+        cls,
+        user_id: str,
+        user_email: Optional[str] = None,
+        roles: Optional[list[str]] = None,
+        permissions: Optional[list[str]] = None,
+        ttl_seconds: int = 3600,
+    ) -> "UserContext":
+        """Create a new user context with TTL."""
+        now = datetime.utcnow()
+        return cls(
+            user_id=user_id,
+            user_email=user_email,
+            roles=roles or [],
+            permissions=permissions or [],
+            issued_at=now,
+            expires_at=now + timedelta(seconds=ttl_seconds),
+        )
 
 
 class DelegationLink(BaseModel):
@@ -39,6 +93,9 @@ class DelegationLink(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     expires_at: Optional[datetime] = Field(None)
     
+    # User context for OBO flows
+    user_context: Optional[UserContext] = Field(None, description="End-user context for OBO flows")
+
     # Cryptographic binding
     parent_signature: str = Field(..., description="Parent's signature on this delegation")
     link_hash: str = Field(..., description="Hash of this link for chain verification")
@@ -74,6 +131,7 @@ class DelegationLink(BaseModel):
             "delegated_capabilities": sorted(self.delegated_capabilities),
             "created_at": self.created_at.isoformat(),
             "previous_link_hash": self.previous_link_hash,
+            "user_context_user_id": self.user_context.user_id if self.user_context else None,
         }
         canonical = json.dumps(data, sort_keys=True)
         return hashlib.sha256(canonical.encode()).hexdigest()

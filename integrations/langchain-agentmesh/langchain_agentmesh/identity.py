@@ -10,7 +10,7 @@ import base64
 import hashlib
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 # Try to import cryptography for real Ed25519 operations
@@ -72,16 +72,29 @@ class CMVKIdentity:
     private_key: Optional[str] = None  # base64 encoded private key
     capabilities: List[str] = field(default_factory=list)
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    expires_at: Optional[datetime] = None  # Identity expiration for TTL enforcement
+
+    def is_expired(self) -> bool:
+        """Check if this identity has expired.
+
+        Returns:
+            True if expired, False if still valid or no TTL set
+        """
+        if self.expires_at is None:
+            return False
+        return datetime.now(timezone.utc) > self.expires_at
 
     @classmethod
     def generate(
-        cls, agent_name: str, capabilities: Optional[List[str]] = None
+        cls, agent_name: str, capabilities: Optional[List[str]] = None,
+        ttl_seconds: Optional[int] = None,
     ) -> "CMVKIdentity":
         """Generate a new CMVK identity with Ed25519 key pair.
 
         Args:
             agent_name: Human-readable name for the agent
             capabilities: List of capabilities this agent has
+            ttl_seconds: Optional TTL in seconds (None = no expiry)
 
         Returns:
             A new CMVKIdentity with generated keys
@@ -114,6 +127,11 @@ class CMVKIdentity:
             public_key=public_key_b64,
             private_key=private_key_b64,
             capabilities=capabilities or [],
+            expires_at=(
+                datetime.now(timezone.utc) + timedelta(seconds=ttl_seconds)
+                if ttl_seconds is not None
+                else None
+            ),
         )
 
     def sign(self, data: str) -> CMVKSignature:
@@ -180,18 +198,22 @@ class CMVKIdentity:
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize identity to dictionary (excludes private key)."""
-        return {
+        result = {
             "did": self.did,
             "agent_name": self.agent_name,
             "public_key": self.public_key,
             "capabilities": self.capabilities,
             "created_at": self.created_at.isoformat(),
         }
+        if self.expires_at is not None:
+            result["expires_at"] = self.expires_at.isoformat()
+        return result
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "CMVKIdentity":
         """Deserialize identity from dictionary."""
         created_str = data.get("created_at")
+        expires_str = data.get("expires_at")
         return cls(
             did=data["did"],
             agent_name=data["agent_name"],
@@ -201,6 +223,11 @@ class CMVKIdentity:
                 datetime.fromisoformat(created_str)
                 if created_str
                 else datetime.now(timezone.utc)
+            ),
+            expires_at=(
+                datetime.fromisoformat(expires_str)
+                if expires_str
+                else None
             ),
         )
 
@@ -213,4 +240,97 @@ class CMVKIdentity:
             private_key=None,
             capabilities=self.capabilities.copy(),
             created_at=self.created_at,
+            expires_at=self.expires_at,
+        )
+
+
+@dataclass
+class UserContext:
+    """User context for On-Behalf-Of (OBO) flows.
+
+    When an agent acts on behalf of an end user, this context propagates
+    through the trust layer so downstream agents can enforce user-level
+    access control.
+    """
+
+    user_id: str
+    user_email: Optional[str] = None
+    roles: List[str] = field(default_factory=list)
+    permissions: List[str] = field(default_factory=list)
+    issued_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    expires_at: Optional[datetime] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    def is_valid(self) -> bool:
+        """Check if the user context is still valid."""
+        if self.expires_at and datetime.now(timezone.utc) > self.expires_at:
+            return False
+        return True
+
+    def has_permission(self, permission: str) -> bool:
+        """Check if the user has a specific permission."""
+        if "*" in self.permissions:
+            return True
+        return permission in self.permissions
+
+    def has_role(self, role: str) -> bool:
+        """Check if the user has a specific role."""
+        return role in self.roles
+
+    @classmethod
+    def create(
+        cls,
+        user_id: str,
+        user_email: Optional[str] = None,
+        roles: Optional[List[str]] = None,
+        permissions: Optional[List[str]] = None,
+        ttl_seconds: int = 3600,
+    ) -> "UserContext":
+        """Create a new user context with TTL."""
+        now = datetime.now(timezone.utc)
+        return cls(
+            user_id=user_id,
+            user_email=user_email,
+            roles=roles or [],
+            permissions=permissions or [],
+            issued_at=now,
+            expires_at=now + timedelta(seconds=ttl_seconds),
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize to dictionary."""
+        result: Dict[str, Any] = {
+            "user_id": self.user_id,
+            "roles": self.roles,
+            "permissions": self.permissions,
+            "issued_at": self.issued_at.isoformat(),
+            "metadata": self.metadata,
+        }
+        if self.user_email:
+            result["user_email"] = self.user_email
+        if self.expires_at:
+            result["expires_at"] = self.expires_at.isoformat()
+        return result
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "UserContext":
+        """Deserialize from dictionary."""
+        issued_str = data.get("issued_at")
+        expires_str = data.get("expires_at")
+        return cls(
+            user_id=data["user_id"],
+            user_email=data.get("user_email"),
+            roles=data.get("roles", []),
+            permissions=data.get("permissions", []),
+            issued_at=(
+                datetime.fromisoformat(issued_str)
+                if issued_str
+                else datetime.now(timezone.utc)
+            ),
+            expires_at=(
+                datetime.fromisoformat(expires_str)
+                if expires_str
+                else None
+            ),
+            metadata=data.get("metadata", {}),
         )

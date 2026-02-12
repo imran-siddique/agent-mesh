@@ -11,7 +11,7 @@ from typing import Any, Callable, Dict, List, Optional, Union
 
 from langchain_core.tools import BaseTool, StructuredTool
 
-from langchain_agentmesh.identity import CMVKIdentity
+from langchain_agentmesh.identity import CMVKIdentity, UserContext
 from langchain_agentmesh.trust import (
     TrustHandshake,
     TrustPolicy,
@@ -31,6 +31,7 @@ class ToolInvocationRecord:
     trust_score: float
     input_summary: str
     result_summary: str
+    user_context: Optional[UserContext] = None
     warnings: List[str] = field(default_factory=list)
 
 
@@ -237,6 +238,7 @@ class TrustedToolExecutor:
             trust_score=verification.trust_score,
             input_summary=str(input_data)[:200],
             result_summary="",
+            user_context=invoker_card.user_context,
             warnings=verification.warnings,
         )
 

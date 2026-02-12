@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
-from langchain_agentmesh.identity import CMVKIdentity, CMVKSignature
+from langchain_agentmesh.identity import CMVKIdentity, CMVKSignature, UserContext
 
 
 @dataclass
@@ -51,6 +51,7 @@ class TrustedAgentCard:
     trust_score: float = 1.0
     card_signature: Optional[CMVKSignature] = None
     delegation_chain: Optional[List["Delegation"]] = None
+    user_context: Optional[UserContext] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def _get_signable_content(self) -> str:
@@ -106,6 +107,9 @@ class TrustedAgentCard:
         if self.delegation_chain:
             result["delegation_chain"] = [d.to_dict() for d in self.delegation_chain]
 
+        if self.user_context:
+            result["user_context"] = self.user_context.to_dict()
+
         return result
 
     @classmethod
@@ -123,6 +127,10 @@ class TrustedAgentCard:
         if "delegation_chain" in data:
             delegation_chain = [Delegation.from_dict(d) for d in data["delegation_chain"]]
 
+        user_context = None
+        if "user_context" in data:
+            user_context = UserContext.from_dict(data["user_context"])
+
         return cls(
             name=data["name"],
             description=data.get("description", ""),
@@ -131,6 +139,7 @@ class TrustedAgentCard:
             trust_score=data.get("trust_score", 1.0),
             card_signature=card_signature,
             delegation_chain=delegation_chain,
+            user_context=user_context,
             metadata=data.get("metadata", {}),
         )
 
@@ -441,3 +450,88 @@ class DelegationChain:
                     continue
                 capabilities.extend(delegation.capabilities)
         return list(set(capabilities))
+
+
+class AgentDirectory:
+    """Local directory for discovering trusted agents.
+
+    Provides a framework-level registry so agents can find each other
+    by DID or capability without a centralized service dependency.
+    Pairs with the core AgentMesh Registry for production deployments.
+    """
+
+    def __init__(self) -> None:
+        self._cards: Dict[str, TrustedAgentCard] = {}  # did -> card
+
+    def register(self, card: TrustedAgentCard) -> bool:
+        """Register an agent card after verifying its signature.
+
+        Args:
+            card: The agent card to register
+
+        Returns:
+            True if registered, False if signature verification failed
+        """
+        if not card.identity:
+            return False
+        if not card.verify_signature():
+            return False
+        self._cards[card.identity.did] = card
+        return True
+
+    def find_by_did(self, did: str) -> Optional[TrustedAgentCard]:
+        """Look up an agent by DID.
+
+        Args:
+            did: The agent's decentralized identifier
+
+        Returns:
+            The agent card if found, None otherwise
+        """
+        return self._cards.get(did)
+
+    def find_by_capability(self, capability: str) -> List[TrustedAgentCard]:
+        """Find all agents that advertise a specific capability.
+
+        Args:
+            capability: The capability to search for
+
+        Returns:
+            List of agent cards with the capability
+        """
+        return [
+            card for card in self._cards.values()
+            if capability in card.capabilities
+        ]
+
+    def list_trusted(self, min_trust_score: float = 0.7) -> List[TrustedAgentCard]:
+        """List all agents above a minimum trust score.
+
+        Args:
+            min_trust_score: Minimum trust score threshold
+
+        Returns:
+            List of trusted agent cards
+        """
+        return [
+            card for card in self._cards.values()
+            if card.trust_score >= min_trust_score
+        ]
+
+    def remove(self, did: str) -> bool:
+        """Remove an agent from the directory.
+
+        Args:
+            did: The agent's DID
+
+        Returns:
+            True if removed, False if not found
+        """
+        if did in self._cards:
+            del self._cards[did]
+            return True
+        return False
+
+    def count(self) -> int:
+        """Return number of registered agents."""
+        return len(self._cards)

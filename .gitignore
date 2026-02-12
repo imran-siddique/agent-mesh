@@ -86,3 +86,4 @@ secrets.json
 config.local.yaml
 
 node_modules/
+.pypirc
