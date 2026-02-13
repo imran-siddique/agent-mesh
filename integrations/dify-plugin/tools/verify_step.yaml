@@ -54,3 +54,6 @@ parameters:
       zh_Hans: 使用特定能力要求覆盖默认能力检查
     llm_description: Optional specific capability to check instead of auto-deriving from step_type
     form: llm
+extra:
+  python:
+    source: tools/verify_step.py

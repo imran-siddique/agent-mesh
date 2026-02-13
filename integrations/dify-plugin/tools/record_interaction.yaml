@@ -43,3 +43,6 @@ parameters:
       zh_Hans: 对于失败，严重程度（0.0-1.0）。较高的值会更多地降低信任度。默认为0.1。
     llm_description: For failed interactions, the severity from 0.0-1.0. Higher values cause larger trust score decreases. Default is 0.1.
     form: llm
+extra:
+  python:
+    source: tools/record_interaction.py

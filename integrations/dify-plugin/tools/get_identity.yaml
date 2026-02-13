@@ -22,3 +22,6 @@ parameters:
     llm_description: Whether to include the list of capabilities in the response. Default is true.
     form: form
     default: true
+extra:
+  python:
+    source: tools/get_identity.py
