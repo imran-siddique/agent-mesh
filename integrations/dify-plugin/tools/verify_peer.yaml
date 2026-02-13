@@ -54,3 +54,6 @@ parameters:
       zh_Hans: 对等代理声明具有的能力，以逗号分隔
     llm_description: Comma-separated list of capabilities the peer claims to possess
     form: llm
+extra:
+  python:
+    source: tools/verify_peer.py

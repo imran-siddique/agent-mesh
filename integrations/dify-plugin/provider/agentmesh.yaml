@@ -62,3 +62,6 @@ tools:
   - tools/verify_step.yaml
   - tools/get_identity.yaml
   - tools/record_interaction.yaml
+extra:
+  python:
+    source: provider/agentmesh.py
