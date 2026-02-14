@@ -3,7 +3,6 @@
 from typing import Any
 
 from dify_plugin import ToolProvider
-from dify_plugin.entities.tool import ToolProviderCredentials
 
 from .identity import CMVKIdentity
 from .trust_manager import TrustManager
