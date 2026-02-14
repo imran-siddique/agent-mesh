@@ -147,7 +147,7 @@ class MerkleAuditChain:
         self._root_hash: Optional[str] = None
     
     def add_entry(self, entry: AuditEntry) -> None:
-        """Add an entry and rebuild tree."""
+        """Add an entry and update tree incrementally."""
         # Set previous hash
         if self._entries:
             entry.previous_hash = self._entries[-1].entry_hash
@@ -156,10 +156,69 @@ class MerkleAuditChain:
         entry.entry_hash = entry.compute_hash()
         
         self._entries.append(entry)
-        self._rebuild_tree()
+        
+        new_leaf = MerkleNode(
+            hash=entry.entry_hash,
+            is_leaf=True,
+            entry_id=entry.entry_id,
+        )
+        
+        n = len(self._entries)
+        
+        if n == 1:
+            # First entry — initialize tree
+            self._tree = [[new_leaf]]
+            self._root_hash = new_leaf.hash
+            return
+        
+        # Check if we need to expand the tree capacity
+        capacity = len(self._tree[0])
+        if n > capacity:
+            # Double capacity: pad leaves with empty nodes, add new tree level
+            empty = MerkleNode(hash="0" * 64, is_leaf=True)
+            for level_idx in range(len(self._tree)):
+                self._tree[level_idx].extend(
+                    [MerkleNode(hash="0" * 64) for _ in range(len(self._tree[level_idx]))]
+                )
+            # Add new root level
+            old_root = self._tree[-1][0]
+            empty_node = MerkleNode(hash="0" * 64)
+            combined = old_root.hash + empty_node.hash
+            new_root = MerkleNode(
+                hash=hashlib.sha256(combined.encode()).hexdigest(),
+                left_child=old_root.hash,
+                right_child=empty_node.hash,
+            )
+            self._tree.append([new_root, MerkleNode(hash="0" * 64)])
+
+        # Place new leaf
+        leaf_idx = n - 1
+        self._tree[0][leaf_idx] = new_leaf
+        
+        # Update path from leaf to root
+        idx = leaf_idx
+        for level_idx in range(len(self._tree) - 1):
+            parent_idx = idx // 2
+            left_idx = parent_idx * 2
+            right_idx = left_idx + 1
+            
+            left = self._tree[level_idx][left_idx]
+            right = self._tree[level_idx][right_idx] if right_idx < len(self._tree[level_idx]) else left
+            
+            combined = left.hash + right.hash
+            parent_hash = hashlib.sha256(combined.encode()).hexdigest()
+            
+            self._tree[level_idx + 1][parent_idx] = MerkleNode(
+                hash=parent_hash,
+                left_child=left.hash,
+                right_child=right.hash,
+            )
+            idx = parent_idx
+        
+        self._root_hash = self._tree[-1][0].hash if self._tree else None
     
     def _rebuild_tree(self) -> None:
-        """Rebuild Merkle tree from entries."""
+        """Rebuild Merkle tree from entries (full rebuild, used for verification)."""
         if not self._entries:
             self._tree = []
             self._root_hash = None
