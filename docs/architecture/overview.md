@@ -82,7 +82,7 @@ src/agentmesh/
 
 | Protocol | Purpose | Integration point |
 |----------|---------|-------------------|
-| A2A (Google) | Agent-to-agent calls | `integrations/a2a/` |
+| A2A (Google) | Agent-to-agent calls | `src/agentmesh/integrations/a2a/` |
 | MCP (Anthropic) | Tool governance proxy | `packages/mcp-proxy/` |
 | IATP | Inter-agent trust | Identity layer |
 | SPIFFE | Workload identity | SVID generation in L1 |
