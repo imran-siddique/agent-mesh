@@ -156,7 +156,7 @@ pip install -e .
 - [CrewAI Integration](./examples/integrations/crewai.md) - Multi-agent crew governance
 - [LangGraph](./src/agentmesh/integrations/langgraph/) - Trust checkpoints for graph workflows (built-in)
 - [OpenAI Swarm](./src/agentmesh/integrations/swarm/) - Trust-verified handoffs (built-in)
-- [Dify](./integrations/dify/) - Trust middleware for Dify workflows
+- [Dify](https://github.com/imran-siddique/agentmesh-integrations/tree/master/dify) - Trust middleware for Dify workflows
 
 📚 **[Browse all examples →](./examples/)**
 
@@ -305,8 +305,8 @@ rules:
 
 | Protocol | Status | Description |
 |----------|--------|-------------|
-| A2A | ✅ Alpha | Agent-to-agent coordination (full adapter in `integrations/a2a/`) |
-| MCP | ✅ Alpha | Tool and resource binding (trust-gated server/client in `integrations/mcp/`) |
+| A2A | ✅ Alpha | Agent-to-agent coordination (full adapter in `src/agentmesh/integrations/a2a/`) |
+| MCP | ✅ Alpha | Tool and resource binding (trust-gated server/client in `src/agentmesh/integrations/mcp/`) |
 | IATP | ✅ Alpha | Trust handshakes (via [agent-os](https://github.com/imran-siddique/agent-os), graceful fallback if unavailable) |
 | ACP | 🔜 Planned | Lightweight messaging (protocol bridge supports routing, adapter not yet implemented) |
 | SPIFFE | ✅ Alpha | Workload identity |
@@ -425,7 +425,7 @@ report = compliance.generate_report(
 
 ### Integration Caveats (Dify)
 
-The [Dify integration](./integrations/dify/) has these documented limitations:
+The [Dify integration](https://github.com/imran-siddique/agentmesh-integrations/tree/master/dify) has these documented limitations:
 - Request body signature verification (`X-Agent-Signature` header) is not yet verified by middleware
 - Trust score time decay is not yet implemented (scores don't decay over time)
 - Audit logs are in-memory only (not persistent across multi-worker deployments)
