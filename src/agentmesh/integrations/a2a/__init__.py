@@ -2,28 +2,25 @@
 A2A Protocol Integration for AgentMesh
 =======================================
 
-Provides CMVK-enhanced Agent Cards and trust verification for the
-Agent-to-Agent (A2A) Protocol developed by Google/Linux Foundation.
+Provides A2A Agent Cards and trust-gated task delegation using the
+AI Card standard for identity verification.
 
-Features:
-- CMVK-signed Agent Cards for cryptographic identity
-- Trust handshake before task delegation
-- Capability verification for A2A tasks
-- Audit trail integration
+Identity is handled by AI Card (https://github.com/agent-card/ai-card),
+not embedded directly in A2A Agent Cards. The A2A integration focuses
+on task delegation, state management, and protocol-level concerns.
 
 Example:
     >>> from agentmesh.integrations.a2a import A2AAgentCard, A2ATrustProvider
     >>> from agentmesh.identity import AgentIdentity
     >>>
-    >>> # Create identity and Agent Card
     >>> identity = AgentIdentity.create(
     ...     name="sql-agent",
-    ...     sponsor_id="human@example.com",
-    ...     capabilities=["execute:sql", "read:database"]
+    ...     sponsor="human@example.com",
+    ...     capabilities=["execute:sql", "read:database"],
     ... )
-    >>> card = A2AAgentCard.from_identity(identity)
+    >>> card = A2AAgentCard.from_identity(identity, url="https://agent.example.com")
     >>>
-    >>> # Publish to /.well-known/agent.json
+    >>> # Standard A2A Agent Card JSON (identity via AI Card)
     >>> card.to_json()
 """
 
@@ -33,9 +30,11 @@ import json
 import logging
 import hashlib
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 from enum import Enum
+
+from agentmesh.integrations.ai_card.schema import AICard, AICardService
 
 logger = logging.getLogger(__name__)
 
@@ -51,103 +50,95 @@ class A2ATaskState(Enum):
 
 
 @dataclass
-class CMVKSignature:
-    """Cryptographic Multi-Vector Key signature for Agent Cards."""
-    algorithm: str = "Ed25519"
-    public_key: str = ""
-    signature: str = ""
-    timestamp: datetime = field(default_factory=datetime.utcnow)
-    expires_at: Optional[datetime] = None
-
-    def is_valid(self) -> bool:
-        """Check if signature is still valid."""
-        if self.expires_at is None:
-            return True
-        return datetime.utcnow() < self.expires_at
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "algorithm": self.algorithm,
-            "publicKey": self.public_key,
-            "signature": self.signature,
-            "timestamp": self.timestamp.isoformat(),
-            "expiresAt": self.expires_at.isoformat() if self.expires_at else None,
-        }
-
-
-@dataclass
 class A2AAgentCard:
     """
-    CMVK-enhanced A2A Agent Card.
+    A2A Agent Card backed by AI Card for identity.
 
-    Extends the standard A2A Agent Card with cryptographic identity
-    verification using AgentMesh's CMVK infrastructure.
+    Standard A2A fields (name, url, skills, capabilities) live here.
+    Cryptographic identity (DID, signing, trust scores) is delegated
+    to the underlying AICard instance.
     """
     # Standard A2A fields
     name: str
     description: str
     url: str
     version: str = "1.0.0"
-    capabilities: List[str] = field(default_factory=list)
     skills: List[Dict[str, Any]] = field(default_factory=list)
     authentication: Dict[str, Any] = field(default_factory=dict)
-    
-    # AgentMesh extensions
-    agent_did: str = ""
-    cmvk_signature: Optional[CMVKSignature] = None
-    trust_score: int = 500
-    sponsor_id: str = ""
-    delegation_chain: List[str] = field(default_factory=list)
-    
+
+    # AI Card provides identity, trust, and verifiable metadata
+    ai_card: Optional[AICard] = None
+
+    @property
+    def agent_did(self) -> str:
+        """Agent DID from AI Card identity."""
+        if self.ai_card and self.ai_card.identity:
+            return self.ai_card.identity.did
+        return ""
+
+    @property
+    def trust_score(self) -> float:
+        """Trust score from AI Card verifiable metadata."""
+        if self.ai_card:
+            return self.ai_card.verifiable.trust_score
+        return 0.0
+
+    @property
+    def capabilities(self) -> List[str]:
+        """Capabilities from AI Card attestations."""
+        if self.ai_card:
+            return list(self.ai_card.verifiable.capability_attestations.keys())
+        return []
+
     @classmethod
     def from_identity(
         cls,
-        identity: Any,  # AgentIdentity
+        identity: Any,
         url: str,
         description: str = "",
         skills: Optional[List[Dict[str, Any]]] = None,
     ) -> "A2AAgentCard":
-        """Create Agent Card from AgentMesh identity."""
-        # Extract capabilities from identity
-        capabilities = []
-        if hasattr(identity, "capabilities"):
-            capabilities = list(identity.capabilities)
-        
-        # Build delegation chain
-        delegation_chain = []
-        if hasattr(identity, "delegation_chain"):
-            delegation_chain = identity.delegation_chain
-        
-        # Create CMVK signature
-        signature = None
-        if hasattr(identity, "sign"):
-            card_data = f"{identity.did}:{url}:{datetime.utcnow().isoformat()}"
-            sig_bytes = identity.sign(card_data.encode())
-            signature = CMVKSignature(
-                algorithm="Ed25519",
-                public_key=identity.public_key if hasattr(identity, "public_key") else "",
-                signature=sig_bytes.hex() if sig_bytes else "",
-                timestamp=datetime.utcnow(),
-                expires_at=datetime.utcnow() + timedelta(hours=24),
-            )
-        
+        """Create an A2A Agent Card from an AgentIdentity.
+
+        Identity is stored in an AICard; the A2A card references it.
+
+        Args:
+            identity: An ``AgentIdentity`` with a private key.
+            url: A2A service endpoint URL.
+            description: Agent description.
+            skills: A2A skill definitions.
+
+        Returns:
+            An ``A2AAgentCard`` with a signed AI Card.
+        """
+        a2a_service = AICardService(
+            protocol="a2a",
+            url=url,
+            metadata={"skills": skills or [], "version": "1.0.0"},
+        )
+        ai_card = AICard.from_identity(
+            identity,
+            description=description or f"AgentMesh agent: {identity.did}",
+            services=[a2a_service],
+        )
+
         return cls(
             name=identity.name if hasattr(identity, "name") else str(identity.did),
             description=description or f"AgentMesh agent: {identity.did}",
             url=url,
-            capabilities=capabilities,
             skills=skills or [],
-            authentication={"schemes": ["cmvk", "bearer"]},
-            agent_did=str(identity.did) if hasattr(identity, "did") else "",
-            cmvk_signature=signature,
-            trust_score=identity.trust_score if hasattr(identity, "trust_score") else 500,
-            sponsor_id=identity.sponsor_id if hasattr(identity, "sponsor_id") else "",
-            delegation_chain=delegation_chain,
+            authentication={"schemes": ["ai-card", "bearer"]},
+            ai_card=ai_card,
         )
 
     def to_json(self, indent: int = 2) -> str:
-        """Export as A2A-compatible JSON for /.well-known/agent.json"""
-        data = {
+        """Export as A2A-compatible JSON.
+
+        Identity is referenced via ``ai_card_url`` pointing to the
+        agent's ``/.well-known/ai-card.json`` endpoint rather than
+        embedded directly.
+        """
+        data: Dict[str, Any] = {
             "name": self.name,
             "description": self.description,
             "url": self.url,
@@ -159,45 +150,24 @@ class A2AAgentCard:
             },
             "skills": self.skills,
             "authentication": self.authentication,
-            # AgentMesh extensions (under x-agentmesh namespace)
-            "x-agentmesh": {
-                "did": self.agent_did,
-                "trustScore": self.trust_score,
-                "sponsorId": self.sponsor_id,
-                "delegationChain": self.delegation_chain,
-                "cmvkSignature": self.cmvk_signature.to_dict() if self.cmvk_signature else None,
-                "grantedCapabilities": self.capabilities,
-            },
         }
+
+        # Reference AI Card for identity instead of embedding
+        if self.ai_card and self.ai_card.identity:
+            data["ai_card_url"] = f"{self.url}/.well-known/ai-card.json"
+            data["agent_did"] = self.agent_did
+
         return json.dumps(data, indent=indent)
 
     def to_dict(self) -> Dict[str, Any]:
         """Export as dictionary."""
         return json.loads(self.to_json())
 
-    def verify_signature(self, identity_registry: Any = None) -> bool:
-        """Verify the CMVK signature is valid."""
-        if not self.cmvk_signature:
+    def verify_signature(self) -> bool:
+        """Verify identity via the underlying AI Card signature."""
+        if not self.ai_card:
             return False
-        
-        if not self.cmvk_signature.is_valid():
-            logger.warning(f"Agent Card signature expired for {self.agent_did}")
-            return False
-        
-        # If registry provided, verify against stored identity
-        if identity_registry and hasattr(identity_registry, "get"):
-            stored_identity = identity_registry.get(self.agent_did)
-            if not stored_identity:
-                logger.warning(f"Unknown agent DID: {self.agent_did}")
-                return False
-            
-            # Verify public key matches
-            if hasattr(stored_identity, "public_key"):
-                if stored_identity.public_key != self.cmvk_signature.public_key:
-                    logger.warning(f"Public key mismatch for {self.agent_did}")
-                    return False
-        
-        return True
+        return self.ai_card.verify_signature()
 
 
 @dataclass
@@ -207,29 +177,29 @@ class A2ATask:
     session_id: str
     state: A2ATaskState
     message: Dict[str, Any]
-    
+
     # Trust metadata
     requester_did: str = ""
     executor_did: str = ""
     trust_verified: bool = False
     trust_level: str = "untrusted"
-    
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class A2ATrustProvider:
     """
     Trust provider for A2A Protocol interactions.
-    
-    Verifies agent identity and trust before allowing task delegation.
+
+    Verifies agent identity via AI Card before allowing task delegation.
     """
-    
+
     def __init__(
         self,
-        identity: Any,  # AgentIdentity
-        trust_bridge: Any = None,  # TrustBridge
-        min_trust_score: int = 300,
+        identity: Any,
+        trust_bridge: Any = None,
+        min_trust_score: float = 0.3,
     ):
         self.identity = identity
         self.trust_bridge = trust_bridge
@@ -237,38 +207,44 @@ class A2ATrustProvider:
         self._verified_peers: Dict[str, datetime] = {}
         self._verification_cache_ttl = timedelta(minutes=15)
 
-    async def verify_peer(self, peer_did: str, peer_card: Optional[A2AAgentCard] = None) -> bool:
-        """
-        Verify peer agent before task interaction.
-        
+    async def verify_peer(
+        self,
+        peer_did: str,
+        peer_card: Optional[A2AAgentCard] = None,
+    ) -> bool:
+        """Verify peer agent before task interaction.
+
+        Verification uses the AI Card attached to the peer's A2A card.
+
         Args:
-            peer_did: Peer agent's DID
-            peer_card: Optional peer's Agent Card for verification
-            
+            peer_did: Peer agent's DID.
+            peer_card: Optional peer's A2A Agent Card.
+
         Returns:
-            True if peer is trusted
+            True if peer is trusted.
         """
+        now = datetime.now(timezone.utc)
+
         # Check cache
         if peer_did in self._verified_peers:
             cached_time = self._verified_peers[peer_did]
-            if datetime.utcnow() - cached_time < self._verification_cache_ttl:
+            if now - cached_time < self._verification_cache_ttl:
                 logger.debug(f"Using cached trust for {peer_did}")
                 return True
-        
-        # Verify Agent Card signature if provided
+
+        # Verify via AI Card
         if peer_card:
             if not peer_card.verify_signature():
-                logger.warning(f"Invalid Agent Card signature for {peer_did}")
+                logger.warning(f"AI Card signature invalid for {peer_did}")
                 return False
-            
-            # Check trust score
+
             if peer_card.trust_score < self.min_trust_score:
                 logger.warning(
                     f"Peer {peer_did} trust score {peer_card.trust_score} "
                     f"below minimum {self.min_trust_score}"
                 )
                 return False
-        
+
         # Use TrustBridge for handshake if available
         if self.trust_bridge and hasattr(self.trust_bridge, "verify_peer"):
             try:
@@ -279,9 +255,9 @@ class A2ATrustProvider:
             except Exception as e:
                 logger.error(f"Trust verification error: {e}")
                 return False
-        
+
         # Cache successful verification
-        self._verified_peers[peer_did] = datetime.utcnow()
+        self._verified_peers[peer_did] = now
         logger.info(f"Verified trust for peer {peer_did}")
         return True
 
@@ -291,27 +267,24 @@ class A2ATrustProvider:
         message: Dict[str, Any],
         peer_card: Optional[A2AAgentCard] = None,
     ) -> Optional[A2ATask]:
-        """
-        Create A2A task with trust verification.
-        
+        """Create A2A task with trust verification.
+
         Args:
-            peer_did: Target agent DID
-            message: Task message
-            peer_card: Optional target's Agent Card
-            
+            peer_did: Target agent DID.
+            message: Task message.
+            peer_card: Optional target's A2A Agent Card.
+
         Returns:
-            A2ATask if trust verified, None otherwise
+            ``A2ATask`` if trust verified, ``None`` otherwise.
         """
-        # Verify trust first
         if not await self.verify_peer(peer_did, peer_card):
             logger.warning(f"Cannot create task - peer {peer_did} not trusted")
             return None
-        
-        # Create task with trust metadata
+
         task_id = hashlib.sha256(
-            f"{self.identity.did}:{peer_did}:{datetime.utcnow().isoformat()}".encode()
+            f"{self.identity.did}:{peer_did}:{datetime.now(timezone.utc).isoformat()}".encode()
         ).hexdigest()[:16]
-        
+
         task = A2ATask(
             task_id=task_id,
             session_id=f"session-{task_id}",
@@ -322,22 +295,18 @@ class A2ATrustProvider:
             trust_verified=True,
             trust_level="verified",
         )
-        
+
         logger.info(f"Created A2A task {task_id} for peer {peer_did}")
         return task
 
     def get_trust_footer(self) -> Dict[str, Any]:
-        """
-        Get trust verification footer for A2A messages.
-        
-        This footer can be appended to A2A messages for audit trails.
-        """
+        """Get trust verification footer for A2A messages."""
         return {
-            "x-agentmesh-trust": {
-                "verifierDid": str(self.identity.did) if hasattr(self.identity, "did") else "",
-                "timestamp": datetime.utcnow().isoformat(),
-                "minTrustScore": self.min_trust_score,
-                "verificationMethod": "cmvk-handshake",
+            "trust": {
+                "verifier_did": str(self.identity.did) if hasattr(self.identity, "did") else "",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "min_trust_score": self.min_trust_score,
+                "verification_method": "ai-card",
             }
         }
 
@@ -348,5 +317,4 @@ __all__ = [
     "A2ATask",
     "A2ATaskState",
     "A2ATrustProvider",
-    "CMVKSignature",
 ]
