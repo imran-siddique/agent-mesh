@@ -305,6 +305,7 @@ rules:
 
 | Protocol | Status | Description |
 |----------|--------|-------------|
+| AI Card | ✅ Alpha | Cross-protocol identity standard (`src/agentmesh/integrations/ai_card/`) |
 | A2A | ✅ Alpha | Agent-to-agent coordination (full adapter in `src/agentmesh/integrations/a2a/`) |
 | MCP | ✅ Alpha | Tool and resource binding (trust-gated server/client in `src/agentmesh/integrations/mcp/`) |
 | IATP | ✅ Alpha | Trust handshakes (via [agent-os](https://github.com/imran-siddique/agent-os), graceful fallback if unavailable) |
@@ -341,6 +342,7 @@ agentmesh/
 │   └── learning.py     # Adaptive learning & weight optimization
 │
 ├── integrations/       # Protocol & framework adapters
+│   ├── ai_card/        # AI Card standard (cross-protocol identity)
 │   ├── a2a/            # Google A2A protocol support
 │   ├── mcp/            # Anthropic MCP trust-gated server/client
 │   ├── langgraph/      # LangGraph trust checkpoints
