@@ -11,6 +11,8 @@ Commands:
 - policy: Manage policies
 """
 
+import logging
+
 import click
 from rich.console import Console
 from rich.table import Table
@@ -23,6 +25,7 @@ import yaml
 import os
 
 console = Console()
+logger = logging.getLogger(__name__)
 
 
 @click.group()
@@ -446,12 +449,12 @@ def _init_claude_integration(config_path: Optional[str], backup: bool):
     else:
         config_path = Path(config_path)
     
-    console.print(f"Config path: {config_path}")
+    logger.info("Config path: %s", config_path)
     
     # Check if config exists
     if not config_path.exists():
-        console.print(f"[yellow]Config file not found at {config_path}[/yellow]")
-        console.print("Creating new config file...")
+        logger.warning("Config file not found at %s", config_path)
+        logger.info("Creating new config file...")
         config_path.parent.mkdir(parents=True, exist_ok=True)
         config = {"mcpServers": {}}
     else:
@@ -460,7 +463,7 @@ def _init_claude_integration(config_path: Optional[str], backup: bool):
             backup_path = config_path.with_suffix(".json.backup")
             import shutil
             shutil.copy(config_path, backup_path)
-            console.print(f"[dim]✓ Backed up existing config to {backup_path}[/dim]")
+            logger.debug("Backed up existing config to %s", backup_path)
         
         # Load existing config
         with open(config_path) as f:
@@ -495,7 +498,7 @@ def _init_claude_integration(config_path: Optional[str], backup: bool):
         config["mcpServers"].update(example_server)
         console.print("\n[green]✓ Added AgentMesh-protected filesystem server example[/green]")
     else:
-        console.print("\n[yellow]⚠️  AgentMesh proxy already configured[/yellow]")
+        logger.warning("AgentMesh proxy already configured")
     
     # Save updated config
     with open(config_path, "w") as f:

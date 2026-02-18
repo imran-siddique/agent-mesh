@@ -19,13 +19,14 @@ from pathlib import Path
 from typing import Any, Dict, Optional, List
 import subprocess
 
+import logging
+
 import click
-from rich.console import Console
 
 from agentmesh import PolicyEngine, AuditLog, RewardEngine
 from agentmesh.identity import AgentIdentity
 
-console = Console(stderr=True)  # Use stderr for logs to keep stdout clean for MCP
+logger = logging.getLogger(__name__)
 
 
 class MCPProxy:
@@ -57,7 +58,7 @@ class MCPProxy:
         self.enable_footer = enable_footer
         
         # Create proxy identity
-        console.print(f"[dim]🔐 Initializing AgentMesh proxy identity...[/dim]")
+        logger.info("Initializing AgentMesh proxy identity...")
         self.identity = AgentIdentity.create(
             name=identity_name,
             sponsor="proxy@agentmesh.ai",
@@ -76,7 +77,7 @@ class MCPProxy:
         # Process handle
         self.target_process: Optional[subprocess.Popen] = None
         
-        console.print(f"[dim]✓ Proxy initialized with trust score: {self.trust_score}/1000[/dim]")
+        logger.info("Proxy initialized with trust score: %d/1000", self.trust_score)
     
     def _load_default_policies(self):
         """Load default policies based on policy level."""
@@ -144,14 +145,14 @@ rules: []
         try:
             self.policy_engine.load_yaml(policy_yaml)
         except Exception as e:
-            console.print(f"[yellow]⚠️  Warning: Could not load policy: {e}[/yellow]")
+            logger.warning("Could not load policy: %s", e)
     
     async def start(self):
         """Start the proxy server."""
-        console.print(f"[dim]🚀 Starting MCP proxy...[/dim]")
-        console.print(f"[dim]   Target: {' '.join(self.target_command)}[/dim]")
-        console.print(f"[dim]   Policy: {self.policy_level}[/dim]")
-        console.print(f"[dim]   Agent DID: {self.identity.did}[/dim]")
+        logger.info("Starting MCP proxy...")
+        logger.info("Target: %s", " ".join(self.target_command))
+        logger.info("Policy: %s", self.policy_level)
+        logger.info("Agent DID: %s", self.identity.did)
         
         # Start target MCP server as subprocess
         self.target_process = subprocess.Popen(
@@ -162,8 +163,8 @@ rules: []
             bufsize=0,
         )
         
-        console.print(f"[dim]✓ Target server started (PID: {self.target_process.pid})[/dim]")
-        console.print(f"[dim]🔒 AgentMesh governance active[/dim]")
+        logger.info("Target server started (PID: %d)", self.target_process.pid)
+        logger.info("AgentMesh governance active")
         
         # Start message handling loops
         read_task = asyncio.create_task(self._read_from_target())
@@ -172,7 +173,7 @@ rules: []
         try:
             await asyncio.gather(read_task, write_task)
         except KeyboardInterrupt:
-            console.print("\n[dim]🛑 Shutting down proxy...[/dim]")
+            logger.info("Shutting down proxy...")
         finally:
             if self.target_process:
                 self.target_process.terminate()
@@ -205,7 +206,7 @@ rules: []
                 self._write_to_target(json.dumps(message) + "\n")
                 
             except Exception as e:
-                console.print(f"[red]Error reading from client: {e}[/red]")
+                logger.error("Error reading from client: %s", e)
                 break
     
     async def _read_from_target(self):
@@ -239,7 +240,7 @@ rules: []
                     sys.stdout.flush()
                 
             except Exception as e:
-                console.print(f"[red]Error reading from target: {e}[/red]")
+                logger.error("Error reading from target: %s", e)
                 break
     
     def _write_to_target(self, data: str):
@@ -248,7 +249,7 @@ rules: []
             self.target_process.stdin.write(data.encode())
             self.target_process.stdin.flush()
         except Exception as e:
-            console.print(f"[red]Error writing to target: {e}[/red]")
+            logger.error("Error writing to target: %s", e)
     
     async def _handle_tool_call(self, message: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -279,9 +280,7 @@ rules: []
         self._audit_log_tool_call(tool_name, arguments, decision)
         
         if not decision.allowed:
-            console.print(
-                f"[yellow]🔒 BLOCKED: {tool_name} - {decision.reason}[/yellow]"
-            )
+            logger.warning("BLOCKED: %s - %s", tool_name, decision.reason)
             
             # Return error response
             error_response = {
@@ -309,11 +308,9 @@ rules: []
             return {"_agentmesh_blocked": True}
         
         if decision.action == "warn":
-            console.print(
-                f"[yellow]⚠️  WARNING: {tool_name} - {decision.reason}[/yellow]"
-            )
+            logger.warning("%s - %s", tool_name, decision.reason)
         else:
-            console.print(f"[dim]✓ Allowed: {tool_name}[/dim]")
+            logger.debug("Allowed: %s", tool_name)
         
         # Update trust score
         self._update_trust_score(tool_name, allowed=True)
@@ -371,7 +368,7 @@ rules: []
         
         # In production, would write to persistent audit log
         # For now, just track in memory
-        console.print(f"[dim]📋 Audit: {tool_name} - {decision.action}[/dim]")
+        logger.debug("Audit: %s - %s", tool_name, decision.action)
     
     def _update_trust_score(self, tool_name: str, allowed: bool):
         """Update trust score based on tool usage."""
@@ -430,7 +427,7 @@ def proxy(target: tuple, policy: str, no_footer: bool, identity: str):
     target_cmd = list(target)
     
     if not target_cmd:
-        console.print("[red]Error: --target is required[/red]")
+        click.echo("Error: --target is required", err=True)
         sys.exit(1)
     
     # Create and start proxy
@@ -444,5 +441,5 @@ def proxy(target: tuple, policy: str, no_footer: bool, identity: str):
     try:
         asyncio.run(proxy_server.start())
     except KeyboardInterrupt:
-        console.print("\n[dim]Proxy stopped[/dim]")
+        logger.info("Proxy stopped")
         sys.exit(0)
