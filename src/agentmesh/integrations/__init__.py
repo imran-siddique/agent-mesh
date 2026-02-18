@@ -12,6 +12,7 @@ from .mcp import TrustGatedMCPServer, TrustGatedMCPClient
 from .langchain import AgentMeshTrustCallback, TrustVerifiedTool, trust_verified_tool
 from .langgraph import TrustedGraphNode, TrustCheckpoint
 from .swarm import TrustedSwarm, TrustPolicy, TrustedAgent, HandoffVerifier
+from .crewai import TrustAwareAgent, TrustAwareCrew
 from .langflow import TrustGatedFlow, TrustVerificationComponent, IdentityComponent
 from .flowise import TrustGatedFlowiseClient, FlowiseNodeIdentity, FlowiseTrustPolicy
 from .haystack import TrustedPipeline, TrustGateComponent, TrustAgentComponent
@@ -41,6 +42,9 @@ __all__ = [
     "TrustPolicy",
     "TrustedAgent",
     "HandoffVerifier",
+    # CrewAI
+    "TrustAwareAgent",
+    "TrustAwareCrew",
     # Langflow
     "TrustGatedFlow",
     "TrustVerificationComponent",
