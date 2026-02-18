@@ -53,6 +53,19 @@ from .governance import (
     ShadowResult,
 )
 
+# Exceptions
+from .exceptions import (
+    AgentMeshError,
+    IdentityError,
+    TrustError,
+    TrustVerificationError,
+    TrustViolationError,
+    DelegationError,
+    GovernanceError,
+    HandshakeError,
+    StorageError,
+)
+
 # Layer 4: Reward & Learning Engine
 from .reward import (
     RewardEngine,
@@ -103,6 +116,17 @@ __all__ = [
     "ShadowMode",
     "ShadowResult",
     
+    # Exceptions
+    "AgentMeshError",
+    "IdentityError",
+    "TrustError",
+    "TrustVerificationError",
+    "TrustViolationError",
+    "DelegationError",
+    "GovernanceError",
+    "HandshakeError",
+    "StorageError",
+
     # Layer 4: Reward
     "RewardEngine",
     "TrustScore",

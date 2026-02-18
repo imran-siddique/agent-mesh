@@ -20,9 +20,10 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 
-class TrustVerificationError(Exception):
-    """Raised when a Langflow component trust check fails."""
-    pass
+from agentmesh.exceptions import TrustVerificationError  # noqa: E402
+
+
+# Backward compatibility: TrustVerificationError is re-exported from agentmesh.exceptions
 
 
 @dataclass

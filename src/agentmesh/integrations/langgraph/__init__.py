@@ -310,9 +310,10 @@ class TrustCheckpoint:
         return verify
 
 
-class TrustVerificationError(Exception):
-    """Raised when trust verification fails."""
-    pass
+from agentmesh.exceptions import TrustVerificationError  # noqa: E402
+
+
+# Backward compatibility: TrustVerificationError is re-exported from agentmesh.exceptions
 
 
 def create_trusted_graph(
