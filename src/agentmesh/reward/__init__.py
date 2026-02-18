@@ -10,6 +10,18 @@ from .scoring import TrustScore, RewardDimension, RewardSignal
 from .learning import AdaptiveLearner, WeightOptimizer
 from .anomaly import BehavioralAnomalyDetector, AnomalyReport
 from .trust_decay import NetworkTrustEngine, TrustEvent, RegimeChangeAlert
+from .distribution import (
+    ContributionWeightedStrategy,
+    DistributionResult,
+    EqualSplitStrategy,
+    HierarchicalStrategy,
+    ParticipantInfo,
+    RewardAllocation,
+    RewardPool,
+    RewardStrategy,
+    TrustWeightedStrategy,
+)
+from .distributor import RewardDistributor
 
 __all__ = [
     "RewardEngine",
@@ -23,4 +35,14 @@ __all__ = [
     "NetworkTrustEngine",
     "TrustEvent",
     "RegimeChangeAlert",
+    "ContributionWeightedStrategy",
+    "DistributionResult",
+    "EqualSplitStrategy",
+    "HierarchicalStrategy",
+    "ParticipantInfo",
+    "RewardAllocation",
+    "RewardPool",
+    "RewardStrategy",
+    "TrustWeightedStrategy",
+    "RewardDistributor",
 ]
