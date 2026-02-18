@@ -11,6 +11,15 @@ from .audit import AuditLog, AuditEntry, MerkleAuditChain
 from .persistent_audit import PersistentAuditLog
 from .shadow import ShadowMode, ShadowResult
 from .opa import OPAEvaluator, OPADecision, load_rego_into_engine
+from .trust_policy import (
+    TrustPolicy,
+    TrustRule,
+    TrustCondition,
+    TrustDefaults,
+    ConditionOperator,
+    load_policies,
+)
+from .policy_evaluator import PolicyEvaluator, TrustPolicyDecision
 
 __all__ = [
     "PolicyEngine",
@@ -29,4 +38,12 @@ __all__ = [
     "OPAEvaluator",
     "OPADecision",
     "load_rego_into_engine",
+    "TrustPolicy",
+    "TrustRule",
+    "TrustCondition",
+    "TrustDefaults",
+    "ConditionOperator",
+    "load_policies",
+    "PolicyEvaluator",
+    "TrustPolicyDecision",
 ]

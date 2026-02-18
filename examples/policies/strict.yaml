@@ -1,0 +1,39 @@
+name: strict-trust-policy
+version: "1.0"
+description: Strict trust policy — high-security environments
+rules:
+  - name: require-high-trust
+    description: Deny agents below strict trust threshold
+    condition:
+      field: trust_score
+      operator: lt
+      value: 700
+    action: deny
+    priority: 10
+  - name: no-delegation
+    description: Deny any delegation beyond depth 1
+    condition:
+      field: delegation_depth
+      operator: gt
+      value: 1
+    action: deny
+    priority: 10
+  - name: deny-unknown-namespace
+    description: Deny agents from unknown namespaces
+    condition:
+      field: agent.namespace
+      operator: not_in
+      value:
+        - core
+        - trusted
+        - internal
+    action: deny
+    priority: 5
+defaults:
+  min_trust_score: 700
+  max_delegation_depth: 1
+  allowed_namespaces:
+    - core
+    - trusted
+    - internal
+  require_handshake: true

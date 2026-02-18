@@ -1,0 +1,34 @@
+name: default-trust-policy
+version: "1.0"
+description: Base trust policy — balanced security for production use
+rules:
+  - name: block-untrusted
+    description: Deny agents with very low trust scores
+    condition:
+      field: trust_score
+      operator: lt
+      value: 200
+    action: deny
+    priority: 10
+  - name: warn-low-trust
+    description: Warn when trust score is below minimum threshold
+    condition:
+      field: trust_score
+      operator: lt
+      value: 500
+    action: warn
+    priority: 20
+  - name: block-deep-delegation
+    description: Deny delegation chains deeper than allowed
+    condition:
+      field: delegation_depth
+      operator: gt
+      value: 3
+    action: deny
+    priority: 15
+defaults:
+  min_trust_score: 500
+  max_delegation_depth: 3
+  allowed_namespaces:
+    - "*"
+  require_handshake: true
