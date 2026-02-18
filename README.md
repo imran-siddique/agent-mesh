@@ -13,6 +13,7 @@
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
 [![PyPI](https://img.shields.io/pypi/v/agentmesh-platform)](https://pypi.org/project/agentmesh-platform/)
 [![Downloads](https://img.shields.io/pypi/dm/agentmesh-platform)](https://pypi.org/project/agentmesh-platform/)
+[![Downloads](https://static.pepy.tech/badge/agentmesh-platform)](https://pepy.tech/project/agentmesh-platform)
 [![Agent-OS Compatible](https://img.shields.io/badge/agent--os-compatible-green.svg)](https://github.com/imran-siddique/agent-os)
 [![Featured in awesome-llm-apps](https://img.shields.io/badge/Featured%20in-awesome--llm--apps-orange)](https://github.com/Shubhamsaboo/awesome-llm-apps)
 [![Integrated in LlamaIndex](https://img.shields.io/badge/LlamaIndex-integrated-purple?logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiPjx0ZXh0IHg9IjQiIHk9IjE4IiBmb250LXNpemU9IjE2Ij7wn6aZPC90ZXh0Pjwvc3ZnPg==)](https://github.com/run-llama/llama_index/pull/20644)
@@ -24,6 +25,17 @@
 [Quick Start](#quick-start) • [MCP Proxy](#the-agentmesh-proxy-ssl-for-ai-agents) • [Examples](#examples--integrations) • [Agent-OS](https://github.com/imran-siddique/agent-os)
 
 </div>
+
+### Trusted By
+
+<p align="center">
+  <a href="https://github.com/langgenius/dify-plugins/pull/2060"><img src="https://img.shields.io/badge/Dify-65K_⭐_Merged-success?style=flat-square" alt="Dify"></a>
+  <a href="https://github.com/run-llama/llama_index/pull/20644"><img src="https://img.shields.io/badge/LlamaIndex-47K_⭐_Merged-success?style=flat-square" alt="LlamaIndex"></a>
+  <a href="https://github.com/microsoft/agent-lightning/pull/478"><img src="https://img.shields.io/badge/Agent--Lightning-15K_⭐_Merged-success?style=flat-square" alt="Agent-Lightning"></a>
+  <a href="https://pypi.org/project/langgraph-trust/"><img src="https://img.shields.io/badge/LangGraph-PyPI-blue?style=flat-square" alt="LangGraph"></a>
+  <a href="https://pypi.org/project/openai-agents-trust/"><img src="https://img.shields.io/badge/OpenAI_Agents-PyPI-blue?style=flat-square" alt="OpenAI Agents"></a>
+  <a href="https://clawhub.ai/imran-siddique/agentmesh-governance"><img src="https://img.shields.io/badge/OpenClaw-ClawHub-purple?style=flat-square" alt="OpenClaw"></a>
+</p>
 
 ---
 
