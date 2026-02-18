@@ -6,13 +6,14 @@ have more capabilities than their parent. Scope always narrows.
 """
 
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import ClassVar, Optional
 from pydantic import BaseModel, Field, field_validator
 import hashlib
 import json
 
 from agentmesh.identity.agent_id import AgentIdentity
-from agentmesh.exceptions import DelegationError
+from agentmesh.constants import DEFAULT_DELEGATION_MAX_DEPTH
+from agentmesh.exceptions import DelegationError, DelegationDepthError
 
 
 class UserContext(BaseModel):
@@ -165,7 +166,10 @@ class DelegationChain(BaseModel):
     - Traceable to human sponsor
     """
     
+    DEFAULT_MAX_DEPTH: ClassVar[int] = DEFAULT_DELEGATION_MAX_DEPTH
+
     chain_id: str = Field(..., description="Unique chain identifier")
+    max_depth: int = Field(default=DEFAULT_DELEGATION_MAX_DEPTH, description="Maximum allowed chain depth")
     
     # Root (human sponsor)
     root_sponsor_email: str = Field(..., description="Human sponsor at chain root")
@@ -223,15 +227,27 @@ class DelegationChain(BaseModel):
     # Verification
     chain_hash: str = Field(default="", description="Hash of entire chain")
     
+    def get_depth(self) -> int:
+        """Return the current depth of the delegation chain."""
+        return len(self.links)
+
     def add_link(self, link: DelegationLink) -> None:
         """
         Add a link to the chain.
         
         Validates that:
-        1. Link connects to current leaf
-        2. Capabilities are properly narrowed
-        3. Link hash is correct
+        1. Depth limit is not exceeded
+        2. Link connects to current leaf
+        3. Capabilities are properly narrowed
+        4. Link hash is correct
         """
+        new_depth = len(self.links) + 1
+        if new_depth > self.max_depth:
+            raise DelegationDepthError(
+                f"Delegation chain depth {new_depth} exceeds maximum allowed depth "
+                f"of {self.max_depth}"
+            )
+
         if self.links:
             last_link = self.links[-1]
             if link.parent_did != last_link.child_did:
