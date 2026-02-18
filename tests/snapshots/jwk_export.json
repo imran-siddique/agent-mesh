@@ -1,0 +1,7 @@
+{
+  "kty": "OKP",
+  "crv": "Ed25519",
+  "x": "4UOr6kjY4bcnFNXCAw0x23xyjpNIBMmHXk6Tn0gHKTU",
+  "kid": "did:mesh:fb875ec7ca78a9ff32614b180baa2497",
+  "use": "sig"
+}

@@ -1,0 +1,33 @@
+{
+  "agent_did": "did:mesh:scored_agent",
+  "total_score": 750,
+  "tier": "trusted",
+  "dimensions": {
+    "policy_compliance": {
+      "score": 75.0,
+      "trend": "stable",
+      "signal_count": 10
+    },
+    "resource_efficiency": {
+      "score": 75.0,
+      "trend": "stable",
+      "signal_count": 10
+    },
+    "output_quality": {
+      "score": 75.0,
+      "trend": "stable",
+      "signal_count": 10
+    },
+    "security_posture": {
+      "score": 75.0,
+      "trend": "stable",
+      "signal_count": 10
+    },
+    "collaboration_health": {
+      "score": 75.0,
+      "trend": "stable",
+      "signal_count": 10
+    }
+  },
+  "calculated_at": "2026-02-18T22:50:53.634393"
+}
