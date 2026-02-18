@@ -1,0 +1,21 @@
+{
+  "link_id": "link_snap000001",
+  "depth": 1,
+  "parent_did": "did:mesh:parent111",
+  "child_did": "did:mesh:child222",
+  "parent_capabilities": [
+    "read",
+    "write",
+    "admin"
+  ],
+  "delegated_capabilities": [
+    "read",
+    "write"
+  ],
+  "created_at": "2026-02-18T22:50:53.627397",
+  "expires_at": null,
+  "user_context": null,
+  "parent_signature": "sig_placeholder",
+  "link_hash": "f58c3c0dbc1ab04ed54cbac5d9e328947f6f17ce1a11c5e092472b9168ffc0a6",
+  "previous_link_hash": "prev_hash_placeholder"
+}

@@ -1,0 +1,25 @@
+{
+  "did": {
+    "method": "mesh",
+    "unique_id": "d7f46108bef519029c240b191d258a1c"
+  },
+  "name": "snapshot-agent",
+  "description": "Agent for snapshot testing",
+  "public_key": "ijunKBt+mmoJPW7YDyShjaOmVF8p0qyGA1jxP5If/aI=",
+  "verification_key_id": "key-a41f8d650137ff09",
+  "sponsor_email": "snapshot@example.com",
+  "sponsor_verified": false,
+  "organization": "snapshot-org",
+  "organization_id": null,
+  "capabilities": [
+    "read",
+    "write"
+  ],
+  "created_at": "2026-02-18T22:50:53.600112",
+  "updated_at": "2026-02-18T22:50:53.600129",
+  "expires_at": null,
+  "status": "active",
+  "revocation_reason": null,
+  "parent_did": null,
+  "delegation_depth": 0
+}
