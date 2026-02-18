@@ -5,11 +5,16 @@ Simulate agent behavior against real policies without execution.
 Shadow vs. production divergence target: <2% on replay dataset.
 """
 
+from __future__ import annotations
+
 from datetime import datetime
-from typing import Optional, Any
+from typing import TYPE_CHECKING, Optional, Any
 from pydantic import BaseModel, Field
 from dataclasses import dataclass
 import uuid
+
+if TYPE_CHECKING:
+    from .policy import PolicyEngine
 
 
 @dataclass
@@ -90,7 +95,7 @@ class ShadowMode:
     
     DIVERGENCE_TARGET = 0.02  # 2%
     
-    def __init__(self, policy_engine):
+    def __init__(self, policy_engine: PolicyEngine):
         """
         Initialize shadow mode.
         
@@ -225,7 +230,7 @@ class ShadowMode:
         """Get session by ID."""
         return self._sessions.get(session_id)
     
-    def get_divergence_report(self, session_id: Optional[str] = None) -> dict:
+    def get_divergence_report(self, session_id: Optional[str] = None) -> dict[str, Any]:
         """Generate divergence report for a session."""
         sid = session_id or self._active_session
         if not sid or sid not in self._sessions:

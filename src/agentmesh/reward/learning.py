@@ -5,8 +5,10 @@ The platform's ability to learn and adapt from agent behavior.
 Supports tunable weights with A/B testing.
 """
 
+from __future__ import annotations
+
 from datetime import datetime, timedelta
-from typing import Optional, Callable
+from typing import Any, Optional, Callable
 from pydantic import BaseModel, Field
 from dataclasses import dataclass
 import random
@@ -29,16 +31,16 @@ class WeightExperiment:
     treatment_percentage: float = 0.1  # 10% in treatment
     
     # Assignment
-    control_agents: set = None
-    treatment_agents: set = None
+    control_agents: Optional[set[str]] = None
+    treatment_agents: Optional[set[str]] = None
     
     # Results
-    control_scores: list = None
-    treatment_scores: list = None
+    control_scores: Optional[list[int]] = None
+    treatment_scores: Optional[list[int]] = None
     
     # Status
-    started_at: datetime = None
-    ended_at: datetime = None
+    started_at: Optional[datetime] = None
+    ended_at: Optional[datetime] = None
     
     def __post_init__(self):
         self.control_agents = set()
@@ -69,7 +71,7 @@ class WeightExperiment:
         else:
             self.control_scores.append(score)
     
-    def get_results(self) -> dict:
+    def get_results(self) -> dict[str, Any]:
         """Get experiment results."""
         control_avg = (
             sum(self.control_scores) / len(self.control_scores)
@@ -148,7 +150,7 @@ class WeightOptimizer:
         if self._active_experiment:
             self._experiments[self._active_experiment].record_score(agent_did, score)
     
-    def end_experiment(self, experiment_id: Optional[str] = None) -> dict:
+    def end_experiment(self, experiment_id: Optional[str] = None) -> dict[str, Any]:
         """End an experiment and get results."""
         exp_id = experiment_id or self._active_experiment
         if not exp_id or exp_id not in self._experiments:
@@ -220,7 +222,7 @@ class AdaptiveLearner:
                 "type": "large_negative_impact",
             })
     
-    def get_agent_patterns(self, agent_did: str) -> list:
+    def get_agent_patterns(self, agent_did: str) -> list[dict[str, Any]]:
         """Get learned patterns for an agent."""
         return self._patterns.get(agent_did, [])
     
@@ -257,7 +259,7 @@ class AdaptiveLearner:
         self,
         agent_did: Optional[str] = None,
         since: Optional[datetime] = None,
-    ) -> list:
+    ) -> list[dict[str, Any]]:
         """Get detected anomalies."""
         anomalies = self._anomalies
         
@@ -272,7 +274,7 @@ class AdaptiveLearner:
         
         return anomalies
     
-    def get_learning_summary(self) -> dict:
+    def get_learning_summary(self) -> dict[str, Any]:
         """Get summary of learning state."""
         total_observations = sum(len(p) for p in self._patterns.values())
         

@@ -236,7 +236,7 @@ class PolicyEngine:
         self.load_policy(policy)
         return policy
     
-    def _apply_rule(self, rule: PolicyRule, policy: Policy, context: dict = None) -> PolicyDecision:
+    def _apply_rule(self, rule: PolicyRule, policy: Policy, context: Optional[dict] = None) -> PolicyDecision:
         """Apply a matched rule and generate actionable error messages."""
         # Check rate limit if applicable
         if rule.limit:
@@ -285,7 +285,7 @@ class PolicyEngine:
             approvers=rule.approvers if rule.action == "require_approval" else [],
         )
     
-    def _get_suggestion(self, rule: PolicyRule, context: dict = None) -> str:
+    def _get_suggestion(self, rule: PolicyRule, context: Optional[dict] = None) -> str:
         """Generate actionable suggestions based on the rule condition."""
         condition = rule.condition.lower()
         
@@ -375,7 +375,7 @@ class PolicyEngine:
 
     # ── OPA/Rego integration ──────────────────────────────────
 
-    def load_rego(self, rego_path: str = None, rego_content: str = None, package: str = "agentmesh") -> "OPAEvaluator":
+    def load_rego(self, rego_path: Optional[str] = None, rego_content: Optional[str] = None, package: str = "agentmesh") -> "OPAEvaluator":
         """
         Load a .rego file alongside YAML/JSON policies.
 

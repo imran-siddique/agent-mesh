@@ -88,7 +88,7 @@ class AuditEntry(BaseModel):
         "audit_integrity":     "ai.agentmesh.audit.integrity.verified",
     }
 
-    def to_cloudevent(self) -> dict:
+    def to_cloudevent(self) -> dict[str, Any]:
         """
         Serialize this entry as a CloudEvents v1.0 JSON envelope.
 
@@ -452,7 +452,7 @@ class AuditLog:
         """Verify the entire audit log integrity."""
         return self._chain.verify_chain()
     
-    def get_proof(self, entry_id: str) -> Optional[dict]:
+    def get_proof(self, entry_id: str) -> Optional[dict[str, Any]]:
         """Get tamper-proof evidence for an entry."""
         entry = self.get_entry(entry_id)
         if not entry:
@@ -475,7 +475,7 @@ class AuditLog:
         self,
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Export audit log for external verification."""
         entries = self.query(start_time=start_time, end_time=end_time, limit=10000)
         
@@ -490,7 +490,7 @@ class AuditLog:
         self,
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
-    ) -> list[dict]:
+    ) -> list[dict[str, Any]]:
         """
         Export audit entries as CloudEvents v1.0 JSON envelopes.
 
