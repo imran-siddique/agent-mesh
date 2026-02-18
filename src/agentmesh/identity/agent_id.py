@@ -15,6 +15,8 @@ import hashlib
 import uuid
 import base64
 
+from agentmesh.exceptions import IdentityError
+
 
 class AgentDID(BaseModel):
     """
@@ -90,13 +92,45 @@ class AgentIdentity(BaseModel):
     
     # Delegation
     parent_did: Optional[str] = Field(None, description="Parent agent DID if delegated")
-    delegation_depth: int = Field(default=0, description="Depth in delegation chain")
+    delegation_depth: int = Field(default=0, ge=0, description="Depth in delegation chain")
     
     # Private key stored separately (not serialized)
     _private_key: Optional[ed25519.Ed25519PrivateKey] = None
     
     model_config = {"arbitrary_types_allowed": True}
-    
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise IdentityError("Agent name must not be empty")
+        return v
+
+    @field_validator("public_key")
+    @classmethod
+    def validate_public_key(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise IdentityError("Public key must not be empty")
+        return v
+
+    @field_validator("sponsor_email")
+    @classmethod
+    def validate_sponsor_email(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise IdentityError("Sponsor email must not be empty")
+        if "@" not in v:
+            raise IdentityError(f"Invalid sponsor email format: {v}")
+        return v
+
+    @field_validator("parent_did")
+    @classmethod
+    def validate_parent_did(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not v.startswith("did:mesh:"):
+            raise IdentityError(
+                f"Parent DID must match 'did:mesh:' pattern, got: {v}"
+            )
+        return v
+
     @classmethod
     def create(
         cls,
@@ -111,6 +145,13 @@ class AgentIdentity(BaseModel):
         
         This is the primary factory method for creating governed agents.
         """
+        if not name or not name.strip():
+            raise IdentityError("Agent name must not be empty")
+        if not sponsor or not sponsor.strip():
+            raise IdentityError("Sponsor email must not be empty")
+        if "@" not in sponsor:
+            raise IdentityError(f"Invalid sponsor email format: {sponsor}")
+
         # Generate keypair
         private_key = ed25519.Ed25519PrivateKey.generate()
         public_key = private_key.public_key()

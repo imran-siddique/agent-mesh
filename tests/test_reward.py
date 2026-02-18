@@ -27,7 +27,7 @@ class TestRewardEngine:
         """Test initial trust score."""
         engine = RewardEngine()
         
-        score = engine.get_agent_score("did:agentmesh:test")
+        score = engine.get_agent_score("did:mesh:test")
         
         assert isinstance(score, TrustScore)
         assert score.total_score >= 0
@@ -38,14 +38,14 @@ class TestRewardEngine:
         engine = RewardEngine()
         
         engine.record_signal(
-            agent_did="did:agentmesh:test",
+            agent_did="did:mesh:test",
             dimension=DimensionType.POLICY_COMPLIANCE,
             value=1.0,
             source="test",
         )
         
         # Signal should be recorded
-        state = engine._agents.get("did:agentmesh:test")
+        state = engine._agents.get("did:mesh:test")
         assert state is not None
         assert len(state.recent_signals) == 1
     
@@ -54,12 +54,12 @@ class TestRewardEngine:
         engine = RewardEngine()
         
         engine.record_policy_compliance(
-            agent_did="did:agentmesh:test",
+            agent_did="did:mesh:test",
             compliant=True,
             policy_name="test-policy",
         )
         
-        state = engine._agents.get("did:agentmesh:test")
+        state = engine._agents.get("did:mesh:test")
         signal = state.recent_signals[0]
         
         assert signal.dimension == DimensionType.POLICY_COMPLIANCE
@@ -70,14 +70,14 @@ class TestRewardEngine:
         engine = RewardEngine()
         
         engine.record_resource_usage(
-            agent_did="did:agentmesh:test",
+            agent_did="did:mesh:test",
             tokens_used=100,
             tokens_budget=200,
             compute_ms=50,
             compute_budget_ms=100,
         )
         
-        state = engine._agents.get("did:agentmesh:test")
+        state = engine._agents.get("did:mesh:test")
         signal = state.recent_signals[0]
         
         assert signal.dimension == DimensionType.RESOURCE_EFFICIENCY
@@ -90,13 +90,13 @@ class TestRewardEngine:
         # Add many positive signals
         for _ in range(10):
             engine.record_signal(
-                agent_did="did:agentmesh:test",
+                agent_did="did:mesh:test",
                 dimension=DimensionType.POLICY_COMPLIANCE,
                 value=1.0,
                 source="test",
             )
         
-        score = engine._recalculate_score("did:agentmesh:test")
+        score = engine._recalculate_score("did:mesh:test")
         
         # Score should be high
         assert score.total_score > 500
@@ -112,16 +112,16 @@ class TestRewardEngine:
         for _ in range(100):
             for dim in DimensionType:
                 engine.record_signal(
-                    agent_did="did:agentmesh:test",
+                    agent_did="did:mesh:test",
                     dimension=dim,
                     value=0.0,
                     source="test",
                 )
         
-        engine._recalculate_score("did:agentmesh:test")
+        engine._recalculate_score("did:mesh:test")
         
         # Agent should be revoked (score will be 0)
-        state = engine._agents.get("did:agentmesh:test")
+        state = engine._agents.get("did:mesh:test")
         assert state.revoked or len(revoked_agents) > 0
     
     def test_score_explanation(self):
@@ -129,14 +129,14 @@ class TestRewardEngine:
         engine = RewardEngine()
         
         engine.record_signal(
-            agent_did="did:agentmesh:test",
+            agent_did="did:mesh:test",
             dimension=DimensionType.POLICY_COMPLIANCE,
             value=0.8,
             source="test",
         )
-        engine._recalculate_score("did:agentmesh:test")
+        engine._recalculate_score("did:mesh:test")
         
-        explanation = engine.get_score_explanation("did:agentmesh:test")
+        explanation = engine.get_score_explanation("did:mesh:test")
         
         assert "agent_did" in explanation
         assert "total_score" in explanation
@@ -149,31 +149,31 @@ class TestTrustScore:
     
     def test_create_score(self):
         """Test creating trust score."""
-        score = TrustScore(agent_did="did:agentmesh:test")
+        score = TrustScore(agent_did="did:mesh:test")
         
-        assert score.agent_did == "did:agentmesh:test"
+        assert score.agent_did == "did:mesh:test"
         assert score.total_score == 500  # Default
     
     def test_tier_assignment(self):
         """Test tier assignment based on score."""
-        score = TrustScore(agent_did="did:agentmesh:test", total_score=950)
+        score = TrustScore(agent_did="did:mesh:test", total_score=950)
         assert score.tier == "verified_partner"
         
-        score = TrustScore(agent_did="did:agentmesh:test", total_score=750)
+        score = TrustScore(agent_did="did:mesh:test", total_score=750)
         assert score.tier == "trusted"
         
-        score = TrustScore(agent_did="did:agentmesh:test", total_score=500)
+        score = TrustScore(agent_did="did:mesh:test", total_score=500)
         assert score.tier == "standard"
         
-        score = TrustScore(agent_did="did:agentmesh:test", total_score=350)
+        score = TrustScore(agent_did="did:mesh:test", total_score=350)
         assert score.tier == "probationary"
         
-        score = TrustScore(agent_did="did:agentmesh:test", total_score=100)
+        score = TrustScore(agent_did="did:mesh:test", total_score=100)
         assert score.tier == "untrusted"
     
     def test_threshold_check(self):
         """Test threshold checking."""
-        score = TrustScore(agent_did="did:agentmesh:test", total_score=700)
+        score = TrustScore(agent_did="did:mesh:test", total_score=700)
         
         assert score.meets_threshold(500)
         assert score.meets_threshold(700)
@@ -194,14 +194,14 @@ class TestAdaptiveLearner:
         learner = AdaptiveLearner()
         
         learner.observe(
-            agent_did="did:agentmesh:test",
+            agent_did="did:mesh:test",
             action="api_call",
             context={"endpoint": "/data"},
             outcome="success",
             score_impact=5,
         )
         
-        patterns = learner.get_agent_patterns("did:agentmesh:test")
+        patterns = learner.get_agent_patterns("did:mesh:test")
         
         assert len(patterns) == 1
     
@@ -211,7 +211,7 @@ class TestAdaptiveLearner:
         
         # Large negative impact should trigger anomaly
         learner.observe(
-            agent_did="did:agentmesh:test",
+            agent_did="did:mesh:test",
             action="dangerous_action",
             context={},
             outcome="failure",
@@ -229,14 +229,14 @@ class TestAdaptiveLearner:
         # Repeated negative actions
         for _ in range(5):
             learner.observe(
-                agent_did="did:agentmesh:test",
+                agent_did="did:mesh:test",
                 action="bad_action",
                 context={},
                 outcome="failure",
                 score_impact=-10,
             )
         
-        recommendations = learner.get_recommendations("did:agentmesh:test")
+        recommendations = learner.get_recommendations("did:mesh:test")
         
         assert len(recommendations) >= 1
 
@@ -276,7 +276,7 @@ class TestWeightOptimizer:
         
         # Assign multiple agents
         assignments = [
-            optimizer.get_weights_for_agent(f"did:agentmesh:agent-{i}")
+            optimizer.get_weights_for_agent(f"did:mesh:agent-{i}")
             for i in range(100)
         ]
         
