@@ -149,3 +149,8 @@ warn_unused_configs = true
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "fuzz: fuzzing tests with malformed inputs",
+    "benchmark: crypto operation benchmarks",
+    "slow: long-running load tests (skip with -m 'not slow')",
+]
