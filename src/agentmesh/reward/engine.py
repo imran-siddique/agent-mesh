@@ -6,10 +6,20 @@ multi-dimensional reward signals, updated every ≤30s.
 """
 
 from datetime import datetime, timedelta
-from typing import Optional, Callable
+from typing import Any, Optional, Callable
 from pydantic import BaseModel, Field
 import asyncio
 
+from agentmesh.constants import (
+    REWARD_UPDATE_INTERVAL_SECONDS,
+    TRUST_REVOCATION_THRESHOLD,
+    TRUST_WARNING_THRESHOLD,
+    WEIGHT_COLLABORATION_HEALTH,
+    WEIGHT_OUTPUT_QUALITY,
+    WEIGHT_POLICY_COMPLIANCE,
+    WEIGHT_RESOURCE_EFFICIENCY,
+    WEIGHT_SECURITY_POSTURE,
+)
 from .scoring import TrustScore, RewardDimension, RewardSignal, DimensionType
 
 
@@ -17,18 +27,18 @@ class RewardConfig(BaseModel):
     """Configuration for the reward engine."""
     
     # Update frequency
-    update_interval_seconds: int = Field(default=30, ge=1, le=300)
+    update_interval_seconds: int = Field(default=REWARD_UPDATE_INTERVAL_SECONDS, ge=1, le=300)
     
     # Thresholds
-    revocation_threshold: int = Field(default=300, ge=0, le=1000)
-    warning_threshold: int = Field(default=500, ge=0, le=1000)
+    revocation_threshold: int = Field(default=TRUST_REVOCATION_THRESHOLD, ge=0, le=1000)
+    warning_threshold: int = Field(default=TRUST_WARNING_THRESHOLD, ge=0, le=1000)
     
     # Dimension weights (must sum to 1.0)
-    policy_compliance_weight: float = Field(default=0.25)
-    resource_efficiency_weight: float = Field(default=0.15)
-    output_quality_weight: float = Field(default=0.20)
-    security_posture_weight: float = Field(default=0.25)
-    collaboration_health_weight: float = Field(default=0.15)
+    policy_compliance_weight: float = Field(default=WEIGHT_POLICY_COMPLIANCE)
+    resource_efficiency_weight: float = Field(default=WEIGHT_RESOURCE_EFFICIENCY)
+    output_quality_weight: float = Field(default=WEIGHT_OUTPUT_QUALITY)
+    security_posture_weight: float = Field(default=WEIGHT_SECURITY_POSTURE)
+    collaboration_health_weight: float = Field(default=WEIGHT_COLLABORATION_HEALTH)
     
     def validate_weights(self) -> bool:
         """Verify weights sum to 1.0."""
@@ -317,7 +327,7 @@ class RewardEngine:
         """Register callback for automatic revocations."""
         self._revocation_callbacks.append(callback)
     
-    def get_score_explanation(self, agent_did: str) -> dict:
+    def get_score_explanation(self, agent_did: str) -> dict[str, Any]:
         """
         Get fully explainable breakdown of an agent's score.
         
@@ -426,7 +436,7 @@ class RewardEngine:
                     at_risk.append(agent_did)
         return at_risk
     
-    def get_health_report(self, days: int = 7) -> dict:
+    def get_health_report(self, days: int = 7) -> dict[str, Any]:
         """Get longitudinal health report."""
         cutoff = datetime.utcnow() - timedelta(days=days)
         

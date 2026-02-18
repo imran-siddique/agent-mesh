@@ -9,6 +9,16 @@ from typing import Optional
 from pydantic import BaseModel, Field
 from enum import Enum
 
+from agentmesh.constants import (
+    TIER_PROBATIONARY_THRESHOLD,
+    TIER_STANDARD_THRESHOLD,
+    TIER_TRUSTED_THRESHOLD,
+    TIER_VERIFIED_PARTNER_THRESHOLD,
+    TRUST_REVOCATION_THRESHOLD,
+    TRUST_SCORE_DEFAULT,
+    TRUST_SCORE_MAX,
+)
+
 
 class DimensionType(str, Enum):
     """The 5 reward dimensions."""
@@ -98,7 +108,7 @@ class TrustScore(BaseModel):
     agent_did: str
     
     # Total score (0-1000)
-    total_score: int = Field(default=500, ge=0, le=1000)
+    total_score: int = Field(default=TRUST_SCORE_DEFAULT, ge=0, le=1000)
     
     # Trust tier
     tier: str = "standard"  # verified_partner, trusted, standard, probationary, untrusted
@@ -121,13 +131,13 @@ class TrustScore(BaseModel):
     
     def _update_tier(self) -> None:
         """Update tier based on score."""
-        if self.total_score >= 900:
+        if self.total_score >= TIER_VERIFIED_PARTNER_THRESHOLD:
             self.tier = "verified_partner"
-        elif self.total_score >= 700:
+        elif self.total_score >= TIER_TRUSTED_THRESHOLD:
             self.tier = "trusted"
-        elif self.total_score >= 500:
+        elif self.total_score >= TIER_STANDARD_THRESHOLD:
             self.tier = "standard"
-        elif self.total_score >= 300:
+        elif self.total_score >= TIER_PROBATIONARY_THRESHOLD:
             self.tier = "probationary"
         else:
             self.tier = "untrusted"
@@ -135,7 +145,7 @@ class TrustScore(BaseModel):
     def update(self, new_score: int, dimensions: dict[str, RewardDimension]) -> None:
         """Update the trust score."""
         self.previous_score = self.total_score
-        self.total_score = max(0, min(1000, new_score))
+        self.total_score = max(0, min(TRUST_SCORE_MAX, new_score))
         self.score_change = self.total_score - (self.previous_score or 0)
         self.dimensions = dimensions
         self.calculated_at = datetime.utcnow()
@@ -167,15 +177,15 @@ class ScoreThresholds(BaseModel):
     """Configurable score thresholds."""
     
     # Tier thresholds
-    verified_partner: int = 900
-    trusted: int = 700
-    standard: int = 500
-    probationary: int = 300
+    verified_partner: int = TIER_VERIFIED_PARTNER_THRESHOLD
+    trusted: int = TIER_TRUSTED_THRESHOLD
+    standard: int = TIER_STANDARD_THRESHOLD
+    probationary: int = TIER_PROBATIONARY_THRESHOLD
     
     # Action thresholds
-    allow_threshold: int = 500
+    allow_threshold: int = TIER_STANDARD_THRESHOLD
     warn_threshold: int = 400
-    revocation_threshold: int = 300
+    revocation_threshold: int = TRUST_REVOCATION_THRESHOLD
     
     def get_tier(self, score: int) -> str:
         """Get tier for a score."""
