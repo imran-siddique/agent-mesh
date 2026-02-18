@@ -3,12 +3,13 @@ AgentMesh Integrations
 ======================
 
 Protocol and framework integrations for AI Card, A2A, MCP, LangGraph,
-Swarm, Langflow, Flowise, and Haystack.
+LangChain, Swarm, Langflow, Flowise, and Haystack.
 """
 
 from .a2a import A2AAgentCard, A2ATrustProvider
 from .ai_card import AICard, AICardIdentity, AICardService, AICardDiscovery
 from .mcp import TrustGatedMCPServer, TrustGatedMCPClient
+from .langchain import AgentMeshTrustCallback, TrustVerifiedTool, trust_verified_tool
 from .langgraph import TrustedGraphNode, TrustCheckpoint
 from .swarm import TrustedSwarm, TrustPolicy, TrustedAgent, HandoffVerifier
 from .langflow import TrustGatedFlow, TrustVerificationComponent, IdentityComponent
@@ -28,6 +29,10 @@ __all__ = [
     # MCP
     "TrustGatedMCPServer",
     "TrustGatedMCPClient",
+    # LangChain
+    "AgentMeshTrustCallback",
+    "TrustVerifiedTool",
+    "trust_verified_tool",
     # LangGraph
     "TrustedGraphNode",
     "TrustCheckpoint",
