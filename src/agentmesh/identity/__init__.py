@@ -14,6 +14,8 @@ from .delegation import DelegationChain, DelegationLink, UserContext
 from .sponsor import HumanSponsor
 from .risk import RiskScorer, RiskScore
 from .spiffe import SPIFFEIdentity, SVID
+from .namespace import AgentNamespace, NamespaceRule
+from .namespace_manager import NamespaceManager
 
 __all__ = [
     "AgentIdentity",
@@ -28,4 +30,7 @@ __all__ = [
     "RiskScore",
     "SPIFFEIdentity",
     "SVID",
+    "AgentNamespace",
+    "NamespaceRule",
+    "NamespaceManager",
 ]
