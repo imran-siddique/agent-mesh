@@ -14,9 +14,10 @@ from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional, Set
 
 
-class TrustViolationError(Exception):
-    """Raised when a handoff trust verification fails."""
-    pass
+from agentmesh.exceptions import TrustViolationError  # noqa: E402
+
+
+# Backward compatibility: TrustViolationError is re-exported from agentmesh.exceptions
 
 
 @dataclass

@@ -26,9 +26,11 @@ except ImportError:
     _HTTP_AVAILABLE = False
 
 
-class FlowiseTrustError(Exception):
+from agentmesh.exceptions import TrustError  # noqa: E402
+
+
+class FlowiseTrustError(TrustError):
     """Raised when a Flowise trust verification fails."""
-    pass
 
 
 @dataclass

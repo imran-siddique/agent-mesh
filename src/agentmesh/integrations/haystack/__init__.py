@@ -17,9 +17,11 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 
-class HaystackTrustError(Exception):
+from agentmesh.exceptions import TrustError  # noqa: E402
+
+
+class HaystackTrustError(TrustError):
     """Raised when a Haystack pipeline trust check fails."""
-    pass
 
 
 @dataclass
