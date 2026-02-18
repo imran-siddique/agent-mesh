@@ -223,15 +223,134 @@ def get_metrics() -> Optional[MetricsCollector]:
     return _metrics_collector
 
 
-def start_metrics_server(port: int = 9090):
-    """
-    Start Prometheus metrics HTTP server.
-    
+class MeshMetrics:
+    """Prometheus metrics for mesh health monitoring.
+
+    Tracks handshake latency, trust scores, active agents, delegation depth,
+    verification failures, and policy evaluations.
+
     Args:
-        port: Port to listen on (default: 9090)
+        prefix: Optional metric name prefix. Defaults to ``agentmesh``.
+    """
+
+    def __init__(self, prefix: str = "agentmesh") -> None:
+        try:
+            from prometheus_client import Counter, Gauge, Histogram
+
+            self.handshake_duration = Histogram(
+                f"{prefix}_handshake_duration_seconds",
+                "Handshake latency in seconds",
+            )
+            self.trust_score = Gauge(
+                f"{prefix}_trust_score",
+                "Current trust score for an agent",
+                ["agent_did"],
+            )
+            self.active_agents = Gauge(
+                f"{prefix}_active_agents_total",
+                "Number of active agents in the mesh",
+            )
+            self.delegation_chain_depth = Histogram(
+                f"{prefix}_delegation_chain_depth",
+                "Delegation chain depths",
+            )
+            self.failed_verifications = Counter(
+                f"{prefix}_failed_verifications_total",
+                "Failed trust verifications",
+                ["reason"],
+            )
+            self.handshakes_total = Counter(
+                f"{prefix}_handshakes_total",
+                "Total handshakes by result",
+                ["result"],
+            )
+            self.policy_evaluations = Counter(
+                f"{prefix}_policy_evaluations_total",
+                "Policy evaluation decisions",
+                ["decision"],
+            )
+            self._enabled = True
+        except ImportError:
+            self._enabled = False
+
+    @property
+    def enabled(self) -> bool:
+        """Return whether prometheus_client is available."""
+        return self._enabled
+
+    def record_handshake(self, duration_seconds: float, result: str) -> None:
+        """Record a handshake with its duration and result.
+
+        Args:
+            duration_seconds: Handshake latency in seconds.
+            result: Outcome label, e.g. ``success`` or ``failure``.
+        """
+        if not self._enabled:
+            return
+        self.handshake_duration.observe(duration_seconds)
+        self.handshakes_total.labels(result=result).inc()
+
+    def update_trust_score(self, agent_did: str, score: float) -> None:
+        """Update the trust score gauge for an agent.
+
+        Args:
+            agent_did: DID of the agent.
+            score: Current trust score value.
+        """
+        if not self._enabled:
+            return
+        self.trust_score.labels(agent_did=agent_did).set(score)
+
+    def record_verification_failure(self, reason: str) -> None:
+        """Increment the failed verifications counter.
+
+        Args:
+            reason: Failure reason label.
+        """
+        if not self._enabled:
+            return
+        self.failed_verifications.labels(reason=reason).inc()
+
+    def record_delegation(self, depth: int) -> None:
+        """Record a delegation chain depth observation.
+
+        Args:
+            depth: Depth of the delegation chain.
+        """
+        if not self._enabled:
+            return
+        self.delegation_chain_depth.observe(depth)
+
+    def record_policy_evaluation(self, decision: str) -> None:
+        """Record a policy evaluation decision.
+
+        Args:
+            decision: Decision label, e.g. ``allow``, ``deny``, or ``warn``.
+        """
+        if not self._enabled:
+            return
+        self.policy_evaluations.labels(decision=decision).inc()
+
+    def set_active_agents(self, count: int) -> None:
+        """Set the active agents gauge.
+
+        Args:
+            count: Number of currently active agents.
+        """
+        if not self._enabled:
+            return
+        self.active_agents.set(count)
+
+
+def start_metrics_server(port: int = 9090):
+    """Start Prometheus metrics HTTP server.
+
+    Args:
+        port: Port to listen on (default: 9090).
     """
     try:
         from prometheus_client import start_http_server
+
         start_http_server(port)
     except ImportError:
         pass
