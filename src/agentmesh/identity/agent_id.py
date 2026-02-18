@@ -281,6 +281,61 @@ class AgentIdentity(BaseModel):
                     return True
         return False
     
+    def to_jwk(self, include_private: bool = False) -> dict:
+        """Export this identity as a JWK (JSON Web Key).
+
+        Args:
+            include_private: If True, include the private key. Defaults to False.
+
+        Returns:
+            A dict representing the JWK per RFC 7517.
+        """
+        from agentmesh.identity.jwk import to_jwk
+
+        return to_jwk(self, include_private=include_private)
+
+    @classmethod
+    def from_jwk(cls, jwk: dict) -> "AgentIdentity":
+        """Create an AgentIdentity from a JWK.
+
+        Args:
+            jwk: A dict representing a JWK with Ed25519 key material.
+
+        Returns:
+            A new AgentIdentity.
+        """
+        from agentmesh.identity.jwk import from_jwk
+
+        return from_jwk(jwk)
+
+    def to_jwks(self, include_private: bool = False) -> dict:
+        """Export this identity as a JWK Set.
+
+        Args:
+            include_private: If True, include private keys. Defaults to False.
+
+        Returns:
+            A dict with a "keys" array containing the JWK.
+        """
+        from agentmesh.identity.jwk import to_jwks
+
+        return to_jwks(self, include_private=include_private)
+
+    @classmethod
+    def from_jwks(cls, jwks: dict, kid: str | None = None) -> "AgentIdentity":
+        """Import an AgentIdentity from a JWK Set.
+
+        Args:
+            jwks: A dict representing a JWK Set.
+            kid: Optional key ID to filter by.
+
+        Returns:
+            An AgentIdentity from the matching key.
+        """
+        from agentmesh.identity.jwk import from_jwks
+
+        return from_jwks(jwks, kid=kid)
+
     def to_did_document(self) -> dict:
         """Export as a DID Document (W3C format)."""
         return {
