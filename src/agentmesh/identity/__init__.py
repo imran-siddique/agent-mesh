@@ -17,6 +17,7 @@ from .spiffe import SPIFFEIdentity, SVID
 from .namespace import AgentNamespace, NamespaceRule
 from .namespace_manager import NamespaceManager
 from .revocation import RevocationList, RevocationEntry
+from .rotation import KeyRotationManager
 from .jwk import to_jwk, from_jwk, to_jwks, from_jwks
 
 __all__ = [
@@ -37,6 +38,7 @@ __all__ = [
     "NamespaceManager",
     "RevocationList",
     "RevocationEntry",
+    "KeyRotationManager",
     "to_jwk",
     "from_jwk",
     "to_jwks",
