@@ -6,7 +6,7 @@ Expired credentials are rejected; rotation is automatic and zero-downtime.
 """
 
 from datetime import datetime, timedelta
-from typing import Optional, Literal
+from typing import Callable, Optional, Literal
 from pydantic import BaseModel, Field
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
@@ -14,6 +14,8 @@ import hashlib
 import uuid
 import base64
 import secrets
+
+from agentmesh.constants import CREDENTIAL_ROTATION_THRESHOLD_SECONDS
 
 
 class Credential(BaseModel):
@@ -103,7 +105,7 @@ class Credential(BaseModel):
             return False
         return datetime.utcnow() < self.expires_at
     
-    def is_expiring_soon(self, threshold_seconds: int = 60) -> bool:
+    def is_expiring_soon(self, threshold_seconds: int = CREDENTIAL_ROTATION_THRESHOLD_SECONDS) -> bool:
         """Check if credential is about to expire."""
         return datetime.utcnow() > (self.expires_at - timedelta(seconds=threshold_seconds))
     
@@ -185,14 +187,14 @@ class CredentialManager:
     """
     
     DEFAULT_TTL = 900  # 15 minutes
-    ROTATION_THRESHOLD = 60  # Start rotation 1 minute before expiry
+    ROTATION_THRESHOLD = CREDENTIAL_ROTATION_THRESHOLD_SECONDS
     REVOCATION_PROPAGATION_TARGET = 5  # Target: propagate in ≤5 seconds
     
     def __init__(self, default_ttl: int = DEFAULT_TTL):
         self.default_ttl = default_ttl
         self._credentials: dict[str, Credential] = {}
         self._by_agent: dict[str, list[str]] = {}  # agent_did -> list of credential_ids
-        self._revocation_callbacks: list[callable] = []
+        self._revocation_callbacks: list[Callable] = []
     
     def issue(
         self,
@@ -310,7 +312,7 @@ class CredentialManager:
         
         return len(expired)
     
-    def on_revocation(self, callback: callable) -> None:
+    def on_revocation(self, callback: Callable) -> None:
         """Register a callback for revocation events."""
         self._revocation_callbacks.append(callback)
     

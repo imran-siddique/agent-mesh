@@ -6,13 +6,15 @@ communication. Handshake completes in <200ms.
 """
 
 from datetime import datetime, timedelta
-from typing import Optional, Literal
+from typing import Any, Optional, Literal
 from pydantic import BaseModel, Field
 import hashlib
 import secrets
 import asyncio
+from agentmesh.constants import TIER_TRUSTED_THRESHOLD, TIER_VERIFIED_PARTNER_THRESHOLD
 from agentmesh.identity.agent_id import AgentIdentity
 from agentmesh.identity.delegation import UserContext
+from agentmesh.exceptions import HandshakeError
 
 
 class HandshakeChallenge(BaseModel):
@@ -100,9 +102,9 @@ class HandshakeResult(BaseModel):
         latency = int((now - start).total_seconds() * 1000)
         
         # Determine trust level
-        if trust_score >= 900:
+        if trust_score >= TIER_VERIFIED_PARTNER_THRESHOLD:
             level = "verified_partner"
-        elif trust_score >= 700:
+        elif trust_score >= TIER_TRUSTED_THRESHOLD:
             level = "trusted"
         elif trust_score >= 400:
             level = "standard"
@@ -165,6 +167,16 @@ class TrustHandshake:
     DEFAULT_CACHE_TTL_SECONDS = 900  # 15 minutes
     
     def __init__(self, agent_did: str, identity: Optional[AgentIdentity] = None, cache_ttl_seconds: int = DEFAULT_CACHE_TTL_SECONDS):
+        if not agent_did or not agent_did.strip():
+            raise HandshakeError("agent_did must not be empty")
+        if not agent_did.startswith("did:mesh:"):
+            raise HandshakeError(
+                f"agent_did must match 'did:mesh:' pattern, got: {agent_did}"
+            )
+        if cache_ttl_seconds < 0:
+            raise HandshakeError(
+                f"cache_ttl_seconds must be non-negative, got: {cache_ttl_seconds}"
+            )
         self.agent_did = agent_did
         self.identity = identity
         self._pending_challenges: dict[str, HandshakeChallenge] = {}
@@ -283,7 +295,7 @@ class TrustHandshake:
         challenge: HandshakeChallenge,
         my_capabilities: list[str],
         my_trust_score: int,
-        private_key: any = None,  # Deprecated; use identity parameter
+        private_key: Any = None,  # Deprecated; use identity parameter
         identity: Optional[AgentIdentity] = None,
         user_context: Optional[UserContext] = None,
     ) -> HandshakeResponse:

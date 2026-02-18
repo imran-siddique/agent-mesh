@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import math
 import time
+
+from agentmesh.constants import TRUST_SCORE_DEFAULT, TRUST_SCORE_MAX
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -129,10 +131,10 @@ class NetworkTrustEngine:
     # -- Score management -----------------------------------------------------
 
     def get_score(self, agent_did: str) -> float:
-        return self._scores.get(agent_did, 500.0)
+        return self._scores.get(agent_did, float(TRUST_SCORE_DEFAULT))
 
     def set_score(self, agent_did: str, score: float) -> None:
-        self._scores[agent_did] = max(0.0, min(1000.0, score))
+        self._scores[agent_did] = max(0.0, min(float(TRUST_SCORE_MAX), score))
 
     # -- Interaction graph ----------------------------------------------------
 

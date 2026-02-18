@@ -6,9 +6,23 @@ Score visible in dashboard; configurable alert thresholds.
 """
 
 from datetime import datetime, timedelta
-from typing import Optional, Literal
+from typing import Callable, Optional, Literal
 from pydantic import BaseModel, Field
 from dataclasses import dataclass, field
+
+from agentmesh.constants import (
+    RISK_CRITICAL_THRESHOLD,
+    RISK_HIGH_THRESHOLD,
+    RISK_ALERT_THRESHOLD,
+    RISK_MINIMAL_THRESHOLD,
+    RISK_UPDATE_INTERVAL_SECONDS,
+    RISK_WEIGHT_CRITICAL,
+    RISK_WEIGHT_HIGH,
+    RISK_WEIGHT_MEDIUM,
+    RISK_WEIGHT_LOW,
+    RISK_WEIGHT_INFO,
+    TRUST_SCORE_DEFAULT,
+)
 
 
 @dataclass
@@ -26,13 +40,13 @@ class RiskSignal:
     def weight(self) -> float:
         """Get weight based on severity."""
         weights = {
-            "critical": 1.0,
-            "high": 0.75,
-            "medium": 0.5,
-            "low": 0.25,
-            "info": 0.1,
+            "critical": RISK_WEIGHT_CRITICAL,
+            "high": RISK_WEIGHT_HIGH,
+            "medium": RISK_WEIGHT_MEDIUM,
+            "low": RISK_WEIGHT_LOW,
+            "info": RISK_WEIGHT_INFO,
         }
-        return weights.get(self.severity, 0.1)
+        return weights.get(self.severity, RISK_WEIGHT_INFO)
 
 
 class RiskScore(BaseModel):
@@ -46,7 +60,7 @@ class RiskScore(BaseModel):
     agent_did: str
     
     # Overall score (0-1000, higher = safer)
-    total_score: int = Field(default=500, ge=0, le=1000)
+    total_score: int = Field(default=TRUST_SCORE_DEFAULT, ge=0, le=1000)
     risk_level: Literal["critical", "high", "medium", "low", "minimal"] = "medium"
     
     # Component scores (0-100 each)
@@ -66,13 +80,13 @@ class RiskScore(BaseModel):
     @classmethod
     def get_risk_level(cls, score: int) -> str:
         """Convert score to risk level."""
-        if score >= 800:
+        if score >= RISK_MINIMAL_THRESHOLD:
             return "minimal"
-        elif score >= 600:
+        elif score >= RISK_ALERT_THRESHOLD:
             return "low"
-        elif score >= 400:
+        elif score >= RISK_HIGH_THRESHOLD:
             return "medium"
-        elif score >= 200:
+        elif score >= RISK_CRITICAL_THRESHOLD:
             return "high"
         else:
             return "critical"
@@ -104,7 +118,7 @@ class RiskScore(BaseModel):
         self.active_signals = active_signals
         self.critical_signals = critical_signals
         self.calculated_at = datetime.utcnow()
-        self.next_update_at = datetime.utcnow() + timedelta(seconds=30)
+        self.next_update_at = datetime.utcnow() + timedelta(seconds=RISK_UPDATE_INTERVAL_SECONDS)
 
 
 class RiskScorer:
@@ -118,17 +132,17 @@ class RiskScorer:
     - Compliance violations
     """
     
-    UPDATE_INTERVAL = 30  # seconds
+    UPDATE_INTERVAL = RISK_UPDATE_INTERVAL_SECONDS
     
     # Alert thresholds
-    CRITICAL_THRESHOLD = 200
-    HIGH_THRESHOLD = 400
-    ALERT_THRESHOLD = 600
+    CRITICAL_THRESHOLD = RISK_CRITICAL_THRESHOLD
+    HIGH_THRESHOLD = RISK_HIGH_THRESHOLD
+    ALERT_THRESHOLD = RISK_ALERT_THRESHOLD
     
     def __init__(self):
         self._scores: dict[str, RiskScore] = {}
         self._signals: dict[str, list[RiskSignal]] = {}  # agent_did -> signals
-        self._alert_callbacks: list[callable] = []
+        self._alert_callbacks: list[Callable] = []
     
     def get_score(self, agent_did: str) -> RiskScore:
         """Get current risk score for an agent."""
@@ -260,7 +274,7 @@ class RiskScorer:
                 except Exception:
                     pass
     
-    def on_alert(self, callback: callable) -> None:
+    def on_alert(self, callback: Callable) -> None:
         """Register an alert callback."""
         self._alert_callbacks.append(callback)
     

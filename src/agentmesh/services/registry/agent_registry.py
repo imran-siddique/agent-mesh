@@ -14,6 +14,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from agentmesh.constants import TIER_TRUSTED_THRESHOLD, TIER_VERIFIED_PARTNER_THRESHOLD, TRUST_SCORE_DEFAULT
+
 
 class AgentRegistryEntry(BaseModel):
     """Entry in the agent registry."""
@@ -37,7 +39,7 @@ class AgentRegistryEntry(BaseModel):
     supported_protocols: list[str] = Field(default_factory=list)
 
     # Trust
-    trust_score: int = Field(default=500, ge=0, le=1000)
+    trust_score: int = Field(default=TRUST_SCORE_DEFAULT, ge=0, le=1000)
     trust_tier: Literal[
         "verified_partner",
         "trusted",
@@ -127,9 +129,9 @@ class AgentRegistry:
             entry.updated_at = datetime.now(timezone.utc)
 
             # Update trust tier based on score
-            if new_score >= 900:
+            if new_score >= TIER_VERIFIED_PARTNER_THRESHOLD:
                 entry.trust_tier = "verified_partner"
-            elif new_score >= 700:
+            elif new_score >= TIER_TRUSTED_THRESHOLD:
                 entry.trust_tier = "trusted"
             elif new_score >= 400:
                 entry.trust_tier = "standard"
