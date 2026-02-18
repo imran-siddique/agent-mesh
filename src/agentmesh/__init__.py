@@ -61,8 +61,10 @@ from .exceptions import (
     TrustVerificationError,
     TrustViolationError,
     DelegationError,
+    DelegationDepthError,
     GovernanceError,
     HandshakeError,
+    HandshakeTimeoutError,
     StorageError,
 )
 
@@ -123,8 +125,10 @@ __all__ = [
     "TrustVerificationError",
     "TrustViolationError",
     "DelegationError",
+    "DelegationDepthError",
     "GovernanceError",
     "HandshakeError",
+    "HandshakeTimeoutError",
     "StorageError",
 
     # Layer 4: Reward

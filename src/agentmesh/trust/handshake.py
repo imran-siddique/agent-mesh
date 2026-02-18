@@ -14,7 +14,7 @@ import asyncio
 from agentmesh.constants import TIER_TRUSTED_THRESHOLD, TIER_VERIFIED_PARTNER_THRESHOLD
 from agentmesh.identity.agent_id import AgentIdentity
 from agentmesh.identity.delegation import UserContext
-from agentmesh.exceptions import HandshakeError
+from agentmesh.exceptions import HandshakeError, HandshakeTimeoutError
 
 
 class HandshakeChallenge(BaseModel):
@@ -165,8 +165,15 @@ class TrustHandshake:
     
     MAX_HANDSHAKE_MS = 200
     DEFAULT_CACHE_TTL_SECONDS = 900  # 15 minutes
+    DEFAULT_TIMEOUT_SECONDS = 30.0
     
-    def __init__(self, agent_did: str, identity: Optional[AgentIdentity] = None, cache_ttl_seconds: int = DEFAULT_CACHE_TTL_SECONDS):
+    def __init__(
+        self,
+        agent_did: str,
+        identity: Optional[AgentIdentity] = None,
+        cache_ttl_seconds: int = DEFAULT_CACHE_TTL_SECONDS,
+        timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
+    ):
         if not agent_did or not agent_did.strip():
             raise HandshakeError("agent_did must not be empty")
         if not agent_did.startswith("did:mesh:"):
@@ -177,8 +184,13 @@ class TrustHandshake:
             raise HandshakeError(
                 f"cache_ttl_seconds must be non-negative, got: {cache_ttl_seconds}"
             )
+        if timeout_seconds <= 0:
+            raise ValueError(
+                f"timeout_seconds must be positive, got: {timeout_seconds}"
+            )
         self.agent_did = agent_did
         self.identity = identity
+        self.timeout_seconds = timeout_seconds
         self._pending_challenges: dict[str, HandshakeChallenge] = {}
         self._verified_peers: dict[str, tuple[HandshakeResult, datetime]] = {}
         self._cache_ttl = timedelta(seconds=cache_ttl_seconds)
@@ -236,6 +248,32 @@ class TrustHandshake:
         start = datetime.utcnow()
         
         try:
+            result = await asyncio.wait_for(
+                self._do_initiate(peer_did, required_trust_score, required_capabilities, start),
+                timeout=self.timeout_seconds,
+            )
+            return result
+        except asyncio.TimeoutError:
+            raise HandshakeTimeoutError(
+                f"Handshake with {peer_did} exceeded {self.timeout_seconds}s timeout"
+            )
+        except HandshakeTimeoutError:
+            raise
+        except Exception as e:
+            return HandshakeResult.failure(
+                peer_did, f"Handshake error: {str(e)}", start
+            )
+
+    async def _do_initiate(
+        self,
+        peer_did: str,
+        required_trust_score: int,
+        required_capabilities: Optional[list[str]],
+        start: datetime,
+    ) -> HandshakeResult:
+        """Execute the core handshake phases (challenge, response, verify)."""
+        challenge: Optional[HandshakeChallenge] = None
+        try:
             # Phase 1: Generate and send challenge
             challenge = HandshakeChallenge.generate()
             self._pending_challenges[challenge.challenge_id] = challenge
@@ -244,10 +282,9 @@ class TrustHandshake:
             response = await self._get_peer_response(peer_did, challenge)
             
             if not response:
-                result = HandshakeResult.failure(
+                return HandshakeResult.failure(
                     peer_did, "No response from peer", start
                 )
-                return result
             
             # Phase 3: Verify response
             verification = await self._verify_response(
@@ -255,10 +292,9 @@ class TrustHandshake:
             )
             
             if not verification["valid"]:
-                result = HandshakeResult.failure(
+                return HandshakeResult.failure(
                     peer_did, verification["reason"], start
                 )
-                return result
             
             # Reconstruct UserContext from response if present
             response_user_ctx = None
@@ -276,18 +312,9 @@ class TrustHandshake:
             # Cache successful result
             self._cache_result(peer_did, result)
             return result
-            
-        except asyncio.TimeoutError:
-            return HandshakeResult.failure(
-                peer_did, "Handshake timeout", start
-            )
-        except Exception as e:
-            return HandshakeResult.failure(
-                peer_did, f"Handshake error: {str(e)}", start
-            )
         finally:
             # Cleanup
-            if challenge.challenge_id in self._pending_challenges:
+            if challenge and challenge.challenge_id in self._pending_challenges:
                 del self._pending_challenges[challenge.challenge_id]
     
     async def respond(
