@@ -16,6 +16,7 @@ from .risk import RiskScorer, RiskScore
 from .spiffe import SPIFFEIdentity, SVID
 from .namespace import AgentNamespace, NamespaceRule
 from .namespace_manager import NamespaceManager
+from .revocation import RevocationList, RevocationEntry
 
 __all__ = [
     "AgentIdentity",
@@ -33,4 +34,6 @@ __all__ = [
     "AgentNamespace",
     "NamespaceRule",
     "NamespaceManager",
+    "RevocationList",
+    "RevocationEntry",
 ]
