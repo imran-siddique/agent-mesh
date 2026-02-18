@@ -19,6 +19,7 @@ from .namespace_manager import NamespaceManager
 from .revocation import RevocationList, RevocationEntry
 from .rotation import KeyRotationManager
 from .jwk import to_jwk, from_jwk, to_jwks, from_jwks
+from .mtls import MTLSConfig, MTLSIdentityVerifier
 
 __all__ = [
     "AgentIdentity",
@@ -43,4 +44,6 @@ __all__ = [
     "from_jwk",
     "to_jwks",
     "from_jwks",
+    "MTLSConfig",
+    "MTLSIdentityVerifier",
 ]
