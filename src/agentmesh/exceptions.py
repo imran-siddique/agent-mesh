@@ -31,12 +31,20 @@ class DelegationError(AgentMeshError):
     """Errors related to delegation chains."""
 
 
+class DelegationDepthError(DelegationError):
+    """Raised when delegation chain exceeds the configured max depth."""
+
+
 class GovernanceError(AgentMeshError):
     """Errors related to governance policy enforcement."""
 
 
 class HandshakeError(TrustError):
     """Errors during trust handshake protocol."""
+
+
+class HandshakeTimeoutError(HandshakeError):
+    """Raised when a trust handshake exceeds the configured timeout."""
 
 
 class StorageError(AgentMeshError):
@@ -50,7 +58,9 @@ __all__ = [
     "TrustVerificationError",
     "TrustViolationError",
     "DelegationError",
+    "DelegationDepthError",
     "GovernanceError",
     "HandshakeError",
+    "HandshakeTimeoutError",
     "StorageError",
 ]
