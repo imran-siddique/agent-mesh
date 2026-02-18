@@ -5,8 +5,8 @@ Multi-dimensional scoring with trust scores and reward signals.
 """
 
 from datetime import datetime
-from typing import Optional
-from pydantic import BaseModel, Field
+from typing import Any, Optional
+from pydantic import BaseModel, Field, field_validator
 from enum import Enum
 
 from agentmesh.constants import (
@@ -18,6 +18,7 @@ from agentmesh.constants import (
     TRUST_SCORE_DEFAULT,
     TRUST_SCORE_MAX,
 )
+from agentmesh.exceptions import TrustError
 
 
 class DimensionType(str, Enum):
@@ -124,7 +125,18 @@ class TrustScore(BaseModel):
     score_change: int = 0
     
     model_config = {"validate_assignment": True}
-    
+
+    @field_validator("agent_did")
+    @classmethod
+    def validate_agent_did(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise TrustError("agent_did must not be empty")
+        if not v.startswith("did:mesh:"):
+            raise TrustError(
+                f"agent_did must match 'did:mesh:' pattern, got: {v}"
+            )
+        return v
+
     def __init__(self, **data):
         super().__init__(**data)
         self._update_tier()

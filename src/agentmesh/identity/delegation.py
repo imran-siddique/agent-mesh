@@ -7,11 +7,12 @@ have more capabilities than their parent. Scope always narrows.
 
 from datetime import datetime, timedelta
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 import hashlib
 import json
 
 from agentmesh.identity.agent_id import AgentIdentity
+from agentmesh.exceptions import DelegationError
 
 
 class UserContext(BaseModel):
@@ -180,7 +181,41 @@ class DelegationChain(BaseModel):
     # Final agent
     leaf_did: str = Field(..., description="DID of the agent at end of chain")
     leaf_capabilities: list[str] = Field(..., description="Final effective capabilities")
-    
+
+    @field_validator("chain_id")
+    @classmethod
+    def validate_chain_id(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise DelegationError("chain_id must not be empty")
+        return v
+
+    @field_validator("root_sponsor_email")
+    @classmethod
+    def validate_root_sponsor_email(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise DelegationError("root_sponsor_email must not be empty")
+        if "@" not in v:
+            raise DelegationError(f"Invalid root_sponsor_email format: {v}")
+        return v
+
+    @field_validator("root_capabilities")
+    @classmethod
+    def validate_root_capabilities(cls, v: list[str]) -> list[str]:
+        if not v:
+            raise DelegationError("root_capabilities must not be empty")
+        return v
+
+    @field_validator("leaf_did")
+    @classmethod
+    def validate_leaf_did(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise DelegationError("leaf_did must not be empty")
+        if not v.startswith("did:mesh:"):
+            raise DelegationError(
+                f"leaf_did must match 'did:mesh:' pattern, got: {v}"
+            )
+        return v
+
     # Chain metadata
     created_at: datetime = Field(default_factory=datetime.utcnow)
     total_depth: int = Field(default=0)
