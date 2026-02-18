@@ -1,0 +1,69 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mcp-trust-server"
+version = "0.1.0"
+description = "MCP server exposing AgentMesh trust management tools for Claude, GPT, and other AI agents"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.11"
+authors = [
+    { name = "Imran Siddique", email = "imran@agentmesh.dev" }
+]
+keywords = [
+    "mcp",
+    "model-context-protocol",
+    "agentmesh",
+    "trust",
+    "identity",
+    "ai-agents",
+    "security",
+    "cryptography",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Security :: Cryptography",
+]
+dependencies = [
+    "mcp>=1.0.0",
+    "pydantic>=2.5.0",
+    "cryptography>=42.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.23.0",
+]
+
+[project.scripts]
+mcp-trust-server = "mcp_trust_server.server:main"
+
+[project.urls]
+Homepage = "https://github.com/imran-siddique/agent-mesh"
+Documentation = "https://github.com/imran-siddique/agent-mesh/tree/master/packages/mcp-trust-server"
+Repository = "https://github.com/imran-siddique/agent-mesh"
+Issues = "https://github.com/imran-siddique/agent-mesh/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mcp_trust_server"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
