@@ -1,0 +1,18 @@
+name: permissive-trust-policy
+version: "1.0"
+description: Permissive trust policy — development and testing environments
+rules:
+  - name: allow-high-trust
+    description: Always allow agents with high trust scores
+    condition:
+      field: trust_score
+      operator: gte
+      value: 800
+    action: allow
+    priority: 1
+defaults:
+  min_trust_score: 100
+  max_delegation_depth: 5
+  allowed_namespaces:
+    - "*"
+  require_handshake: false
