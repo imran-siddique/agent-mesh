@@ -49,6 +49,22 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
+Component labels — adds app.kubernetes.io/component
+*/}}
+{{- define "agentmesh.componentLabels" -}}
+{{ include "agentmesh.labels" . }}
+app.kubernetes.io/component: {{ .component }}
+{{- end }}
+
+{{/*
+Component selector labels
+*/}}
+{{- define "agentmesh.componentSelectorLabels" -}}
+{{ include "agentmesh.selectorLabels" . }}
+app.kubernetes.io/component: {{ .component }}
+{{- end }}
+
+{{/*
 Create the name of the service account to use
 */}}
 {{- define "agentmesh.serviceAccountName" -}}
@@ -57,4 +73,22 @@ Create the name of the service account to use
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
+{{- end }}
+
+{{/*
+Prometheus scrape annotations
+*/}}
+{{- define "agentmesh.prometheusAnnotations" -}}
+{{- if .Values.monitoring.prometheus.enabled }}
+prometheus.io/scrape: "true"
+prometheus.io/port: {{ .metricsPort | quote }}
+prometheus.io/path: "/metrics"
+{{- end }}
+{{- end }}
+
+{{/*
+Resolve image tag — falls back to global.imageTag then Chart.AppVersion
+*/}}
+{{- define "agentmesh.imageTag" -}}
+{{- . | default $.Values.global.imageTag | default $.Chart.AppVersion }}
 {{- end }}

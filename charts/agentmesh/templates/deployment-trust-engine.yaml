@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agentmesh.fullname" . }}-trust-engine
+  labels:
+    {{- include "agentmesh.labels" . | nindent 4 }}
+    app.kubernetes.io/component: trust-engine
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.trustEngine.replicas }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "agentmesh.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: trust-engine
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.monitoring.prometheus.enabled }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.trustEngine.service.metricsPort | quote }}
+        prometheus.io/path: "/metrics"
+        {{- end }}
+      labels:
+        {{- include "agentmesh.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: trust-engine
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "agentmesh.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: trust-engine
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.trustEngine.image.repository }}:{{ .Values.trustEngine.image.tag | default .Values.global.imageTag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.trustEngine.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.trustEngine.service.port }}
+              protocol: TCP
+            - name: metrics
+              containerPort: {{ .Values.trustEngine.service.metricsPort }}
+              protocol: TCP
+          env:
+            - name: AGENTMESH_COMPONENT
+              value: trust-engine
+            - name: AGENTMESH_TLS_ENABLED
+              value: {{ .Values.global.tls.enabled | quote }}
+            {{- if .Values.global.spiffe.enabled }}
+            - name: SPIFFE_ENDPOINT_SOCKET
+              value: {{ .Values.global.spiffe.socketPath }}
+            - name: SPIFFE_TRUST_DOMAIN
+              value: {{ .Values.global.spiffe.trustDomain }}
+            {{- end }}
+          {{- with .Values.trustEngine.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.trustEngine.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.trustEngine.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            {{- if .Values.global.tls.enabled }}
+            - name: tls-certs
+              mountPath: /etc/agentmesh/tls
+              readOnly: true
+            {{- end }}
+            {{- if .Values.global.spiffe.enabled }}
+            - name: spire-socket
+              mountPath: /run/spire/sockets
+              readOnly: true
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        {{- if .Values.global.tls.enabled }}
+        - name: tls-certs
+          secret:
+            secretName: {{ .Values.global.tls.certSecretName }}
+        {{- end }}
+        {{- if .Values.global.spiffe.enabled }}
+        - name: spire-socket
+          hostPath:
+            path: {{ .Values.global.spiffe.socketPath | dir }}
+            type: DirectoryOrCreate
+        {{- end }}
+      {{- with .Values.trustEngine.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.trustEngine.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.trustEngine.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

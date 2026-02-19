@@ -1,32 +1,98 @@
 {{- if .Values.networkPolicy.enabled }}
+{{- $fullname := include "agentmesh.fullname" . -}}
+---
+# Allow external traffic only to the API Gateway
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "agentmesh.fullname" . }}
+  name: {{ $fullname }}-api-gateway
   labels:
     {{- include "agentmesh.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api-gateway
 spec:
   podSelector:
     matchLabels:
       {{- include "agentmesh.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api-gateway
   policyTypes:
-    {{- toYaml .Values.networkPolicy.policyTypes | nindent 4 }}
+    - Ingress
+    - Egress
   ingress:
-    {{- toYaml .Values.networkPolicy.ingress | nindent 4 }}
+    - ports:
+        - protocol: TCP
+          port: {{ .Values.apiGateway.service.port }}
   egress:
-    {{- toYaml .Values.networkPolicy.egress | nindent 4 }}
-    # Allow DNS
+    # To trust-engine
     - to:
-      - namespaceSelector:
-          matchLabels:
-            name: kube-system
+        - podSelector:
+            matchLabels:
+              {{- include "agentmesh.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: trust-engine
+      ports:
+        - protocol: TCP
+          port: {{ .Values.trustEngine.service.port }}
+    # To policy-server
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "agentmesh.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: policy-server
+      ports:
+        - protocol: TCP
+          port: {{ .Values.policyServer.service.port }}
+    # To audit-collector
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "agentmesh.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: audit-collector
+      ports:
+        - protocol: TCP
+          port: {{ .Values.auditCollector.service.port }}
+    # DNS
+    - to:
+        - namespaceSelector: {}
       ports:
         - protocol: UDP
           port: 53
-    # Allow HTTPS (for external APIs)
+---
+# Internal components: only accept traffic from the API Gateway
+{{- $internalComponents := list "trust-engine" "policy-server" "audit-collector" }}
+{{- range $component := $internalComponents }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullname }}-{{ $component }}
+  labels:
+    {{- include "agentmesh.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $component }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "agentmesh.selectorLabels" $ | nindent 6 }}
+      app.kubernetes.io/component: {{ $component }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "agentmesh.selectorLabels" $ | nindent 14 }}
+              app.kubernetes.io/component: api-gateway
+  egress:
+    # DNS
     - to:
-      - namespaceSelector: {}
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+    # HTTPS for external APIs
+    - to:
+        - namespaceSelector: {}
       ports:
         - protocol: TCP
           port: 443
+---
+{{- end }}
 {{- end }}

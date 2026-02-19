@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agentmesh.fullname" . }}-policy-server
+  labels:
+    {{- include "agentmesh.labels" . | nindent 4 }}
+    app.kubernetes.io/component: policy-server
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.policyServer.replicas }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "agentmesh.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: policy-server
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.monitoring.prometheus.enabled }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.policyServer.service.metricsPort | quote }}
+        prometheus.io/path: "/metrics"
+        {{- end }}
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      labels:
+        {{- include "agentmesh.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: policy-server
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "agentmesh.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: policy-server
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.policyServer.image.repository }}:{{ .Values.policyServer.image.tag | default .Values.global.imageTag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.policyServer.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.policyServer.service.port }}
+              protocol: TCP
+            - name: metrics
+              containerPort: {{ .Values.policyServer.service.metricsPort }}
+              protocol: TCP
+          env:
+            - name: AGENTMESH_COMPONENT
+              value: policy-server
+            - name: AGENTMESH_POLICY_DIR
+              value: {{ .Values.policyServer.policyMountPath }}
+            - name: AGENTMESH_TLS_ENABLED
+              value: {{ .Values.global.tls.enabled | quote }}
+          {{- with .Values.policyServer.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.policyServer.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.policyServer.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: policy-config
+              mountPath: {{ .Values.policyServer.policyMountPath }}
+              readOnly: true
+            {{- if .Values.global.tls.enabled }}
+            - name: tls-certs
+              mountPath: /etc/agentmesh/tls
+              readOnly: true
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: policy-config
+          configMap:
+            name: {{ include "agentmesh.fullname" . }}-config
+        {{- if .Values.global.tls.enabled }}
+        - name: tls-certs
+          secret:
+            secretName: {{ .Values.global.tls.certSecretName }}
+        {{- end }}
+      {{- with .Values.policyServer.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.policyServer.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.policyServer.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
