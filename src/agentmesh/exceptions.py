@@ -51,6 +51,10 @@ class StorageError(AgentMeshError):
     """Errors related to storage backend operations."""
 
 
+class MarketplaceError(AgentMeshError):
+    """Errors related to the plugin marketplace."""
+
+
 __all__ = [
     "AgentMeshError",
     "IdentityError",
@@ -63,4 +67,5 @@ __all__ = [
     "HandshakeError",
     "HandshakeTimeoutError",
     "StorageError",
+    "MarketplaceError",
 ]
