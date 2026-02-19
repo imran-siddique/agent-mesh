@@ -1,0 +1,94 @@
+# Grafana Alerting Rules for AgentMesh
+# Import via Grafana UI → Alerting → Alert rules → Import
+
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: agentmesh-alerts
+    folder: AgentMesh
+    interval: 1m
+    rules:
+      # ── High policy violation rate ────────────────────────────
+      - uid: agentmesh-high-policy-violations
+        title: High policy violation rate
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: "${DS_PROMETHEUS}"
+            model:
+              expr: sum(rate(agentmesh_policy_violations_total[1m])) * 60
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [10]
+        for: 2m
+        annotations:
+          summary: "Policy violations exceeded 10/min"
+          description: >-
+            The mesh is experiencing {{ $value }} policy violations per minute,
+            which exceeds the threshold of 10.
+        labels:
+          severity: critical
+
+      # ── Trust score below threshold ───────────────────────────
+      - uid: agentmesh-low-trust-score
+        title: Trust score below threshold
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: "${DS_PROMETHEUS}"
+            model:
+              expr: agentmesh_trust_score
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [0.3]
+        for: 5m
+        annotations:
+          summary: "Agent trust score below 0.3"
+          description: >-
+            Agent {{ $labels.agent_did }} has a trust score of {{ $value }},
+            which is below the minimum threshold of 0.3.
+        labels:
+          severity: warning
+
+      # ── Handshake latency spike ───────────────────────────────
+      - uid: agentmesh-handshake-latency-spike
+        title: Handshake latency spike (p99 > 5s)
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: "${DS_PROMETHEUS}"
+            model:
+              expr: histogram_quantile(0.99, rate(agentmesh_handshake_latency_seconds_bucket[5m]))
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [5]
+        for: 3m
+        annotations:
+          summary: "Handshake p99 latency exceeds 5 seconds"
+          description: >-
+            The 99th-percentile handshake latency is {{ $value }}s, which
+            exceeds the 5-second threshold.
+        labels:
+          severity: critical
