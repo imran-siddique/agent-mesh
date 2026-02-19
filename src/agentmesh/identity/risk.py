@@ -27,7 +27,16 @@ from agentmesh.constants import (
 
 @dataclass
 class RiskSignal:
-    """A single risk signal contributing to the score."""
+    """A single risk signal contributing to the agent's risk score.
+
+    Attributes:
+        signal_type: Category of the signal (e.g. "identity.verification").
+        severity: Severity level determining the signal's weight.
+        value: Normalized signal value from 0.0 (no risk) to 1.0 (max risk).
+        timestamp: When the signal was recorded.
+        source: Origin system that produced the signal.
+        details: Additional context about the signal.
+    """
     
     signal_type: str
     severity: Literal["critical", "high", "medium", "low", "info"]
@@ -79,7 +88,14 @@ class RiskScore(BaseModel):
     
     @classmethod
     def get_risk_level(cls, score: int) -> str:
-        """Convert score to risk level."""
+        """Convert a numeric score to a risk level string.
+
+        Args:
+            score: Total risk score (0–1000, higher is safer).
+
+        Returns:
+            One of "critical", "high", "medium", "low", or "minimal".
+        """
         if score >= RISK_MINIMAL_THRESHOLD:
             return "minimal"
         elif score >= RISK_ALERT_THRESHOLD:
@@ -100,7 +116,16 @@ class RiskScore(BaseModel):
         active_signals: int = 0,
         critical_signals: int = 0,
     ) -> None:
-        """Update component scores and recalculate total."""
+        """Update component scores and recalculate the total.
+
+        Args:
+            identity: Identity verification score (0–100).
+            behavior: Behavioral pattern score (0–100).
+            network: Network activity score (0–100).
+            compliance: Compliance score (0–100).
+            active_signals: Number of active risk signals.
+            critical_signals: Number of critical-severity signals.
+        """
         self.identity_score = max(0, min(100, identity))
         self.behavior_score = max(0, min(100, behavior))
         self.network_score = max(0, min(100, network))
@@ -145,13 +170,29 @@ class RiskScorer:
         self._alert_callbacks: list[Callable] = []
     
     def get_score(self, agent_did: str) -> RiskScore:
-        """Get current risk score for an agent."""
+        """Get current risk score for an agent.
+
+        Creates a default score if one does not already exist.
+
+        Args:
+            agent_did: The agent's DID.
+
+        Returns:
+            The agent's current RiskScore.
+        """
         if agent_did not in self._scores:
             self._scores[agent_did] = RiskScore(agent_did=agent_did)
         return self._scores[agent_did]
     
     def add_signal(self, agent_did: str, signal: RiskSignal) -> None:
-        """Add a risk signal for an agent."""
+        """Add a risk signal for an agent.
+
+        Critical signals trigger an immediate score recalculation.
+
+        Args:
+            agent_did: The agent's DID.
+            signal: The risk signal to record.
+        """
         if agent_did not in self._signals:
             self._signals[agent_did] = []
         
@@ -162,10 +203,16 @@ class RiskScorer:
             self.recalculate(agent_did)
     
     def recalculate(self, agent_did: str) -> RiskScore:
-        """
-        Recalculate risk score based on current signals.
-        
-        This is called every ≤30s or immediately on critical signals.
+        """Recalculate risk score based on current signals.
+
+        Called every ≤30s or immediately on critical signals. Only signals
+        from the last 24 hours are considered.
+
+        Args:
+            agent_did: The agent's DID.
+
+        Returns:
+            The updated RiskScore.
         """
         score = self.get_score(agent_did)
         signals = self._signals.get(agent_did, [])
@@ -275,11 +322,24 @@ class RiskScorer:
                     pass
     
     def on_alert(self, callback: Callable) -> None:
-        """Register an alert callback."""
+        """Register an alert callback.
+
+        Args:
+            callback: A callable that receives an alert dict with keys
+                such as ``type``, ``agent_did``, and ``score``.
+        """
         self._alert_callbacks.append(callback)
     
     def get_high_risk_agents(self, threshold: Optional[int] = None) -> list[RiskScore]:
-        """Get all agents above risk threshold."""
+        """Get all agents above risk threshold.
+
+        Args:
+            threshold: Score below which an agent is considered high-risk.
+                Defaults to HIGH_THRESHOLD.
+
+        Returns:
+            List of RiskScore objects for agents below the threshold.
+        """
         thresh = threshold or self.HIGH_THRESHOLD
         return [
             score for score in self._scores.values()
@@ -287,7 +347,13 @@ class RiskScorer:
         ]
     
     def clear_signals(self, agent_did: str) -> None:
-        """Clear all signals for an agent (e.g., after remediation)."""
+        """Clear all signals for an agent (e.g., after remediation).
+
+        Triggers an immediate recalculation after clearing.
+
+        Args:
+            agent_did: The agent's DID.
+        """
         if agent_did in self._signals:
             self._signals[agent_did] = []
         self.recalculate(agent_did)

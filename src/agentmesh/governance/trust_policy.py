@@ -29,14 +29,29 @@ class ConditionOperator(str, Enum):
 
 
 class TrustCondition(BaseModel):
-    """A single condition in a trust rule."""
+    """A single condition in a trust rule.
+
+    Attributes:
+        field: Dot-notated path to a context value
+            (e.g. ``"trust_score"``, ``"agent.namespace"``).
+        operator: Comparison operator to apply.
+        value: Expected value to compare against.
+    """
 
     field: str = Field(..., description="Dot-notated field path (e.g. 'trust_score', 'agent.namespace')")
     operator: ConditionOperator = Field(..., description="Comparison operator")
     value: Any = Field(..., description="Value to compare against")
 
     def evaluate(self, context: dict) -> bool:
-        """Evaluate this condition against a context dictionary."""
+        """Evaluate this condition against a context dictionary.
+
+        Args:
+            context: Runtime context with values accessible via
+                dot-notated field paths.
+
+        Returns:
+            ``True`` if the condition is satisfied.
+        """
         actual = self._resolve_field(context, self.field)
         return self._apply_operator(actual, self.operator, self.value)
 
@@ -80,7 +95,16 @@ class TrustCondition(BaseModel):
 
 
 class TrustRule(BaseModel):
-    """A single trust policy rule with condition, action, and priority."""
+    """A single trust policy rule with condition, action, and priority.
+
+    Attributes:
+        name: Unique rule name.
+        description: Human-readable description of what the rule does.
+        condition: The ``TrustCondition`` to evaluate.
+        action: Action to take when the condition matches
+            (allow, deny, warn, or require_approval).
+        priority: Evaluation priority (lower number = higher priority).
+    """
 
     name: str = Field(..., description="Rule name")
     description: Optional[str] = Field(None, description="Human-readable description")
@@ -119,14 +143,25 @@ class TrustPolicy(BaseModel):
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> "TrustPolicy":
-        """Load a TrustPolicy from a YAML file."""
+        """Load a TrustPolicy from a YAML file.
+
+        Args:
+            path: Path to the YAML policy file.
+
+        Returns:
+            A fully-constructed ``TrustPolicy`` instance.
+        """
         path = Path(path)
         with open(path, "r") as f:
             data = yaml.safe_load(f)
         return cls(**data)
 
     def to_yaml(self, path: str | Path) -> None:
-        """Save this TrustPolicy to a YAML file."""
+        """Save this TrustPolicy to a YAML file.
+
+        Args:
+            path: Destination file path.
+        """
         path = Path(path)
         data = self.model_dump(mode="json")
         with open(path, "w") as f:
@@ -134,7 +169,16 @@ class TrustPolicy(BaseModel):
 
 
 def load_policies(directory: str | Path) -> list[TrustPolicy]:
-    """Load all YAML trust policies from a directory."""
+    """Load all YAML trust policies from a directory.
+
+    Scans for ``*.yaml`` and ``*.yml`` files in sorted order.
+
+    Args:
+        directory: Path to the directory containing policy files.
+
+    Returns:
+        List of ``TrustPolicy`` instances loaded from the directory.
+    """
     directory = Path(directory)
     policies: list[TrustPolicy] = []
     for yaml_file in sorted(directory.glob("*.yaml")):

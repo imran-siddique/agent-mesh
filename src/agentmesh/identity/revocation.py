@@ -16,7 +16,15 @@ from pydantic import BaseModel, Field
 
 
 class RevocationEntry(BaseModel):
-    """A single revocation record for an agent identity."""
+    """A single revocation record for an agent identity.
+
+    Attributes:
+        agent_did: DID of the revoked agent.
+        revoked_at: Timestamp when the revocation was created.
+        reason: Human-readable reason for revocation.
+        revoked_by: DID of the entity that performed the revocation.
+        expires_at: Expiry time for temporary revocations, or None for permanent.
+    """
 
     agent_did: str = Field(..., description="DID of the revoked agent")
     revoked_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -128,12 +136,20 @@ class RevocationList:
         return len(expired)
 
     def save(self, path: str) -> None:
-        """Persist the revocation list to a JSON file."""
+        """Persist the revocation list to a JSON file.
+
+        Args:
+            path: File path to write the JSON data to.
+        """
         data = [entry.model_dump(mode="json") for entry in self._entries.values()]
         Path(path).write_text(json.dumps(data, indent=2, default=str))
 
     def load(self, path: str) -> None:
-        """Load the revocation list from a JSON file."""
+        """Load the revocation list from a JSON file.
+
+        Args:
+            path: File path to read the JSON data from.
+        """
         raw = json.loads(Path(path).read_text())
         self._entries = {}
         for item in raw:

@@ -54,7 +54,11 @@ class AuditEntry(BaseModel):
     session_id: Optional[str] = None
     
     def compute_hash(self) -> str:
-        """Compute hash of this entry."""
+        """Compute the SHA-256 hash of this entry's canonical fields.
+
+        Returns:
+            Hex-encoded SHA-256 digest.
+        """
         data = {
             "entry_id": self.entry_id,
             "timestamp": self.timestamp.isoformat(),
@@ -70,7 +74,11 @@ class AuditEntry(BaseModel):
         return hashlib.sha256(canonical.encode()).hexdigest()
     
     def verify_hash(self) -> bool:
-        """Verify this entry's hash is correct."""
+        """Verify that this entry's stored hash matches a fresh computation.
+
+        Returns:
+            ``True`` if ``entry_hash`` equals ``compute_hash()``.
+        """
         return self.entry_hash == self.compute_hash()
 
     # ── CloudEvents v1.0 ──────────────────────────────────
@@ -122,7 +130,15 @@ class AuditEntry(BaseModel):
 
 
 class MerkleNode(BaseModel):
-    """Node in a Merkle tree for audit verification."""
+    """Node in a Merkle tree used for audit verification.
+
+    Attributes:
+        hash: SHA-256 hash of this node.
+        left_child: Hash of the left child node (``None`` for leaves).
+        right_child: Hash of the right child node (``None`` for leaves).
+        is_leaf: Whether this node is a leaf in the tree.
+        entry_id: Audit entry ID (populated only for leaf nodes).
+    """
     
     hash: str
     left_child: Optional[str] = None
@@ -147,7 +163,15 @@ class MerkleAuditChain:
         self._root_hash: Optional[str] = None
     
     def add_entry(self, entry: AuditEntry) -> None:
-        """Add an entry and update tree incrementally."""
+        """Add an entry and update the Merkle tree incrementally.
+
+        The entry is chained to the previous entry via its
+        ``previous_hash`` field, hashed, and inserted as a new leaf.
+
+        Args:
+            entry: The audit entry to append. Its ``previous_hash``
+                and ``entry_hash`` fields are set automatically.
+        """
         # Set previous hash
         if self._entries:
             entry.previous_hash = self._entries[-1].entry_hash
@@ -262,14 +286,22 @@ class MerkleAuditChain:
         self._root_hash = self._tree[-1][0].hash if self._tree else None
     
     def get_root_hash(self) -> Optional[str]:
-        """Get the Merkle root hash."""
+        """Get the current Merkle root hash.
+
+        Returns:
+            Hex-encoded root hash, or ``None`` if the tree is empty.
+        """
         return self._root_hash
     
     def get_proof(self, entry_id: str) -> Optional[list[tuple[str, str]]]:
-        """
-        Get Merkle proof for an entry.
-        
-        Returns list of (sibling_hash, position) tuples.
+        """Get a Merkle inclusion proof for an entry.
+
+        Args:
+            entry_id: ID of the audit entry.
+
+        Returns:
+            List of ``(sibling_hash, position)`` tuples forming the proof
+            path from leaf to root, or ``None`` if the entry is not found.
         """
         # Find entry index
         entry_idx = None
@@ -299,7 +331,16 @@ class MerkleAuditChain:
         proof: list[tuple[str, str]],
         root_hash: str,
     ) -> bool:
-        """Verify a Merkle proof."""
+        """Verify a Merkle inclusion proof.
+
+        Args:
+            entry_hash: Hash of the leaf entry.
+            proof: Proof path as returned by ``get_proof``.
+            root_hash: Expected Merkle root hash.
+
+        Returns:
+            ``True`` if the proof is valid.
+        """
         current = entry_hash
         
         for sibling_hash, position in proof:
@@ -312,10 +353,13 @@ class MerkleAuditChain:
         return current == root_hash
     
     def verify_chain(self) -> tuple[bool, Optional[str]]:
-        """
-        Verify the entire chain integrity.
-        
-        Returns (is_valid, error_message).
+        """Verify the entire chain integrity.
+
+        Checks every entry's hash and its link to the previous entry.
+
+        Returns:
+            A tuple of ``(is_valid, error_message)``. ``error_message``
+            is ``None`` when the chain is intact.
         """
         previous_hash = ""
         
@@ -359,10 +403,23 @@ class AuditLog:
         policy_decision: Optional[str] = None,
         trace_id: Optional[str] = None,
     ) -> AuditEntry:
-        """
-        Log an audit event.
-        
+        """Log an audit event and append it to the Merkle chain.
+
         All agent actions should be logged through this method.
+
+        Args:
+            event_type: Category of the event (e.g. ``"tool_invocation"``).
+            agent_did: DID of the agent performing the action.
+            action: Short action identifier.
+            resource: Optional resource being acted upon.
+            data: Sanitised context data (must not contain secrets).
+            outcome: Result of the action (``"success"``, ``"failure"``,
+                ``"denied"``, or ``"error"``).
+            policy_decision: Policy engine decision string, if applicable.
+            trace_id: Distributed trace ID for correlation.
+
+        Returns:
+            The created ``AuditEntry`` with computed hash.
         """
         entry = AuditEntry(
             event_type=event_type,
@@ -389,7 +446,14 @@ class AuditLog:
         return entry
     
     def get_entry(self, entry_id: str) -> Optional[AuditEntry]:
-        """Get an entry by ID."""
+        """Get an audit entry by its unique ID.
+
+        Args:
+            entry_id: The entry identifier.
+
+        Returns:
+            The ``AuditEntry`` if found, otherwise ``None``.
+        """
         for entry in self._chain._entries:
             if entry.entry_id == entry_id:
                 return entry
@@ -400,7 +464,15 @@ class AuditLog:
         agent_did: str,
         limit: int = 100,
     ) -> list[AuditEntry]:
-        """Get recent entries for an agent."""
+        """Get the most recent entries for a specific agent.
+
+        Args:
+            agent_did: DID of the agent to filter by.
+            limit: Maximum number of entries to return.
+
+        Returns:
+            List of ``AuditEntry`` instances, most recent last.
+        """
         entry_ids = self._by_agent.get(agent_did, [])[-limit:]
         return [
             entry for entry in self._chain._entries
@@ -412,7 +484,15 @@ class AuditLog:
         event_type: str,
         limit: int = 100,
     ) -> list[AuditEntry]:
-        """Get recent entries of a type."""
+        """Get the most recent entries of a given event type.
+
+        Args:
+            event_type: Event type to filter by.
+            limit: Maximum number of entries to return.
+
+        Returns:
+            List of matching ``AuditEntry`` instances.
+        """
         entry_ids = self._by_type.get(event_type, [])[-limit:]
         return [
             entry for entry in self._chain._entries
@@ -428,7 +508,21 @@ class AuditLog:
         outcome: Optional[str] = None,
         limit: int = 100,
     ) -> list[AuditEntry]:
-        """Query audit entries with filters."""
+        """Query audit entries with optional filters.
+
+        All filter parameters are combined with AND logic.
+
+        Args:
+            agent_did: Filter to a specific agent DID.
+            event_type: Filter to a specific event type.
+            start_time: Include entries at or after this time.
+            end_time: Include entries at or before this time.
+            outcome: Filter by outcome string.
+            limit: Maximum number of entries to return.
+
+        Returns:
+            List of matching ``AuditEntry`` instances (most recent last).
+        """
         results = self._chain._entries
         
         if agent_did:
@@ -449,11 +543,27 @@ class AuditLog:
         return results[-limit:]
     
     def verify_integrity(self) -> tuple[bool, Optional[str]]:
-        """Verify the entire audit log integrity."""
+        """Verify the entire audit log integrity.
+
+        Returns:
+            A tuple of ``(is_valid, error_message)``. ``error_message``
+            is ``None`` when the chain is intact.
+        """
         return self._chain.verify_chain()
     
     def get_proof(self, entry_id: str) -> Optional[dict[str, Any]]:
-        """Get tamper-proof evidence for an entry."""
+        """Get tamper-proof evidence for a specific entry.
+
+        Returns the entry, its Merkle proof path, the current root
+        hash, and a verification result.
+
+        Args:
+            entry_id: ID of the audit entry.
+
+        Returns:
+            Dictionary with ``entry``, ``merkle_proof``, ``merkle_root``,
+            and ``verified`` keys, or ``None`` if the entry is not found.
+        """
         entry = self.get_entry(entry_id)
         if not entry:
             return None
@@ -476,7 +586,16 @@ class AuditLog:
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
     ) -> dict[str, Any]:
-        """Export audit log for external verification."""
+        """Export the audit log for external verification.
+
+        Args:
+            start_time: Optional start of the export window.
+            end_time: Optional end of the export window.
+
+        Returns:
+            Dictionary containing ``exported_at``, ``merkle_root``,
+            ``entry_count``, and serialised ``entries``.
+        """
         entries = self.query(start_time=start_time, end_time=end_time, limit=10000)
         
         return {

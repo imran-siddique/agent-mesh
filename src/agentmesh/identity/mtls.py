@@ -22,7 +22,15 @@ from agentmesh.identity.agent_id import AgentIdentity
 
 
 class MTLSConfig(BaseModel):
-    """Configuration for mutual TLS identity verification."""
+    """Configuration for mutual TLS identity verification.
+
+    Attributes:
+        cert_path: Path to certificate PEM file, or None for ephemeral certs.
+        key_path: Path to private key PEM file, or None for ephemeral keys.
+        ca_cert_path: Path to CA certificate PEM file for peer verification.
+        verify_peer: Whether to verify peer certificates.
+        require_client_cert: Whether to require client certificates (server-side).
+    """
 
     cert_path: Optional[str] = Field(None, description="Path to certificate PEM file")
     key_path: Optional[str] = Field(None, description="Path to private key PEM file")
