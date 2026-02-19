@@ -11,6 +11,8 @@
 [![CI](https://github.com/imran-siddique/agent-mesh/actions/workflows/ci.yml/badge.svg)](https://github.com/imran-siddique/agent-mesh/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-SDK-3178C6?logo=typescript&logoColor=white)](sdks/typescript/)
+[![Go](https://img.shields.io/badge/Go-SDK-00ADD8?logo=go&logoColor=white)](sdks/go/)
 [![PyPI](https://img.shields.io/pypi/v/agentmesh-platform)](https://pypi.org/project/agentmesh-platform/)
 [![Downloads](https://img.shields.io/pypi/dm/agentmesh-platform)](https://pypi.org/project/agentmesh-platform/)
 [![Downloads](https://static.pepy.tech/badge/agentmesh-platform)](https://pepy.tech/project/agentmesh-platform)
