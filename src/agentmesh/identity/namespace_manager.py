@@ -12,7 +12,11 @@ from agentmesh.identity.namespace import AgentNamespace, NamespaceRule
 
 
 class NamespaceManager:
-    """Central manager for agent namespaces and cross-namespace rules."""
+    """Central manager for agent namespaces and cross-namespace rules.
+
+    Default behaviour: same-namespace agents communicate freely;
+    cross-namespace requires an explicit allow-rule.
+    """
 
     def __init__(self) -> None:
         self._namespaces: dict[str, AgentNamespace] = {}
@@ -26,7 +30,19 @@ class NamespaceManager:
         description: str,
         parent: Optional[str] = None,
     ) -> AgentNamespace:
-        """Create a new namespace, optionally nested under *parent*."""
+        """Create a new namespace, optionally nested under *parent*.
+
+        Args:
+            name: Unique namespace name (e.g. "finance.trading").
+            description: Human-readable description.
+            parent: Parent namespace name for nesting.
+
+        Returns:
+            The newly created AgentNamespace.
+
+        Raises:
+            ValueError: If the namespace already exists or parent is invalid.
+        """
         if name in self._namespaces:
             raise ValueError(f"Namespace already exists: {name}")
         if parent and parent not in self._namespaces:
@@ -36,29 +52,66 @@ class NamespaceManager:
         return ns
 
     def get_namespace(self, name: str) -> AgentNamespace:
-        """Return a namespace by name or raise ``KeyError``."""
+        """Return a namespace by name.
+
+        Args:
+            name: The namespace name to look up.
+
+        Returns:
+            The matching AgentNamespace.
+
+        Raises:
+            KeyError: If the namespace is not found.
+        """
         if name not in self._namespaces:
             raise KeyError(f"Namespace not found: {name}")
         return self._namespaces[name]
 
     def list_namespaces(self) -> list[AgentNamespace]:
-        """Return all registered namespaces."""
+        """Return all registered namespaces.
+
+        Returns:
+            List of all AgentNamespace objects.
+        """
         return list(self._namespaces.values())
 
     # ── Membership ──────────────────────────────────────────────────
 
     def add_member(self, namespace_name: str, agent_did: str) -> None:
-        """Add an agent DID to a namespace."""
+        """Add an agent DID to a namespace.
+
+        Args:
+            namespace_name: Name of the target namespace.
+            agent_did: DID of the agent to add.
+
+        Raises:
+            KeyError: If the namespace does not exist.
+        """
         ns = self.get_namespace(namespace_name)
         ns.members.add(agent_did)
 
     def remove_member(self, namespace_name: str, agent_did: str) -> None:
-        """Remove an agent DID from a namespace."""
+        """Remove an agent DID from a namespace.
+
+        Args:
+            namespace_name: Name of the target namespace.
+            agent_did: DID of the agent to remove.
+
+        Raises:
+            KeyError: If the namespace does not exist.
+        """
         ns = self.get_namespace(namespace_name)
         ns.members.discard(agent_did)
 
     def get_agent_namespace(self, agent_did: str) -> Optional[str]:
-        """Return the namespace name an agent belongs to, or ``None``."""
+        """Return the namespace name an agent belongs to.
+
+        Args:
+            agent_did: DID of the agent to look up.
+
+        Returns:
+            The namespace name, or None if the agent is not in any namespace.
+        """
         for ns in self._namespaces.values():
             if agent_did in ns.members:
                 return ns.name
@@ -67,7 +120,11 @@ class NamespaceManager:
     # ── Rules ───────────────────────────────────────────────────────
 
     def add_rule(self, rule: NamespaceRule) -> None:
-        """Register a cross-namespace communication rule."""
+        """Register a cross-namespace communication rule.
+
+        Args:
+            rule: The NamespaceRule to add.
+        """
         self._rules.append(rule)
 
     # ── Access checks ───────────────────────────────────────────────
@@ -102,6 +159,13 @@ class NamespaceManager:
         Same namespace (or shared lineage) → always allowed.
         Cross-namespace → only if an explicit allow-rule exists.
         Agents not in any namespace → denied.
+
+        Args:
+            from_did: DID of the initiating agent.
+            to_did: DID of the target agent.
+
+        Returns:
+            True if communication is allowed.
         """
         src_ns = self.get_agent_namespace(from_did)
         tgt_ns = self.get_agent_namespace(to_did)
@@ -119,6 +183,13 @@ class NamespaceManager:
         """Check whether *from_did* may delegate to *to_did*.
 
         Default: delegation is restricted to the same namespace only.
+
+        Args:
+            from_did: DID of the delegating agent.
+            to_did: DID of the delegate agent.
+
+        Returns:
+            True if delegation is allowed.
         """
         src_ns = self.get_agent_namespace(from_did)
         tgt_ns = self.get_agent_namespace(to_did)

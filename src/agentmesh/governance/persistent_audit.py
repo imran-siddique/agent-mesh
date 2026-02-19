@@ -53,6 +53,15 @@ class PersistentAuditLog:
         namespace: str = "default",
         verify_on_load: bool = True,
     ):
+        """Initialise the persistent audit log.
+
+        Args:
+            storage: Storage backend implementing ``AbstractStorageProvider``.
+            namespace: Namespace for key isolation (supports multiple
+                independent audit streams in the same store).
+            verify_on_load: Whether to verify chain integrity after
+                loading entries from storage.
+        """
         self._storage = storage
         self._namespace = namespace
         self._verify_on_load = verify_on_load
@@ -86,10 +95,23 @@ class PersistentAuditLog:
         policy_decision: Optional[str] = None,
         trace_id: Optional[str] = None,
     ) -> AuditEntry:
-        """
-        Append an audit entry and persist it.
+        """Append an audit entry and persist it to storage.
 
-        The entry is written to both the in-memory log and the storage backend.
+        The entry is written to both the in-memory Merkle chain and
+        the durable storage backend atomically.
+
+        Args:
+            event_type: Category of the event (e.g. ``"tool_invocation"``).
+            agent_did: DID of the acting agent.
+            action: Short action identifier.
+            resource: Optional resource being acted upon.
+            data: Sanitised context data (must not contain secrets).
+            outcome: Result string (``"success"``, ``"failure"``, etc.).
+            policy_decision: Policy engine decision, if applicable.
+            trace_id: Distributed trace ID for correlation.
+
+        Returns:
+            The persisted ``AuditEntry`` with computed hash.
         """
         # Add to in-memory log (handles Merkle chaining)
         entry = self._log.log(
@@ -123,10 +145,16 @@ class PersistentAuditLog:
     # ── Read operations ───────────────────────────────────────
 
     async def load(self) -> int:
-        """
-        Load audit entries from storage and rebuild the Merkle chain.
+        """Load audit entries from storage and rebuild the Merkle chain.
 
-        Returns the number of entries loaded.
+        If ``verify_on_load`` is enabled, integrity is checked after
+        loading and a ``RuntimeError`` is raised on failure.
+
+        Returns:
+            The number of entries loaded from storage.
+
+        Raises:
+            RuntimeError: If integrity verification fails after loading.
         """
         entry_ids = await self._storage.lrange(self._entries_key(), 0, -1)
         if not entry_ids:
@@ -162,7 +190,14 @@ class PersistentAuditLog:
         return len(entry_ids)
 
     async def get_entry(self, entry_id: str) -> Optional[AuditEntry]:
-        """Get an entry by ID (from memory or storage)."""
+        """Get an entry by ID from memory, falling back to storage.
+
+        Args:
+            entry_id: The entry identifier.
+
+        Returns:
+            The ``AuditEntry`` if found, otherwise ``None``.
+        """
         # Check in-memory first
         entry = self._log.get_entry(entry_id)
         if entry:
@@ -178,7 +213,15 @@ class PersistentAuditLog:
         return None
 
     async def get_entries_for_agent(self, agent_did: str, limit: int = 100) -> List[AuditEntry]:
-        """Get recent entries for an agent."""
+        """Get recent entries for a specific agent.
+
+        Args:
+            agent_did: DID of the agent to filter by.
+            limit: Maximum number of entries to return.
+
+        Returns:
+            List of matching ``AuditEntry`` instances.
+        """
         return self._log.get_entries_for_agent(agent_did, limit)
 
     async def query(
@@ -188,7 +231,17 @@ class PersistentAuditLog:
         outcome: Optional[str] = None,
         limit: int = 100,
     ) -> List[AuditEntry]:
-        """Query audit entries with filters."""
+        """Query audit entries with optional filters.
+
+        Args:
+            agent_did: Filter to a specific agent DID.
+            event_type: Filter to a specific event type.
+            outcome: Filter by outcome string.
+            limit: Maximum number of entries to return.
+
+        Returns:
+            List of matching ``AuditEntry`` instances.
+        """
         return self._log.query(
             agent_did=agent_did,
             event_type=event_type,
@@ -199,7 +252,11 @@ class PersistentAuditLog:
     # ── Integrity ─────────────────────────────────────────────
 
     async def verify_integrity(self) -> tuple[bool, Optional[str]]:
-        """Verify in-memory chain integrity."""
+        """Verify the in-memory Merkle chain integrity.
+
+        Returns:
+            A tuple of ``(is_valid, error_message)``.
+        """
         return self._log.verify_integrity()
 
     async def verify_against_storage(self) -> tuple[bool, Optional[str]]:
@@ -232,11 +289,20 @@ class PersistentAuditLog:
     # ── Export ────────────────────────────────────────────────
 
     async def export(self) -> dict:
-        """Export the audit log with integrity proof."""
+        """Export the audit log with integrity proof.
+
+        Returns:
+            Dictionary with ``exported_at``, ``merkle_root``,
+            ``entry_count``, and serialised ``entries``.
+        """
         return self._log.export()
 
     async def export_cloudevents(self) -> List[dict]:
-        """Export as CloudEvents."""
+        """Export all entries as CloudEvents v1.0 JSON envelopes.
+
+        Returns:
+            List of CloudEvents-formatted dictionaries.
+        """
         return [e.to_cloudevent() for e in self._log._chain._entries]
 
     # ── Properties ────────────────────────────────────────────

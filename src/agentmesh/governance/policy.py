@@ -46,13 +46,20 @@ class PolicyRule(BaseModel):
     enabled: bool = Field(default=True)
     
     def evaluate(self, context: dict) -> bool:
-        """
-        Evaluate the condition against a context.
-        
+        """Evaluate the rule condition against a context.
+
         Supports simple expressions like:
-        - action.type == 'export'
-        - data.contains_pii
-        - user.role in ['admin', 'operator']
+        - ``action.type == 'export'``
+        - ``data.contains_pii``
+        - ``user.role in ['admin', 'operator']``
+
+        Args:
+            context: Dictionary of runtime values the condition is
+                evaluated against. Keys are accessed via dot notation.
+
+        Returns:
+            ``True`` if the rule is enabled and the condition matches,
+            ``False`` otherwise (including on evaluation errors).
         """
         if not self.enabled:
             return False
@@ -135,7 +142,14 @@ class Policy(BaseModel):
     
     @classmethod
     def from_yaml(cls, yaml_content: str) -> "Policy":
-        """Load policy from YAML."""
+        """Load a policy from a YAML string.
+
+        Args:
+            yaml_content: Raw YAML string containing the policy definition.
+
+        Returns:
+            A fully-constructed ``Policy`` instance.
+        """
         data = yaml.safe_load(yaml_content)
         
         # Parse rules
@@ -148,7 +162,14 @@ class Policy(BaseModel):
     
     @classmethod
     def from_json(cls, json_content: str) -> "Policy":
-        """Load policy from JSON."""
+        """Load a policy from a JSON string.
+
+        Args:
+            json_content: Raw JSON string containing the policy definition.
+
+        Returns:
+            A fully-constructed ``Policy`` instance.
+        """
         data = json.loads(json_content)
         
         rules = []
@@ -159,7 +180,18 @@ class Policy(BaseModel):
         return cls(**data)
     
     def applies_to(self, agent_did: str) -> bool:
-        """Check if this policy applies to an agent."""
+        """Check if this policy applies to a given agent.
+
+        A policy applies when the agent DID matches ``self.agent``,
+        appears in ``self.agents``, or when ``self.agents`` contains
+        the wildcard ``"*"``.
+
+        Args:
+            agent_did: Decentralized identifier of the agent.
+
+        Returns:
+            ``True`` if the policy targets this agent.
+        """
         if self.agent and self.agent == agent_did:
             return True
         if agent_did in self.agents:
@@ -169,7 +201,11 @@ class Policy(BaseModel):
         return False
     
     def to_yaml(self) -> str:
-        """Export policy as YAML."""
+        """Export this policy as a YAML string.
+
+        Returns:
+            YAML-formatted policy document.
+        """
         data = self.model_dump(exclude_none=True)
         # Convert rules to dicts
         data["rules"] = [r.model_dump(exclude_none=True) for r in self.rules]
@@ -177,7 +213,20 @@ class Policy(BaseModel):
 
 
 class PolicyDecision(BaseModel):
-    """Result of policy evaluation."""
+    """Result of policy evaluation.
+
+    Attributes:
+        allowed: Whether the action is permitted.
+        action: The action taken (allow, deny, warn, require_approval, log).
+        matched_rule: Name of the rule that triggered the decision.
+        policy_name: Name of the policy containing the matched rule.
+        reason: Human-readable explanation of the decision.
+        approvers: List of required approvers for ``require_approval`` actions.
+        rate_limited: Whether the decision was caused by rate limiting.
+        rate_limit_reset: When the rate limit resets (if applicable).
+        evaluated_at: Timestamp of evaluation.
+        evaluation_ms: Evaluation latency in milliseconds.
+    """
     
     allowed: bool
     action: Literal["allow", "deny", "warn", "require_approval", "log"]
@@ -221,17 +270,36 @@ class PolicyEngine:
         self._rego_evaluators: list[tuple[str, Any]] = []  # [(package, OPAEvaluator)]
     
     def load_policy(self, policy: Policy) -> None:
-        """Load a policy into the engine."""
+        """Load a policy into the engine.
+
+        Args:
+            policy: Policy instance to register. Replaces any existing
+                policy with the same name.
+        """
         self._policies[policy.name] = policy
     
     def load_yaml(self, yaml_content: str) -> Policy:
-        """Load policy from YAML string."""
+        """Parse and register a policy from a YAML string.
+
+        Args:
+            yaml_content: Raw YAML policy definition.
+
+        Returns:
+            The loaded ``Policy`` instance.
+        """
         policy = Policy.from_yaml(yaml_content)
         self.load_policy(policy)
         return policy
     
     def load_json(self, json_content: str) -> Policy:
-        """Load policy from JSON string."""
+        """Parse and register a policy from a JSON string.
+
+        Args:
+            json_content: Raw JSON policy definition.
+
+        Returns:
+            The loaded ``Policy`` instance.
+        """
         policy = Policy.from_json(json_content)
         self.load_policy(policy)
         return policy
@@ -359,15 +427,33 @@ class PolicyEngine:
         return count, period
     
     def get_policy(self, name: str) -> Optional[Policy]:
-        """Get a policy by name."""
+        """Get a loaded policy by name.
+
+        Args:
+            name: Policy name.
+
+        Returns:
+            The ``Policy`` if found, otherwise ``None``.
+        """
         return self._policies.get(name)
     
     def list_policies(self) -> list[str]:
-        """List all loaded policy names."""
+        """List all loaded policy names.
+
+        Returns:
+            List of registered policy name strings.
+        """
         return list(self._policies.keys())
     
     def remove_policy(self, name: str) -> bool:
-        """Remove a policy."""
+        """Remove a policy from the engine.
+
+        Args:
+            name: Name of the policy to remove.
+
+        Returns:
+            ``True`` if the policy was found and removed, ``False`` otherwise.
+        """
         if name in self._policies:
             del self._policies[name]
             return True
@@ -400,10 +486,20 @@ class PolicyEngine:
         agent_did: str,
         context: dict,
     ) -> PolicyDecision:
-        """
-        Evaluate all applicable policies for an action.
+        """Evaluate all applicable policies for an agent action.
 
-        Order: YAML/JSON rules first, then Rego policies.
+        YAML/JSON rules are checked first (sorted by priority,
+        highest first). If no YAML rule matches, registered Rego
+        policies are consulted. If nothing matches, the default
+        action of the first applicable policy is used.
+
+        Args:
+            agent_did: Decentralized identifier of the acting agent.
+            context: Runtime context dict describing the action.
+
+        Returns:
+            A ``PolicyDecision`` indicating whether the action is allowed
+            and which rule (if any) matched.
         """
         start = datetime.utcnow()
 

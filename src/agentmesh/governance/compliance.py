@@ -25,7 +25,18 @@ class ComplianceFramework(str, Enum):
 
 
 class ComplianceControl(BaseModel):
-    """A specific compliance control."""
+    """A specific compliance control within a framework.
+
+    Attributes:
+        control_id: Unique identifier (e.g. ``"SOC2-CC6.1"``).
+        framework: The compliance framework this control belongs to.
+        name: Short human-readable name.
+        description: Detailed description of the control.
+        category: Top-level category within the framework.
+        subcategory: Optional sub-category for finer classification.
+        requirements: List of requirement descriptions for this control.
+        evidence_types: Types of evidence needed to demonstrate compliance.
+    """
     
     control_id: str
     framework: ComplianceFramework
@@ -44,7 +55,14 @@ class ComplianceControl(BaseModel):
 
 
 class ComplianceMapping(BaseModel):
-    """Mapping of an action to compliance controls."""
+    """Mapping of an action type to its applicable compliance controls.
+
+    Attributes:
+        action_type: The agent action (e.g. ``"data_access"``).
+        controls: List of control IDs that apply to this action.
+        evidence_generated: Evidence types produced automatically on action.
+        evidence_required: Evidence types that must be supplied manually.
+    """
     
     action_type: str
     controls: list[str] = Field(default_factory=list)  # Control IDs
@@ -57,7 +75,22 @@ class ComplianceMapping(BaseModel):
 
 
 class ComplianceViolation(BaseModel):
-    """A compliance violation."""
+    """A recorded compliance violation.
+
+    Attributes:
+        violation_id: Unique identifier for this violation.
+        timestamp: When the violation was detected.
+        agent_did: DID of the agent that caused the violation.
+        action_type: The action that triggered the violation.
+        control_id: ID of the violated compliance control.
+        framework: The compliance framework of the violated control.
+        severity: Violation severity (critical, high, medium, low).
+        description: Human-readable description of the violation.
+        evidence: Supporting evidence captured at detection time.
+        remediated: Whether the violation has been remediated.
+        remediated_at: Timestamp of remediation (if applicable).
+        remediation_notes: Free-text notes about the remediation.
+    """
     
     violation_id: str
     timestamp: datetime = Field(default_factory=datetime.utcnow)
@@ -84,7 +117,25 @@ class ComplianceViolation(BaseModel):
 
 
 class ComplianceReport(BaseModel):
-    """Compliance audit report."""
+    """Compliance audit report for a given framework and time period.
+
+    Attributes:
+        report_id: Unique report identifier.
+        generated_at: When the report was generated.
+        framework: Target compliance framework.
+        period_start: Start of the reporting period.
+        period_end: End of the reporting period.
+        organization_id: Optional organisation scope.
+        agents_covered: Agent DIDs included in the report.
+        total_controls: Total number of controls evaluated.
+        controls_met: Number of controls fully satisfied.
+        controls_partial: Number of controls partially satisfied.
+        controls_failed: Number of controls with violations.
+        compliance_score: Overall score from 0 to 100.
+        violations: List of violations found during the period.
+        evidence_items: Count of evidence artefacts collected.
+        recommendations: Actionable remediation recommendations (max 10).
+    """
     
     report_id: str
     generated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -124,6 +175,12 @@ class ComplianceEngine:
     """
     
     def __init__(self, frameworks: Optional[list[ComplianceFramework]] = None):
+        """Initialise the compliance engine.
+
+        Args:
+            frameworks: Compliance frameworks to enable. Defaults to
+                ``[ComplianceFramework.SOC2]`` when ``None``.
+        """
         self.frameworks = frameworks or [ComplianceFramework.SOC2]
         self._controls: dict[str, ComplianceControl] = {}
         self._mappings: dict[str, ComplianceMapping] = {}
@@ -284,7 +341,14 @@ class ComplianceEngine:
         self._controls[control.control_id] = control
     
     def map_action(self, action_type: str) -> Optional[ComplianceMapping]:
-        """Get compliance mapping for an action type."""
+        """Get the compliance mapping for an action type.
+
+        Args:
+            action_type: Action identifier (e.g. ``"data_access"``).
+
+        Returns:
+            The ``ComplianceMapping`` if one exists, otherwise ``None``.
+        """
         return self._mappings.get(action_type)
     
     def check_compliance(
@@ -293,10 +357,18 @@ class ComplianceEngine:
         action_type: str,
         context: dict,
     ) -> list[ComplianceViolation]:
-        """
-        Check an action for compliance violations.
-        
-        Returns list of any violations found.
+        """Check an action for compliance violations.
+
+        Evaluates the action against all mapped controls for the given
+        action type and records any violations found.
+
+        Args:
+            agent_did: DID of the agent performing the action.
+            action_type: The type of action being performed.
+            context: Runtime context (e.g. data type, encryption status).
+
+        Returns:
+            List of ``ComplianceViolation`` instances (empty if compliant).
         """
         violations = []
         mapping = self.map_action(action_type)
@@ -365,7 +437,18 @@ class ComplianceEngine:
         period_end: datetime,
         agent_ids: Optional[list[str]] = None,
     ) -> ComplianceReport:
-        """Generate a compliance report."""
+        """Generate a compliance report for a framework and time period.
+
+        Args:
+            framework: The compliance framework to report on.
+            period_start: Start of the reporting window.
+            period_end: End of the reporting window.
+            agent_ids: Optional list of agent DIDs to scope the report.
+                When ``None``, all agents are included.
+
+        Returns:
+            A ``ComplianceReport`` with score, violations, and recommendations.
+        """
         import uuid
         
         # Filter violations
@@ -417,7 +500,16 @@ class ComplianceEngine:
         violation_id: str,
         notes: str,
     ) -> bool:
-        """Mark a violation as remediated."""
+        """Mark a violation as remediated.
+
+        Args:
+            violation_id: ID of the violation to remediate.
+            notes: Free-text description of the remediation action taken.
+
+        Returns:
+            ``True`` if the violation was found and updated,
+            ``False`` if no violation with that ID exists.
+        """
         for v in self._violations:
             if v.violation_id == violation_id:
                 v.remediated = True
@@ -432,7 +524,16 @@ class ComplianceEngine:
         agent_did: Optional[str] = None,
         remediated: Optional[bool] = None,
     ) -> list[ComplianceViolation]:
-        """Get violations with optional filters."""
+        """Get recorded violations with optional filters.
+
+        Args:
+            framework: Filter to a specific compliance framework.
+            agent_did: Filter to a specific agent DID.
+            remediated: Filter by remediation status. ``None`` returns all.
+
+        Returns:
+            List of matching ``ComplianceViolation`` instances.
+        """
         violations = self._violations
         
         if framework:

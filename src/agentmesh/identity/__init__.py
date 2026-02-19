@@ -20,6 +20,7 @@ from .revocation import RevocationList, RevocationEntry
 from .rotation import KeyRotationManager
 from .jwk import to_jwk, from_jwk, to_jwks, from_jwks
 from .mtls import MTLSConfig, MTLSIdentityVerifier
+from .keystore import KeyStore, SoftwareKeyStore, PKCS11KeyStore
 
 __all__ = [
     "AgentIdentity",
@@ -46,4 +47,7 @@ __all__ = [
     "from_jwks",
     "MTLSConfig",
     "MTLSIdentityVerifier",
+    "KeyStore",
+    "SoftwareKeyStore",
+    "PKCS11KeyStore",
 ]

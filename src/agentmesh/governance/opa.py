@@ -45,7 +45,17 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class OPADecision:
-    """Result from OPA evaluation."""
+    """Result from an OPA policy evaluation.
+
+    Attributes:
+        allowed: Whether the policy permits the action.
+        raw_result: Raw response from the OPA engine.
+        query: The Rego query that was evaluated.
+        evaluation_ms: Evaluation latency in milliseconds.
+        source: How the evaluation was performed
+            (``"remote"``, ``"local"``, or ``"fallback"``).
+        error: Error message if evaluation failed, otherwise ``None``.
+    """
     allowed: bool
     raw_result: Any = None
     query: str = ""
@@ -71,6 +81,17 @@ class OPAEvaluator:
         rego_content: Optional[str] = None,
         timeout_seconds: float = 5.0,
     ):
+        """Initialise the OPA evaluator.
+
+        Args:
+            mode: Evaluation mode — ``"remote"`` queries an OPA REST
+                API, ``"local"`` uses the ``opa eval`` CLI or a
+                built-in fallback parser.
+            opa_url: Base URL of the OPA server (remote mode only).
+            rego_path: Path to a ``.rego`` policy file (local mode).
+            rego_content: Inline Rego policy string (local mode).
+            timeout_seconds: Maximum time to wait for evaluation.
+        """
         self.mode = mode
         self.opa_url = opa_url.rstrip("/")
         self.rego_path = rego_path

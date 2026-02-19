@@ -13,7 +13,14 @@ from .trust_policy import TrustPolicy
 
 
 class TrustPolicyDecision(BaseModel):
-    """Result of trust policy evaluation."""
+    """Result of trust policy evaluation.
+
+    Attributes:
+        allowed: Whether the action is permitted.
+        rule_name: Name of the matched rule, or ``None`` if defaults applied.
+        action: Action taken (allow, deny, warn, or require_approval).
+        reason: Human-readable explanation of the decision.
+    """
 
     allowed: bool = Field(..., description="Whether the action is allowed")
     rule_name: Optional[str] = Field(None, description="Name of the matched rule, if any")
@@ -32,10 +39,28 @@ class PolicyEvaluator:
     """
 
     def __init__(self, policies: list[TrustPolicy]) -> None:
+        """Initialise the evaluator with a list of trust policies.
+
+        Args:
+            policies: Trust policies whose rules will be merged and
+                evaluated in priority order.
+        """
         self._policies = list(policies)
 
     def evaluate(self, context: dict) -> TrustPolicyDecision:
-        """Evaluate all rules against the context, return a decision."""
+        """Evaluate all trust rules against the context.
+
+        Rules across all loaded policies are sorted by priority
+        (lower number = higher priority). The first matching rule
+        wins. If no rule matches, default trust parameters are applied.
+
+        Args:
+            context: Runtime context dictionary containing fields such
+                as ``trust_score``, ``delegation_depth``, and ``agent``.
+
+        Returns:
+            A ``TrustPolicyDecision`` indicating the outcome.
+        """
         # Collect and sort all rules by priority (lower = higher priority)
         all_rules = []
         for policy in self._policies:

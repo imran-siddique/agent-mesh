@@ -19,7 +19,15 @@ if TYPE_CHECKING:
 
 @dataclass
 class SimulatedAction:
-    """An action to simulate in shadow mode."""
+    """An action to simulate in shadow mode.
+
+    Attributes:
+        action_id: Unique identifier for this simulated action.
+        agent_did: DID of the agent performing the action.
+        action_type: Category of the action being simulated.
+        context: Runtime context dict passed to the policy engine.
+        timestamp: When the action occurred (defaults to now).
+    """
     
     action_id: str
     agent_did: str
@@ -33,7 +41,22 @@ class SimulatedAction:
 
 
 class ShadowResult(BaseModel):
-    """Result of shadow mode evaluation."""
+    """Result of a shadow mode evaluation.
+
+    Attributes:
+        action_id: ID of the simulated action.
+        shadow_allowed: Whether the shadow policy allowed the action.
+        shadow_action: Shadow policy action (allow, deny, warn, etc.).
+        shadow_rule: Name of the shadow rule that matched.
+        production_allowed: Whether production policy allowed the action.
+        production_action: Production policy action string.
+        production_rule: Name of the production rule that matched.
+        diverged: Whether shadow and production decisions differ.
+        divergence_reason: Description of the divergence (if any).
+        evaluated_at: Timestamp of evaluation.
+        shadow_latency_ms: Shadow evaluation latency in milliseconds.
+        production_latency_ms: Production evaluation latency in ms.
+    """
     
     action_id: str
     
@@ -58,7 +81,20 @@ class ShadowResult(BaseModel):
 
 
 class ShadowSession(BaseModel):
-    """A shadow mode evaluation session."""
+    """A shadow mode evaluation session tracking results and divergence.
+
+    Attributes:
+        session_id: Unique session identifier.
+        started_at: When the session started.
+        agent_dids: Agent DIDs in scope for this session.
+        policy_names: Policies under test in this session.
+        total_evaluated: Total actions evaluated so far.
+        total_diverged: Number of divergent decisions.
+        divergence_rate: Divergence rate as a float (0.0–1.0).
+        results: Detailed per-action evaluation results.
+        active: Whether the session is still running.
+        ended_at: When the session ended (if finished).
+    """
     
     session_id: str = Field(default_factory=lambda: f"shadow_{uuid.uuid4().hex[:12]}")
     started_at: datetime = Field(default_factory=datetime.utcnow)
@@ -111,7 +147,15 @@ class ShadowMode:
         agent_dids: Optional[list[str]] = None,
         policy_names: Optional[list[str]] = None,
     ) -> ShadowSession:
-        """Start a new shadow evaluation session."""
+        """Start a new shadow evaluation session.
+
+        Args:
+            agent_dids: Optional list of agent DIDs to scope.
+            policy_names: Optional list of policy names under test.
+
+        Returns:
+            The newly created ``ShadowSession``.
+        """
         session = ShadowSession(
             agent_dids=agent_dids or [],
             policy_names=policy_names or [],
@@ -192,12 +236,15 @@ class ShadowMode:
         actions: list[SimulatedAction],
         production_decisions: Optional[list[dict]] = None,
     ) -> list[ShadowResult]:
-        """
-        Replay a batch of actions in shadow mode.
-        
+        """Replay a batch of actions in shadow mode.
+
         Args:
-            actions: List of actions to replay
-            production_decisions: Optional list of production decisions to compare
+            actions: List of actions to replay.
+            production_decisions: Optional parallel list of production
+                decisions for divergence comparison.
+
+        Returns:
+            List of ``ShadowResult`` instances, one per action.
         """
         results = []
         
@@ -212,7 +259,18 @@ class ShadowMode:
         return results
     
     def end_session(self, session_id: Optional[str] = None) -> ShadowSession:
-        """End a shadow session and return summary."""
+        """End a shadow session and return its summary.
+
+        Args:
+            session_id: ID of the session to end. Defaults to the
+                currently active session.
+
+        Returns:
+            The finalised ``ShadowSession`` with statistics.
+
+        Raises:
+            ValueError: If no matching session is found.
+        """
         sid = session_id or self._active_session
         if not sid or sid not in self._sessions:
             raise ValueError("No active session")
@@ -227,11 +285,28 @@ class ShadowMode:
         return session
     
     def get_session(self, session_id: str) -> Optional[ShadowSession]:
-        """Get session by ID."""
+        """Get a shadow session by its ID.
+
+        Args:
+            session_id: Session identifier.
+
+        Returns:
+            The ``ShadowSession`` if found, otherwise ``None``.
+        """
         return self._sessions.get(session_id)
     
     def get_divergence_report(self, session_id: Optional[str] = None) -> dict[str, Any]:
-        """Generate divergence report for a session."""
+        """Generate a divergence report for a session.
+
+        Args:
+            session_id: Session to report on. Defaults to the active
+                session.
+
+        Returns:
+            Dictionary containing ``session_id``, ``divergence_rate``,
+            ``within_target``, ``divergence_breakdown``, and a
+            production readiness ``recommendation``.
+        """
         sid = session_id or self._active_session
         if not sid or sid not in self._sessions:
             return {"error": "No session found"}
@@ -266,6 +341,16 @@ class ShadowMode:
         }
     
     def is_ready_for_production(self, session_id: Optional[str] = None) -> bool:
-        """Check if shadow session shows policy is ready for production."""
+        """Check if the shadow session shows the policy is production-ready.
+
+        A session is considered ready when its divergence rate is at or
+        below ``DIVERGENCE_TARGET`` (default 2%).
+
+        Args:
+            session_id: Session to check. Defaults to the active session.
+
+        Returns:
+            ``True`` if the divergence rate is within the target.
+        """
         report = self.get_divergence_report(session_id)
         return report.get("within_target", False)

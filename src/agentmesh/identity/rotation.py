@@ -58,6 +58,9 @@ class KeyRotationManager:
     def rotate(self) -> AgentIdentity:
         """Generate a new keypair, create a rotation proof, and update the identity.
 
+        The old public key and rotation proof are stored in key history.
+        The agent's DID remains unchanged.
+
         Returns:
             The updated AgentIdentity with the new keypair.
         """
@@ -104,7 +107,11 @@ class KeyRotationManager:
         return self._identity
 
     def needs_rotation(self) -> bool:
-        """Return True if the TTL has elapsed since the last rotation."""
+        """Return True if the TTL has elapsed since the last rotation.
+
+        Returns:
+            True if the elapsed time exceeds ``rotation_ttl_seconds``.
+        """
         elapsed = time.monotonic() - self._last_rotation_time
         return elapsed >= self._rotation_ttl_seconds
 
@@ -159,7 +166,12 @@ class KeyRotationManager:
     # ------------------------------------------------------------------
 
     def get_key_history(self) -> list[dict]:
-        """Return the list of previous public keys with rotation timestamps."""
+        """Return the list of previous public keys with rotation timestamps.
+
+        Returns:
+            List of dicts with keys ``public_key``, ``verification_key_id``,
+            ``rotated_at``, and ``rotation_proof``.
+        """
         return list(self._key_history)
 
     # ------------------------------------------------------------------

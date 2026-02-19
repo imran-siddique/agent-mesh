@@ -28,7 +28,20 @@ except ImportError:
 
 
 class PeerInfo(BaseModel):
-    """Information about a peer agent."""
+    """Information about a peer agent in the trust mesh.
+
+    Attributes:
+        peer_did: Decentralized identifier for the peer agent.
+        peer_name: Optional human-readable name for the peer.
+        protocol: Communication protocol (``"a2a"``, ``"mcp"``,
+            ``"iatp"``, or ``"acp"``).
+        trust_score: Numeric trust score from 0 to 1000.
+        trust_verified: Whether the peer has been verified.
+        last_verified: Timestamp of the most recent verification.
+        capabilities: List of capability strings the peer holds.
+        endpoint: Network endpoint URL for the peer.
+        connected_at: Timestamp when the connection was established.
+    """
     
     peer_did: str
     peer_name: Optional[str] = None
@@ -123,7 +136,19 @@ class TrustBridge(BaseModel):
         peer_did: str,
         required_score: Optional[int] = None,
     ) -> bool:
-        """Quick check if a peer is trusted."""
+        """Check whether a previously verified peer meets the trust threshold.
+
+        Unlike :meth:`verify_peer`, this does **not** perform a new
+        handshake; it only inspects the cached peer record.
+
+        Args:
+            peer_did: The peer's decentralized identifier.
+            required_score: Minimum trust score. Falls back to
+                ``default_trust_threshold`` when ``None``.
+
+        Returns:
+            ``True`` if the peer is verified and meets the threshold.
+        """
         peer = self.peers.get(peer_did)
         if not peer or not peer.trust_verified:
             return False
@@ -132,11 +157,26 @@ class TrustBridge(BaseModel):
         return peer.trust_score >= threshold
     
     def get_peer(self, peer_did: str) -> Optional[PeerInfo]:
-        """Get information about a known peer."""
+        """Get information about a known peer.
+
+        Args:
+            peer_did: The peer's decentralized identifier.
+
+        Returns:
+            The ``PeerInfo`` record, or ``None`` if the peer is unknown.
+        """
         return self.peers.get(peer_did)
     
     def get_trusted_peers(self, min_score: Optional[int] = None) -> list[PeerInfo]:
-        """Get all peers meeting trust threshold."""
+        """Get all peers that are verified and meet the trust threshold.
+
+        Args:
+            min_score: Minimum trust score. Falls back to
+                ``default_trust_threshold`` when ``None``.
+
+        Returns:
+            List of ``PeerInfo`` records for qualifying peers.
+        """
         threshold = min_score or self.default_trust_threshold
         return [
             peer for peer in self.peers.values()
@@ -144,7 +184,19 @@ class TrustBridge(BaseModel):
         ]
     
     async def revoke_peer_trust(self, peer_did: str, reason: str) -> bool:
-        """Revoke trust for a peer."""
+        """Revoke trust for a previously verified peer.
+
+        Resets the peer's trust score to zero and marks them as
+        unverified. The peer record is retained for auditing purposes.
+
+        Args:
+            peer_did: The peer's decentralized identifier.
+            reason: Human-readable reason for revocation.
+
+        Returns:
+            ``True`` if the peer was found and revoked, ``False`` if
+            the peer was not in the known-peers map.
+        """
         if peer_did in self.peers:
             self.peers[peer_did].trust_verified = False
             self.peers[peer_did].trust_score = 0
@@ -182,14 +234,23 @@ class ProtocolBridge(BaseModel):
         source_protocol: str,
         target_protocol: Optional[str] = None,
     ) -> Any:
-        """
-        Send a message to a peer, translating protocols if needed.
-        
+        """Send a message to a peer, translating protocols if needed.
+
+        Verifies trust before sending and automatically translates the
+        message when the source and destination protocols differ.
+
         Args:
-            peer_did: Target peer's DID
-            message: Message to send
-            source_protocol: Protocol the message is in
-            target_protocol: Protocol to send as (auto-detect if None)
+            peer_did: Target peer's decentralized identifier.
+            message: Message payload to send.
+            source_protocol: Protocol the message is currently in.
+            target_protocol: Protocol to translate to before sending.
+                Auto-detected from the peer record when ``None``.
+
+        Returns:
+            Response payload from the protocol handler.
+
+        Raises:
+            PermissionError: If the peer cannot be verified.
         """
         # Verify trust first
         if not await self.trust_bridge.is_peer_trusted(peer_did):
@@ -294,7 +355,15 @@ class ProtocolBridge(BaseModel):
         }
     
     def get_protocol_for_peer(self, peer_did: str) -> Optional[str]:
-        """Get the preferred protocol for a peer."""
+        """Get the preferred communication protocol for a peer.
+
+        Args:
+            peer_did: The peer's decentralized identifier.
+
+        Returns:
+            Protocol string (e.g. ``"a2a"``, ``"mcp"``), or ``None``
+            if the peer is unknown.
+        """
         peer = self.trust_bridge.get_peer(peer_did)
         return peer.protocol if peer else None
 
@@ -310,14 +379,26 @@ class A2AAdapter:
     """
     
     def __init__(self, agent_did: str, trust_bridge: TrustBridge):
+        """Initialise the A2A adapter.
+
+        Args:
+            agent_did: This agent's decentralized identifier.
+            trust_bridge: Shared ``TrustBridge`` for peer verification.
+        """
         self.agent_did = agent_did
         self.trust_bridge = trust_bridge
     
     async def discover_agent(self, endpoint: str) -> Optional[dict]:
-        """
-        Discover an agent via A2A Agent Card.
-        
-        GET /.well-known/agent.json
+        """Discover an agent via A2A Agent Card.
+
+        Fetches the agent card from ``GET /.well-known/agent.json`` at
+        the given endpoint.
+
+        Args:
+            endpoint: Base URL of the remote agent.
+
+        Returns:
+            Agent card dictionary, or ``None`` if discovery fails.
         """
         # Would make HTTP request in production
         return {
@@ -332,7 +413,22 @@ class A2AAdapter:
         task_type: str,
         parameters: dict,
     ) -> dict:
-        """Create a task on a peer agent."""
+        """Create a task on a peer agent via the A2A protocol.
+
+        Trust is verified before the task is dispatched.
+
+        Args:
+            peer_did: Target peer's decentralized identifier.
+            task_type: Type of task to create (e.g. ``"execute"``).
+            parameters: Task parameters to send.
+
+        Returns:
+            Dictionary containing ``task_id``, ``status``, and
+            ``type`` of the created task.
+
+        Raises:
+            PermissionError: If the peer is not trusted.
+        """
         # Verify trust
         if not await self.trust_bridge.is_peer_trusted(peer_did):
             raise PermissionError("Peer not trusted")
@@ -344,7 +440,15 @@ class A2AAdapter:
         }
     
     async def get_task_status(self, peer_did: str, task_id: str) -> dict:
-        """Get status of a task."""
+        """Get the current status of a task on a peer agent.
+
+        Args:
+            peer_did: The peer's decentralized identifier.
+            task_id: Identifier of the task to query.
+
+        Returns:
+            Dictionary containing ``task_id`` and ``status``.
+        """
         return {
             "task_id": task_id,
             "status": "running",
@@ -364,6 +468,12 @@ class MCPAdapter:
     """
     
     def __init__(self, agent_did: str, trust_bridge: TrustBridge):
+        """Initialise the MCP adapter.
+
+        Args:
+            agent_did: This agent's decentralized identifier.
+            trust_bridge: Shared ``TrustBridge`` for peer verification.
+        """
         self.agent_did = agent_did
         self.trust_bridge = trust_bridge
         self._registered_tools: dict[str, dict] = {}
@@ -375,7 +485,15 @@ class MCPAdapter:
         input_schema: dict,
         required_capability: Optional[str] = None,
     ) -> None:
-        """Register a tool with the MCP adapter."""
+        """Register a tool with the MCP adapter.
+
+        Args:
+            name: Unique tool name.
+            description: Human-readable tool description.
+            input_schema: JSON Schema describing accepted arguments.
+            required_capability: Capability string a peer must hold
+                to invoke this tool. ``None`` means unrestricted.
+        """
         self._registered_tools[name] = {
             "name": name,
             "description": description,
@@ -389,13 +507,26 @@ class MCPAdapter:
         tool_name: str,
         arguments: dict,
     ) -> dict:
-        """
-        Call a tool on a peer, with governance.
-        
-        Unlike raw MCP, this:
-        1. Verifies peer trust
-        2. Checks capability scope
-        3. Logs for audit
+        """Call a tool on a peer with governance enforcement.
+
+        Unlike raw MCP, this method:
+
+        1. Verifies peer trust via the ``TrustBridge``.
+        2. Checks that the peer holds the required capability.
+        3. Logs the invocation for audit.
+
+        Args:
+            peer_did: Target peer's decentralized identifier.
+            tool_name: Name of the registered tool to invoke.
+            arguments: Arguments to pass to the tool.
+
+        Returns:
+            Dictionary with ``tool``, ``result``, and ``governed``
+            keys.
+
+        Raises:
+            PermissionError: If the peer is not trusted or lacks the
+                required capability for the tool.
         """
         # Verify trust
         if not await self.trust_bridge.is_peer_trusted(peer_did):
@@ -419,5 +550,11 @@ class MCPAdapter:
         }
     
     def list_tools(self) -> list[dict]:
-        """List all registered tools."""
+        """List all registered tools.
+
+        Returns:
+            List of tool descriptor dictionaries, each containing
+            ``name``, ``description``, ``inputSchema``, and
+            ``required_capability`` keys.
+        """
         return list(self._registered_tools.values())

@@ -34,19 +34,37 @@ class UserContext(BaseModel):
     metadata: dict = Field(default_factory=dict, description="Additional user attributes")
 
     def is_valid(self) -> bool:
-        """Check if the user context is still valid."""
+        """Check if the user context is still valid.
+
+        Returns:
+            True if the context has not expired.
+        """
         if self.expires_at and datetime.utcnow() > self.expires_at:
             return False
         return True
 
     def has_permission(self, permission: str) -> bool:
-        """Check if the user has a specific permission."""
+        """Check if the user has a specific permission.
+
+        Args:
+            permission: The permission string to check.
+
+        Returns:
+            True if the user has the permission or a wildcard grant.
+        """
         if "*" in self.permissions:
             return True
         return permission in self.permissions
 
     def has_role(self, role: str) -> bool:
-        """Check if the user has a specific role."""
+        """Check if the user has a specific role.
+
+        Args:
+            role: The role name to check.
+
+        Returns:
+            True if the user has the given role.
+        """
         return role in self.roles
 
     @classmethod
@@ -58,7 +76,18 @@ class UserContext(BaseModel):
         permissions: Optional[list[str]] = None,
         ttl_seconds: int = 3600,
     ) -> "UserContext":
-        """Create a new user context with TTL."""
+        """Create a new user context with TTL.
+
+        Args:
+            user_id: Unique user identifier.
+            user_email: Optional email for audit trails.
+            roles: User roles for RBAC.
+            permissions: Fine-grained permission strings.
+            ttl_seconds: Time-to-live in seconds (default 1 hour).
+
+        Returns:
+            A new UserContext with computed expiration.
+        """
         now = datetime.utcnow()
         return cls(
             user_id=user_id,
@@ -104,7 +133,11 @@ class DelegationLink(BaseModel):
     previous_link_hash: Optional[str] = Field(None, description="Hash of previous link in chain")
     
     def verify_capability_narrowing(self) -> bool:
-        """Verify that delegated capabilities are a subset of parent's."""
+        """Verify that delegated capabilities are a subset of parent's.
+
+        Returns:
+            True if all delegated capabilities are permitted by the parent.
+        """
         for cap in self.delegated_capabilities:
             if cap not in self.parent_capabilities:
                 # Check for wildcard narrowing (e.g., read:* -> read:data)
@@ -124,7 +157,11 @@ class DelegationLink(BaseModel):
         return False
     
     def compute_hash(self) -> str:
-        """Compute hash of this link for chain verification."""
+        """Compute hash of this link for chain verification.
+
+        Returns:
+            SHA-256 hex digest of the canonical link data.
+        """
         data = {
             "link_id": self.link_id,
             "depth": self.depth,
@@ -139,7 +176,13 @@ class DelegationLink(BaseModel):
         return hashlib.sha256(canonical.encode()).hexdigest()
     
     def is_valid(self) -> bool:
-        """Check if this link is valid."""
+        """Check if this link is valid.
+
+        Validates expiration, capability narrowing, and hash integrity.
+
+        Returns:
+            True if the link passes all validation checks.
+        """
         # Check expiration
         if self.expires_at and datetime.utcnow() > self.expires_at:
             return False
@@ -228,18 +271,29 @@ class DelegationChain(BaseModel):
     chain_hash: str = Field(default="", description="Hash of entire chain")
     
     def get_depth(self) -> int:
-        """Return the current depth of the delegation chain."""
+        """Return the current depth of the delegation chain.
+
+        Returns:
+            The number of links in the chain.
+        """
         return len(self.links)
 
     def add_link(self, link: DelegationLink) -> None:
-        """
-        Add a link to the chain.
-        
+        """Add a link to the chain.
+
         Validates that:
         1. Depth limit is not exceeded
         2. Link connects to current leaf
         3. Capabilities are properly narrowed
         4. Link hash is correct
+
+        Args:
+            link: The delegation link to append.
+
+        Raises:
+            DelegationDepthError: If the chain would exceed max_depth.
+            ValueError: If the link does not connect to the chain, hash
+                is invalid, or capabilities are not properly narrowed.
         """
         new_depth = len(self.links) + 1
         if new_depth > self.max_depth:
@@ -319,16 +373,23 @@ class DelegationChain(BaseModel):
         return True, None
     
     def get_effective_capabilities(self) -> list[str]:
-        """Get the effective capabilities at the end of the chain."""
+        """Get the effective capabilities at the end of the chain.
+
+        Returns:
+            The leaf agent's capabilities, or root capabilities if empty.
+        """
         if self.links:
             return self.links[-1].delegated_capabilities
         return self.root_capabilities
     
     def trace_capability(self, capability: str) -> list[dict]:
-        """
-        Trace how a capability was granted through the chain.
-        
-        Returns list of grants/narrowings from root to leaf.
+        """Trace how a capability was granted through the chain.
+
+        Args:
+            capability: The capability string to trace.
+
+        Returns:
+            List of dicts describing each grant/narrowing from root to leaf.
         """
         trace = []
         
@@ -373,10 +434,17 @@ class DelegationChain(BaseModel):
         capabilities: list[str],
         sponsor_verified: bool = False,
     ) -> tuple["DelegationChain", DelegationLink]:
-        """
-        Create a new chain with a root sponsor.
-        
-        Returns the chain and the first link to be signed.
+        """Create a new chain with a root sponsor.
+
+        Args:
+            sponsor_email: Email of the human sponsor at chain root.
+            root_agent_did: DID of the first agent in the chain.
+            capabilities: Capabilities granted by the sponsor.
+            sponsor_verified: Whether the sponsor has been verified.
+
+        Returns:
+            Tuple of (DelegationChain, DelegationLink) where the link
+            is the first link to be signed by the sponsor.
         """
         import uuid
         

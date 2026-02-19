@@ -123,7 +123,14 @@ class TrustedAgentCard(BaseModel):
         return card
     
     def to_dict(self) -> Dict[str, Any]:
-        """Serialize card to dictionary."""
+        """Serialize the card to a plain dictionary.
+
+        Includes identity and signature fields only when they are
+        populated.
+
+        Returns:
+            Dictionary representation suitable for JSON serialization.
+        """
         result = {
             "name": self.name,
             "description": self.description,
@@ -143,7 +150,18 @@ class TrustedAgentCard(BaseModel):
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "TrustedAgentCard":
-        """Deserialize card from dictionary with safe access."""
+        """Deserialize a card from a dictionary.
+
+        Performs safe access on all keys so missing values fall back to
+        sensible defaults.
+
+        Args:
+            data: Dictionary previously produced by :meth:`to_dict` or
+                an equivalent external source.
+
+        Returns:
+            A ``TrustedAgentCard`` instance.
+        """
         signature_ts = data.get("signature_timestamp")
         created_at = data.get("created_at")
         
@@ -169,6 +187,12 @@ class CardRegistry:
     """
     
     def __init__(self, cache_ttl_seconds: int = 900):
+        """Initialise the card registry.
+
+        Args:
+            cache_ttl_seconds: Time-to-live in seconds for the
+                verification cache. Defaults to 900 (15 minutes).
+        """
         self._cards: Dict[str, TrustedAgentCard] = {}
         self._verified_cache: Dict[str, tuple[bool, datetime]] = {}
         self._cache_ttl = timedelta(seconds=cache_ttl_seconds)
@@ -193,7 +217,14 @@ class CardRegistry:
         return True
     
     def get(self, agent_did: str) -> Optional[TrustedAgentCard]:
-        """Get a card by agent DID."""
+        """Get a registered card by agent DID.
+
+        Args:
+            agent_did: The agent's decentralized identifier.
+
+        Returns:
+            The ``TrustedAgentCard``, or ``None`` if not registered.
+        """
         return self._cards.get(agent_did)
     
     def is_verified(self, agent_did: str) -> bool:
@@ -216,15 +247,31 @@ class CardRegistry:
         return verified
     
     def clear_cache(self) -> None:
-        """Clear verification cache."""
+        """Clear the verification cache.
+
+        Subsequent calls to :meth:`is_verified` will re-verify
+        signatures from scratch.
+        """
         self._verified_cache.clear()
     
     def list_cards(self) -> List[TrustedAgentCard]:
-        """List all registered cards."""
+        """List all registered agent cards.
+
+        Returns:
+            List of every ``TrustedAgentCard`` in the registry.
+        """
         return list(self._cards.values())
     
     def find_by_capability(self, capability: str) -> List[TrustedAgentCard]:
-        """Find cards that have a specific capability."""
+        """Find registered cards that advertise a specific capability.
+
+        Args:
+            capability: Capability string to search for.
+
+        Returns:
+            List of ``TrustedAgentCard`` instances whose
+            ``capabilities`` list contains the given string.
+        """
         return [
             card for card in self._cards.values()
             if capability in card.capabilities
