@@ -90,6 +90,13 @@ langchain = [
 django = [
     "django>=3.2",
 ]
+websocket = [
+    "websockets>=12.0",
+]
+grpc = [
+    "grpcio>=1.60.0",
+    "grpcio-tools>=1.60.0",
+]
 agent-os = [
     "agent-os-kernel[nexus,iatp]>=1.2.0",
 ]
