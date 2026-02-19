@@ -37,6 +37,30 @@
   <a href="https://clawhub.ai/imran-siddique/agentmesh-governance"><img src="https://img.shields.io/badge/OpenClaw-ClawHub-purple?style=flat-square" alt="OpenClaw"></a>
 </p>
 
+## 📊 By The Numbers
+
+<table>
+<tr>
+<td align="center"><h3>1,300+</h3><sub>Tests Passing</sub></td>
+<td align="center"><h3>6</h3><sub>Framework Integrations</sub></td>
+<td align="center"><h3>170K+</h3><sub>Combined Stars of<br/>Integrated Projects</sub></td>
+<td align="center"><h3>4</h3><sub>Protocol Bridges<br/>(A2A · MCP · IATP · AI Card)</sub></td>
+</tr>
+</table>
+
+### 🏢 Production Integrations
+
+| Framework | Stars | Status | What We Ship |
+|-----------|-------|--------|-------------|
+| **Dify** | 65K ⭐ | ✅ Merged | Trust verification plugin in Dify Marketplace |
+| **LlamaIndex** | 47K ⭐ | ✅ Merged | TrustedAgentWorker + TrustGatedQueryEngine |
+| **Microsoft Agent-Lightning** | 15K ⭐ | ✅ Merged | Governance kernel for RL training safety |
+| **LangGraph** | 24K ⭐ | 📦 PyPI | Trust-scored state transitions |
+| **OpenAI Agents SDK** | — | 📦 PyPI | Tool-level governance guardrails |
+| **Haystack** | 22K ⭐ | 🔄 In Review | GovernancePolicyChecker + TrustGate components |
+
+> **AgentMesh is "SSL for AI Agents"** — the trust and identity layer that makes multi-agent systems enterprise-ready. Every agent gets a cryptographic identity. Every interaction is verified. Every action is audited.
+
 ---
 
 <p align="center">
@@ -414,14 +438,16 @@ report = compliance.generate_report(
 | Delegation Escalation | Chains are cryptographically narrowing |
 | Cascade Failure | Per-agent trust scoring isolates blast radius |
 
-## Roadmap
+## 🗺️ Roadmap
 
-| Phase | Timeline | Deliverables |
-|-------|----------|--------------|
-| Alpha | Q1 2026 | Identity Core, A2A+MCP bridge, CLI |
-| Beta | Q2 2026 | IATP handshake, Reward Engine v1, Dashboard |
-| GA | Q3 2026 | Compliance automation, Enterprise features |
-| Scale | Q4 2026 | Agent Marketplace, Partner integrations |
+| Quarter | Milestone |
+|---------|-----------|
+| **Q1 2026** | ✅ Core trust layer, identity, governance engine, 6 framework integrations |
+| **Q2 2026** | TypeScript SDK, Go SDK, Dashboard UI, Plugin Marketplace |
+| **Q3 2026** | AI Card spec contribution, CNCF Sandbox application |
+| **Q4 2026** | Managed cloud service (AgentMesh Cloud), SOC2 Type II |
+
+See our [full roadmap](docs/roadmap.md) for details.
 
 ## Known Limitations & Open Work
 
