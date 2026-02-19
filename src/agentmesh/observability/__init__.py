@@ -14,6 +14,8 @@ from .tracing import (
     extract_context,
 )
 from .metrics import setup_metrics, MetricsCollector, MeshMetrics, start_metrics_server
+from .prometheus_exporter import MeshMetricsExporter
+from .prometheus_exporter import start_http_server as start_exporter_server
 
 __all__ = [
     "setup_tracing",
@@ -26,5 +28,7 @@ __all__ = [
     "setup_metrics",
     "MetricsCollector",
     "MeshMetrics",
+    "MeshMetricsExporter",
     "start_metrics_server",
+    "start_exporter_server",
 ]
