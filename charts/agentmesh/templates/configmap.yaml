@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "agentmesh.fullname" . }}-config
+  labels:
+    {{- include "agentmesh.labels" . | nindent 4 }}
+data:
+  default-policy.yaml: |
+    # Default AgentMesh governance policy
+    apiVersion: agentmesh.io/v1alpha1
+    kind: GovernancePolicy
+    metadata:
+      name: default
+    spec:
+      trustThreshold: 0.7
+      maxDelegationDepth: 3
+      auditLevel: standard
+      requiredCapabilities: []
+      rateLimit:
+        requestsPerMinute: {{ .Values.apiGateway.rateLimitPerMinute }}
+      retentionDays: {{ .Values.auditCollector.retentionDays }}

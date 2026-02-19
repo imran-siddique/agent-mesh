@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agentmesh.fullname" . }}-api-gateway
+  labels:
+    {{- include "agentmesh.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api-gateway
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.apiGateway.replicas }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "agentmesh.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api-gateway
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.monitoring.prometheus.enabled }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.apiGateway.service.metricsPort | quote }}
+        prometheus.io/path: "/metrics"
+        {{- end }}
+      labels:
+        {{- include "agentmesh.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: api-gateway
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "agentmesh.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: api-gateway
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.apiGateway.image.repository }}:{{ .Values.apiGateway.image.tag | default .Values.global.imageTag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.apiGateway.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.apiGateway.service.port }}
+              protocol: TCP
+            - name: metrics
+              containerPort: {{ .Values.apiGateway.service.metricsPort }}
+              protocol: TCP
+          env:
+            - name: AGENTMESH_COMPONENT
+              value: api-gateway
+            - name: AGENTMESH_RATE_LIMIT_PER_MIN
+              value: {{ .Values.apiGateway.rateLimitPerMinute | quote }}
+            - name: AGENTMESH_TRUST_ENGINE_URL
+              value: "https://{{ include "agentmesh.fullname" . }}-trust-engine:{{ .Values.trustEngine.service.port }}"
+            - name: AGENTMESH_POLICY_SERVER_URL
+              value: "https://{{ include "agentmesh.fullname" . }}-policy-server:{{ .Values.policyServer.service.port }}"
+            - name: AGENTMESH_AUDIT_COLLECTOR_URL
+              value: "https://{{ include "agentmesh.fullname" . }}-audit-collector:{{ .Values.auditCollector.service.port }}"
+            - name: AGENTMESH_TLS_ENABLED
+              value: {{ .Values.global.tls.enabled | quote }}
+          {{- with .Values.apiGateway.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.apiGateway.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.apiGateway.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            {{- if .Values.global.tls.enabled }}
+            - name: tls-certs
+              mountPath: /etc/agentmesh/tls
+              readOnly: true
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        {{- if .Values.global.tls.enabled }}
+        - name: tls-certs
+          secret:
+            secretName: {{ .Values.global.tls.certSecretName }}
+        {{- end }}
+      {{- with .Values.apiGateway.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.apiGateway.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.apiGateway.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

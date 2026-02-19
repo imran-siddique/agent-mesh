@@ -1,33 +1,29 @@
 # Default values for agentmesh
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
+# Production-grade defaults for enterprise deployment.
 
-replicaCount: 3
+# -- Global configuration
+global:
+  namespace: agentmesh
+  imagePullSecrets: []
+  imageTag: "0.3.0"
+  tls:
+    enabled: true
+    certSecretName: agentmesh-tls
+  spiffe:
+    enabled: false
+    trustDomain: agentmesh.local
+    socketPath: /run/spire/sockets/agent.sock
 
-image:
-  server:
-    repository: agentmesh/server
-    pullPolicy: IfNotPresent
-    tag: "1.0.0-alpha1"
-  sidecar:
-    repository: agentmesh/sidecar
-    pullPolicy: IfNotPresent
-    tag: "1.0.0-alpha1"
-
-imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
+# -- Service account
 serviceAccount:
   create: true
   annotations: {}
   name: ""
 
-podAnnotations:
-  prometheus.io/scrape: "true"
-  prometheus.io/port: "9090"
-  prometheus.io/path: "/metrics"
-
+# -- Pod security defaults
 podSecurityContext:
   runAsNonRoot: true
   runAsUser: 1000
@@ -38,160 +34,210 @@ podSecurityContext:
 securityContext:
   capabilities:
     drop:
-    - ALL
+      - ALL
   readOnlyRootFilesystem: true
   allowPrivilegeEscalation: false
 
-service:
-  type: ClusterIP
-  port: 8080
-  metricsPort: 9090
-  annotations: {}
+# ---------------------------------------------------------------------------
+# Trust Engine
+# ---------------------------------------------------------------------------
+trustEngine:
+  replicas: 2
+  image:
+    repository: agentmesh/trust-engine
+    tag: ""  # defaults to global.imageTag
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8443
+    metricsPort: 9090
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: http
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /readyz
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
 
-ingress:
-  enabled: false
-  className: "nginx"
-  annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
-  hosts:
-    - host: agentmesh.example.com
-      paths:
-        - path: /
-          pathType: Prefix
-  tls:
-    - secretName: agentmesh-tls
-      hosts:
-        - agentmesh.example.com
+# ---------------------------------------------------------------------------
+# Policy Server
+# ---------------------------------------------------------------------------
+policyServer:
+  replicas: 2
+  image:
+    repository: agentmesh/policy-server
+    tag: ""
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8444
+    metricsPort: 9091
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  # Mount path for YAML policy files inside the container
+  policyMountPath: /etc/agentmesh/policies
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: http
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /readyz
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
 
-resources:
-  limits:
-    cpu: 1000m
-    memory: 1Gi
-  requests:
-    cpu: 250m
-    memory: 256Mi
-
-autoscaling:
-  enabled: true
-  minReplicas: 3
-  maxReplicas: 10
-  targetCPUUtilizationPercentage: 70
-  targetMemoryUtilizationPercentage: 80
-
-nodeSelector: {}
-
-tolerations: []
-
-affinity:
-  podAntiAffinity:
-    preferredDuringSchedulingIgnoredDuringExecution:
-      - weight: 100
-        podAffinityTerm:
-          labelSelector:
-            matchExpressions:
-              - key: app.kubernetes.io/name
-                operator: In
-                values:
-                  - agentmesh
-          topologyKey: kubernetes.io/hostname
-
-# Storage configuration
-storage:
-  backend: redis  # Options: memory, redis, postgres
-  cacheEnabled: true
-  cacheTTL: 300
-
-# Redis configuration (if using redis backend)
-redis:
-  enabled: true
-  architecture: standalone
-  auth:
+# ---------------------------------------------------------------------------
+# Audit Collector
+# ---------------------------------------------------------------------------
+auditCollector:
+  replicas: 1
+  image:
+    repository: agentmesh/audit-collector
+    tag: ""
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8445
+    metricsPort: 9092
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  persistence:
     enabled: true
-    password: "change-me-in-production"
-  master:
-    persistence:
-      enabled: true
-      size: 8Gi
-  metrics:
-    enabled: true
+    storageClass: ""
+    size: 10Gi
+    accessModes:
+      - ReadWriteOnce
+  retentionDays: 90
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: http
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /readyz
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
 
-# PostgreSQL configuration (if using postgres backend)
-postgresql:
-  enabled: false
-  auth:
-    username: agentmesh
-    password: "change-me-in-production"
-    database: agentmesh
-  primary:
-    persistence:
-      enabled: true
-      size: 20Gi
-  metrics:
-    enabled: true
+# ---------------------------------------------------------------------------
+# API Gateway
+# ---------------------------------------------------------------------------
+apiGateway:
+  replicas: 2
+  image:
+    repository: agentmesh/api-gateway
+    tag: ""
+    pullPolicy: IfNotPresent
+  service:
+    type: LoadBalancer
+    port: 443
+    metricsPort: 9093
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  rateLimitPerMinute: 1000
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: http
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /readyz
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
 
-# Identity configuration
-identity:
-  caKeySecret: agentmesh-ca-key
-  spireEnabled: false
-  spireSocketPath: /run/spire/sockets/agent.sock
-
-# Observability
-observability:
-  opentelemetry:
-    enabled: true
-    endpoint: "http://otel-collector:4317"
-    serviceName: "agentmesh"
+# ---------------------------------------------------------------------------
+# Monitoring
+# ---------------------------------------------------------------------------
+monitoring:
   prometheus:
     enabled: true
-  logs:
-    level: INFO
-    format: json
+    scrapeInterval: 15s
+  serviceMonitor:
+    enabled: false
+    namespace: ""
+    additionalLabels: {}
 
-# Governance
-governance:
-  defaultPolicy: standard
-  shadowMode: false
-  auditRetentionDays: 90
-
-# Sidecar injection
-sidecarInjector:
+# ---------------------------------------------------------------------------
+# Autoscaling (HPA)
+# ---------------------------------------------------------------------------
+autoscaling:
   enabled: true
-  namespaceSelector:
-    matchLabels:
-      agentmesh-inject: enabled
-  webhook:
-    port: 9443
-    failurePolicy: Ignore
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
 
-# SPIRE integration
-spire:
-  enabled: false
-  trustDomain: agentmesh.local
-  socketPath: /run/spire/sockets/agent.sock
+# ---------------------------------------------------------------------------
+# Pod Disruption Budget
+# ---------------------------------------------------------------------------
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
 
-# Network policies
+# ---------------------------------------------------------------------------
+# Network Policy
+# ---------------------------------------------------------------------------
 networkPolicy:
   enabled: true
-  policyTypes:
-    - Ingress
-    - Egress
-  ingress:
-    - from:
-      - podSelector:
-          matchLabels:
-            agentmesh-inject: enabled
-  egress:
-    - to:
-      - podSelector:
-          matchLabels:
-            app.kubernetes.io/name: redis
-      ports:
-        - protocol: TCP
-          port: 6379
-    - to:
-      - podSelector:
-          matchLabels:
-            app.kubernetes.io/name: postgresql
-      ports:
-        - protocol: TCP
-          port: 5432

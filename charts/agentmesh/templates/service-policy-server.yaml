@@ -1,23 +1,21 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "agentmesh.fullname" . }}
+  name: {{ include "agentmesh.fullname" . }}-policy-server
   labels:
     {{- include "agentmesh.labels" . | nindent 4 }}
-  {{- with .Values.service.annotations }}
-  annotations:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
+    app.kubernetes.io/component: policy-server
 spec:
-  type: {{ .Values.service.type }}
+  type: {{ .Values.policyServer.service.type }}
   ports:
-    - port: {{ .Values.service.port }}
+    - port: {{ .Values.policyServer.service.port }}
       targetPort: http
       protocol: TCP
       name: http
-    - port: {{ .Values.service.metricsPort }}
+    - port: {{ .Values.policyServer.service.metricsPort }}
       targetPort: metrics
       protocol: TCP
       name: metrics
   selector:
     {{- include "agentmesh.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: policy-server

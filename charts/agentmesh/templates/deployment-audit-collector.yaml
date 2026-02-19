@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agentmesh.fullname" . }}-audit-collector
+  labels:
+    {{- include "agentmesh.labels" . | nindent 4 }}
+    app.kubernetes.io/component: audit-collector
+spec:
+  replicas: {{ .Values.auditCollector.replicas }}
+  selector:
+    matchLabels:
+      {{- include "agentmesh.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: audit-collector
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.monitoring.prometheus.enabled }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.auditCollector.service.metricsPort | quote }}
+        prometheus.io/path: "/metrics"
+        {{- end }}
+      labels:
+        {{- include "agentmesh.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: audit-collector
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "agentmesh.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: audit-collector
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.auditCollector.image.repository }}:{{ .Values.auditCollector.image.tag | default .Values.global.imageTag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.auditCollector.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.auditCollector.service.port }}
+              protocol: TCP
+            - name: metrics
+              containerPort: {{ .Values.auditCollector.service.metricsPort }}
+              protocol: TCP
+          env:
+            - name: AGENTMESH_COMPONENT
+              value: audit-collector
+            - name: AGENTMESH_AUDIT_RETENTION_DAYS
+              value: {{ .Values.auditCollector.retentionDays | quote }}
+            - name: AGENTMESH_TLS_ENABLED
+              value: {{ .Values.global.tls.enabled | quote }}
+          {{- with .Values.auditCollector.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.auditCollector.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.auditCollector.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: audit-data
+              mountPath: /data/audit
+            {{- if .Values.global.tls.enabled }}
+            - name: tls-certs
+              mountPath: /etc/agentmesh/tls
+              readOnly: true
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: audit-data
+          {{- if .Values.auditCollector.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "agentmesh.fullname" . }}-audit-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- if .Values.global.tls.enabled }}
+        - name: tls-certs
+          secret:
+            secretName: {{ .Values.global.tls.certSecretName }}
+        {{- end }}
+      {{- with .Values.auditCollector.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.auditCollector.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.auditCollector.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+{{- if .Values.auditCollector.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "agentmesh.fullname" . }}-audit-data
+  labels:
+    {{- include "agentmesh.labels" . | nindent 4 }}
+    app.kubernetes.io/component: audit-collector
+spec:
+  accessModes:
+    {{- toYaml .Values.auditCollector.persistence.accessModes | nindent 4 }}
+  {{- if .Values.auditCollector.persistence.storageClass }}
+  storageClassName: {{ .Values.auditCollector.persistence.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.auditCollector.persistence.size }}
+{{- end }}
