@@ -228,6 +228,81 @@ We are committed to the [OpenSSF Best Practices](https://bestpractices.coreinfra
 - ✅ Documented security policy
 - ✅ Vulnerability reporting process
 
+## Threat Model
+
+AgentMesh's security model assumes a **zero-trust mesh** where every agent interaction is authenticated, authorized, and audited. The table below summarizes what IS and ISN'T protected.
+
+### What IS Protected
+
+| Threat | Mitigation | Layer |
+|--------|-----------|-------|
+| **Identity spoofing** | Ed25519 cryptographic identity; every message is signed and verified | Identity |
+| **Capability escalation** | Delegation chains enforce capability narrowing — delegatees cannot gain capabilities the delegator does not possess | Identity |
+| **Unauthorized tool access** | Policy engine evaluates every tool invocation against YAML/Rego rules (< 5 ms) | Governance |
+| **Audit tampering** | Merkle-chained audit logs with hash verification via `verify_integrity()` | Governance |
+| **Stale credentials** | 15-minute credential TTL with automatic zero-downtime rotation | Identity |
+| **Trust decay after compromise** | Automated trust score decay (−2 pts/hr) and anomaly detection (5 classes) | Reward |
+| **Cross-protocol trust** | TrustBridge verifies peers across A2A, MCP, IATP, and ACP with score threshold (default ≥ 700) | Trust |
+| **Cascading delegation revocation** | Revoking any link invalidates all downstream links; propagation ≤ 5 seconds | Identity |
+
+### What ISN'T Protected
+
+| Threat | Status | Notes |
+|--------|--------|-------|
+| **Prompt injection in agent inputs** | ⚠️ Not mitigated | AgentMesh operates at the transport/trust layer, not the inference layer. Prompt content is opaque to the mesh. See [Known Limitations](#known-limitations). |
+| **Credential exfiltration within TTL window** | ⚠️ Partially mitigated | Credentials are short-lived (15 min) but a compromised agent can use them until expiry or revocation. |
+| **Side-channel attacks on host** | ❌ Out of scope | AgentMesh does not provide OS-level sandboxing or memory isolation. |
+| **Compromised root sponsor key** | ⚠️ Partially mitigated | Mitigated by credential TTL and SVID rotation, but all delegation chains are compromised until key rotation. |
+| **Malicious agent spawning child processes** | ⚠️ Not mitigated | Shadow mode agents and compromised agents can spawn OS processes that bypass the AgentMesh proxy entirely. |
+| **Cyclic delegation graphs** | ⚠️ Not mitigated | The delegation model assumes tree-structured chains. See [Known Limitations](#known-limitations). |
+
+---
+
+## Known Limitations
+
+This section documents honest gaps in the current security model. These are areas where AgentMesh either provides incomplete protection or where fundamental unsolved problems exist.
+
+### 1. Prompt Injection Sanitization
+
+**What we do:** AgentMesh enforces tool-level access control via the policy engine. If a policy says Agent X cannot call `run_shell`, the engine blocks the invocation regardless of how the request was constructed.
+
+**What we don't do:** AgentMesh does not inspect, sanitize, or validate the *content* of prompts or tool arguments. Prompt injection is an inference-layer concern — a compromised or manipulated prompt can cause an agent to make legitimate-looking tool calls that pass policy checks.
+
+**Unsolved problems:**
+- There is no reliable, general-purpose prompt injection detector today. Heuristic filters produce false positives and false negatives.
+- Even if we added content inspection, adversarial inputs can be designed to evade any static filter.
+- Defense in depth means combining AgentMesh's policy enforcement with framework-level input validation and LLM-level guardrails.
+
+### 2. Credential TTL Does Not Prevent Exfiltration Within the Window
+
+Credentials have a 15-minute TTL (configurable). If an agent is compromised, the attacker has up to 15 minutes of valid credential use before automatic rotation invalidates them. Explicit revocation (propagation ≤ 5 s) is the intended mitigation, but this requires *detecting* the compromise first.
+
+**Implications:**
+- Anomaly detection can flag rapid-fire or unusual actions, but detection latency means some unauthorized actions may succeed.
+- Operators should tune credential TTL based on risk tolerance (shorter TTL = more rotation overhead, less exposure window).
+
+### 3. Shadow Agents Can Bypass the Proxy
+
+Shadow mode (`governance/shadow.py`) runs policy evaluation in dry-run mode. However, any agent — shadow or otherwise — that spawns an OS-level child process (e.g., `subprocess.Popen`, `os.exec`) creates a process that communicates directly on the network, bypassing the AgentMesh sidecar proxy entirely.
+
+**Implications:**
+- Network-level isolation (Kubernetes NetworkPolicy, service mesh mTLS) is required to ensure all traffic routes through the proxy.
+- AgentMesh alone cannot prevent process-level escape. It must be paired with container sandboxing and network policies.
+
+### 4. Delegation Model Assumes Trees, Not Cycles
+
+The delegation chain model (see [ADR-003](docs/adr/003-delegation-chain-design.md)) is designed as a **directed tree** rooted at a human sponsor. The verification algorithm walks the chain linearly from leaf to root.
+
+**Current gap:** There is no cycle detection in delegation chain construction. If Agent A delegates to Agent B and Agent B delegates back to Agent A (via a separate chain), the system does not detect or prevent this. Each individual chain is valid, but the combined graph contains a cycle.
+
+**Risks:**
+- Circular delegation can create confused-deputy scenarios where capability provenance is ambiguous.
+- Revocation of a link in a cycle may not fully invalidate the expected set of agents.
+
+**Planned mitigation:** Add a graph-level cycle detection check at delegation link creation time. Track the global delegation graph (not just individual chains) and reject links that would create cycles. See [ADR-003](docs/adr/003-delegation-chain-design.md) for the delegation chain design.
+
+---
+
 ## Contact
 
 - **Security Reports:** security@agentmesh.dev / imran.siddique@microsoft.com

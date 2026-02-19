@@ -112,3 +112,10 @@ verify_chain(chain):
   increase verification latency and revocation propagation time.
 - **Single point of failure**: If the root sponsor's key is compromised, the entire
   chain is compromised. Mitigated by credential TTL (15 min) and SPIFFE SVID rotation.
+- **No cycle detection**: The chain model assumes a tree structure rooted at a human
+  sponsor. If Agent A delegates to Agent B and Agent B delegates back to Agent A
+  (via separate chains), each chain validates independently but the combined delegation
+  graph contains a cycle. This can create confused-deputy scenarios and ambiguous
+  revocation semantics. **Planned mitigation:** add graph-level cycle detection at
+  link creation time by tracking the global delegation graph and rejecting links that
+  would introduce cycles.
