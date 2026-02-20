@@ -43,7 +43,7 @@ class RewardService:
 
     def get_score_value(self, agent_did: str) -> float:
         """Get the numeric trust score (0-1000) for an agent."""
-        return self._engine.get_agent_score(agent_did).total
+        return self._engine.get_agent_score(agent_did).total_score
 
     def record_task_success(self, agent_did: str, task_id: str = "") -> None:
         """Record a successful task completion."""
@@ -80,7 +80,7 @@ class RewardService:
         """Get agents with trust scores below a threshold."""
         return [
             did for did, state in self._engine._agents.items()
-            if state.trust_score.total < threshold
+            if state.trust_score.total_score < threshold
         ]
 
     def recalculate_all(self) -> dict[str, float]:
@@ -88,13 +88,13 @@ class RewardService:
         results = {}
         for agent_did in list(self._engine._agents.keys()):
             score = self._engine._recalculate_score(agent_did)
-            results[agent_did] = score.total
+            results[agent_did] = score.total_score
         return results
 
     def summary(self) -> dict[str, Any]:
         """Get reward engine summary statistics."""
         agents = self._engine._agents
-        scores = [s.trust_score.total for s in agents.values()]
+        scores = [s.trust_score.total_score for s in agents.values()]
         return {
             "total_agents": len(agents),
             "avg_score": sum(scores) / len(scores) if scores else 0.0,
