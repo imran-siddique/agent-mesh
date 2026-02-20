@@ -22,9 +22,9 @@
 
 > ⭐ **If this project helps you, please star it!** It helps others discover AgentMesh.
 
-> 🔗 **Part of the Agent Ecosystem** — Works seamlessly with [Agent-OS](https://github.com/imran-siddique/agent-os) for IATP trust protocol
+> 🔗 **Part of the Agent Governance Ecosystem** — Works with [Agent OS](https://github.com/imran-siddique/agent-os) (kernel), [Agent Hypervisor](https://github.com/imran-siddique/agent-hypervisor) (runtime), and [Agent SRE](https://github.com/imran-siddique/agent-sre) (reliability)
 
-[Quick Start](#quick-start) • [MCP Proxy](#the-agentmesh-proxy-ssl-for-ai-agents) • [Examples](#examples--integrations) • [Agent-OS](https://github.com/imran-siddique/agent-os)
+[Quick Start](#quick-start) • [MCP Proxy](#the-agentmesh-proxy-ssl-for-ai-agents) • [Examples](#examples--integrations) • [Agent OS](https://github.com/imran-siddique/agent-os) • [Agent Hypervisor](https://github.com/imran-siddique/agent-hypervisor)
 
 </div>
 
@@ -490,7 +490,9 @@ The [Dify integration](https://github.com/imran-siddique/agentmesh-integrations/
 
 AgentMesh builds on:
 
-- **[agent-os](https://github.com/imran-siddique/agent-os)** — IATP protocol, Nexus trust exchange
+- **[Agent OS](https://github.com/imran-siddique/agent-os)** — IATP protocol, Nexus trust exchange
+- **[Agent Hypervisor](https://github.com/imran-siddique/agent-hypervisor)** — Runtime session governance
+- **[Agent SRE](https://github.com/imran-siddique/agent-sre)** — SLO monitoring, chaos testing
 - **SPIFFE/SPIRE** — Workload identity
 - **OpenTelemetry** — Observability
 
