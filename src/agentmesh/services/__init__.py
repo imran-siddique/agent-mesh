@@ -5,6 +5,19 @@ High-level services for AgentMesh:
 - registry: Agent registry (Yellow Pages)
 - reward_engine: Trust score processor
 - audit: Merkle-chain logger
+- rate_limiter: Token bucket rate limiting
 """
 
-__all__ = []
+from agentmesh.services.audit import AuditService
+from agentmesh.services.registry import AgentRegistry, AgentRegistryEntry
+from agentmesh.services.reward_engine import RewardService
+from agentmesh.services.rate_limiter import RateLimiter, TokenBucket
+
+__all__ = [
+    "AuditService",
+    "AgentRegistry",
+    "AgentRegistryEntry",
+    "RewardService",
+    "RateLimiter",
+    "TokenBucket",
+]

@@ -121,19 +121,21 @@ class AuditService:
 
     def verify_chain(self) -> bool:
         """Verify the integrity of the Merkle audit chain."""
-        return self._log._chain.verify()
+        valid, _error = self._log.verify_integrity()
+        return valid
 
     @property
     def entry_count(self) -> int:
         """Total number of audit entries."""
-        return len(self._log._chain)
+        return len(self._log._chain._entries)
 
     def summary(self) -> dict[str, Any]:
         """Get audit service summary statistics."""
+        count = self.entry_count
         return {
-            "total_entries": self.entry_count,
+            "total_entries": count,
             "chain_valid": self.verify_chain(),
-            "root_hash": self._log._chain.root_hash if self.entry_count > 0 else None,
+            "root_hash": self._log._chain.get_root_hash() if count > 0 else None,
         }
 
 
