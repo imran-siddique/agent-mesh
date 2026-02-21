@@ -2,7 +2,9 @@
 
 # AgentMesh
 
-**The Secure Nervous System for Cloud-Native Agent Ecosystems**
+**SSL for AI Agents**
+
+*The trust, identity, and governance layer for production AI agent systems*
 
 *Identity · Trust · Reward · Governance*
 
