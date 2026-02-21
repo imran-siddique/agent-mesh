@@ -2,9 +2,12 @@ import streamlit as st
 import networkx as nx
 import matplotlib.pyplot as plt
 
+# Configure Streamlit page
+# Using wide layout for better visualization of network graphs
 st.set_page_config(page_title="Trust Score Network Dashboard", layout="wide")
 
-st.title("🔗 Trust Score Network Dashboard")
+# Page title (kept plain text to avoid Unicode rendering issues)
+st.title("Trust Score Network Dashboard")
 
 st.markdown(
     """
@@ -13,14 +16,13 @@ st.markdown(
     """
 )
 
-# Create a sample trust network graph
-G = nx.Graph()
+# ---------------------------
+# Section: Create trust graph
+# ---------------------------
 
-# Add nodes (agents)
+# NOTE: Example demo data is hardcoded for simplicity.
+# In production, this could be loaded from a file, database, or user input.
 agents = ["Agent A", "Agent B", "Agent C", "Agent D", "Agent E"]
-G.add_nodes_from(agents)
-
-# Add trust edges (relationships)
 edges = [
     ("Agent A", "Agent B"),
     ("Agent A", "Agent C"),
@@ -29,11 +31,22 @@ edges = [
     ("Agent D", "Agent E"),
 ]
 
+# Build graph
+G = nx.Graph()
+G.add_nodes_from(agents)
 G.add_edges_from(edges)
 
-# Draw graph
-plt.figure(figsize=(8, 6))
+# ---------------------------------
+# Section: Visualize graph in UI
+# ---------------------------------
+
+# Use dedicated matplotlib figure for Streamlit rendering
+fig, ax = plt.subplots(figsize=(8, 6))
+
+# Generate layout for consistent positioning
 pos = nx.spring_layout(G, seed=42)
+
+# Draw network graph
 nx.draw(
     G,
     pos,
@@ -43,6 +56,8 @@ nx.draw(
     font_size=10,
     font_weight="bold",
     edge_color="gray",
+    ax=ax,
 )
 
-st.pyplot(plt)
+# Render figure in Streamlit
+st.pyplot(fig)
