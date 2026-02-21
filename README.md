@@ -497,6 +497,20 @@ AgentMesh builds on:
 - **SPIFFE/SPIRE** — Workload identity
 - **OpenTelemetry** — Observability
 
+## Frequently Asked Questions
+
+**What is an agent mesh?**
+An agent mesh is a trust and communication infrastructure for multi-agent AI systems, analogous to a service mesh for microservices. AgentMesh provides cryptographic identity (DID-based), per-agent trust scoring (0-1000 scale), ephemeral credentials, reward distribution, and automated compliance mapping.
+
+**How does AgentMesh handle trust between agents?**
+Every agent gets a trust score from 0 to 1000 based on behavioral history, vouching from other agents, and compliance with governance policies. Trust scores gate what actions agents can perform and which sessions they can join. The score updates in real-time based on agent behavior.
+
+**What protocols does AgentMesh bridge?**
+AgentMesh unifies three major protocols: Google's A2A (Agent-to-Agent) for inter-agent communication, Anthropic's MCP (Model Context Protocol) for tool integration, and IATP (Inter-Agent Trust Protocol) for cryptographic trust establishment. This means agents built on different frameworks can communicate through a single trust-verified channel.
+
+**Does AgentMesh help with regulatory compliance?**
+Yes. AgentMesh provides automated compliance mapping for EU AI Act, SOC 2, HIPAA, and GDPR. Combined with tamper-evident audit trails and deterministic policy enforcement from [Agent OS](https://github.com/imran-siddique/agent-os), it provides the documentation and safety guarantees needed for regulatory compliance.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
