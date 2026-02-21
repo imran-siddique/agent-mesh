@@ -204,6 +204,18 @@ pip install -e .
 
 📚 **[Browse all examples →](./examples/)**
 
+### Trust Visualization Dashboard
+
+Interactive Streamlit dashboard with 5 tabs:
+
+```bash
+cd examples/06-trust-score-dashboard
+pip install -r requirements.txt
+streamlit run trust_dashboard.py
+```
+
+Tabs: Trust Network | Trust Scores | Credential Lifecycle | Protocol Traffic | Compliance
+
 ## The AgentMesh Proxy: "SSL for AI Agents"
 
 **Problem:** AI agents like Claude Desktop have unfettered access to your filesystem, database, and APIs through MCP servers. One hallucination could be catastrophic.
