@@ -1616,9 +1616,11 @@ class TestDelegationLink:
         assert link.is_valid() is False
 
     def test_is_valid_bad_hash(self):
+        """Community Edition: hash verification removed, bad hash doesn't invalidate."""
         link = self._make_link()
         link.link_hash = "badhash"
-        assert link.is_valid() is False
+        # Community Edition: no hash verification, link is still valid
+        assert link.is_valid() is True
 
 
 class TestDelegationChain:
@@ -1680,8 +1682,9 @@ class TestRewardConfig:
         assert cfg.validate_weights() is True
 
     def test_validate_weights_invalid(self):
+        """Community Edition: validate_weights() always returns True."""
         cfg = RewardConfig(policy_compliance_weight=0.5)
-        assert cfg.validate_weights() is False
+        assert cfg.validate_weights() is True
 
 
 class TestRewardEngine:
@@ -1837,24 +1840,21 @@ class TestProtocolBridge:
 
     @pytest.mark.asyncio
     async def test_translate_a2a_to_mcp(self):
+        """Community Edition: _translate removed, bridge is passthrough only."""
         pb = ProtocolBridge(agent_did="did:mesh:me")
-        msg = {"task_type": "exec", "parameters": {"x": 1}}
-        result = await pb._translate(msg, "a2a", "mcp")
-        assert result["method"] == "tools/call"
+        assert not hasattr(pb, '_translate')
 
     @pytest.mark.asyncio
     async def test_translate_mcp_to_a2a(self):
+        """Community Edition: _translate removed, bridge is passthrough only."""
         pb = ProtocolBridge(agent_did="did:mesh:me")
-        msg = {"params": {"name": "exec", "arguments": {"x": 1}}}
-        result = await pb._translate(msg, "mcp", "a2a")
-        assert result["task_type"] == "exec"
+        assert not hasattr(pb, '_translate')
 
     @pytest.mark.asyncio
     async def test_translate_iatp_passthrough(self):
+        """Community Edition: _translate removed, bridge is passthrough only."""
         pb = ProtocolBridge(agent_did="did:mesh:me")
-        msg = {"data": "hello"}
-        result = await pb._translate(msg, "iatp", "a2a")
-        assert result == msg
+        assert not hasattr(pb, '_translate')
 
     def test_add_verification_footer(self):
         pb = ProtocolBridge(agent_did="did:mesh:me")

@@ -194,7 +194,7 @@ class TestAudit:
         assert entry is not None
         assert entry.event_type == "agent_action"
         assert entry.agent_did == "did:agentmesh:test-agent"
-        assert entry.entry_hash != ""
+        assert entry.entry_hash == ""  # Community Edition: no hash computation
     
     def test_audit_retrieval(self):
         """Test retrieving audit entries by agent and type."""
@@ -211,7 +211,7 @@ class TestAudit:
         assert len(all_entries) == 3
     
     def test_merkle_chain(self):
-        """Test Merkle chain construction and proof generation."""
+        """Test Merkle chain — simplified to append-only in Community Edition."""
         from agentmesh.governance.audit import AuditEntry
         
         chain = MerkleAuditChain()
@@ -223,10 +223,12 @@ class TestAudit:
         )
         chain.add_entry(entry)
         
-        assert chain.get_root_hash() is not None
+        # Community Edition: no Merkle tree, root hash is None
+        assert chain.get_root_hash() is None
         
+        # Community Edition: no proofs
         proof = chain.get_proof(entry.entry_id)
-        assert proof is not None
+        assert proof is None
     
     def test_merkle_tamper_detection(self):
         """Test that chain tampering is detected."""
@@ -249,7 +251,7 @@ class TestAudit:
         
         export = audit_log.export()
         assert export["entry_count"] == 1
-        assert export["merkle_root"] is not None
+        assert export["merkle_root"] is None  # Community Edition: no Merkle tree
 
 
 class TestShadowMode:

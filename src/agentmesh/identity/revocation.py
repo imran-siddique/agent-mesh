@@ -1,10 +1,10 @@
 """
 Identity Revocation List
 
-Maintains a list of revoked agent identities with support for:
-- Permanent and temporary (TTL-based) revocations
-- In-memory and file-backed storage
-- Automatic expiry of temporary revocations
+# Community Edition — basic trust scoring and governance
+
+Manual revocation list — a simple set of revoked DIDs that's
+manually managed. No automatic trust-breach-triggered revocation.
 """
 
 from datetime import datetime, timedelta, timezone

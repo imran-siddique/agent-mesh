@@ -1,14 +1,16 @@
 """
 Audit Log
 
-Tamper-evident audit log with Merkle-chain hashing.
-Any log modification is detected; integrity verifiable offline.
+# Community Edition — basic trust scoring and governance
+
+Append-only JSON log. No Merkle hash chaining.
+AuditEntry class retains all fields for compatibility, but
+previous_hash and entry_hash are not computed.
 """
 
 from datetime import datetime
 from typing import Optional, Any
 from pydantic import BaseModel, Field
-import hashlib
 import json
 import uuid
 
@@ -17,10 +19,8 @@ class AuditEntry(BaseModel):
     """
     Single audit log entry.
     
-    Every entry is:
-    - Timestamped
-    - Signed
-    - Chained to previous entry via hash
+    All fields are preserved for API compatibility.
+    Hash fields exist but are not computed (always empty strings).
     """
     
     entry_id: str = Field(default_factory=lambda: f"audit_{uuid.uuid4().hex[:16]}")
@@ -45,7 +45,7 @@ class AuditEntry(BaseModel):
     policy_decision: Optional[str] = None
     matched_rule: Optional[str] = None
     
-    # Chaining
+    # Chaining — kept for API compatibility but not computed
     previous_hash: str = Field(default="")
     entry_hash: str = Field(default="")
     
@@ -54,36 +54,15 @@ class AuditEntry(BaseModel):
     session_id: Optional[str] = None
     
     def compute_hash(self) -> str:
-        """Compute the SHA-256 hash of this entry's canonical fields.
-
-        Returns:
-            Hex-encoded SHA-256 digest.
-        """
-        data = {
-            "entry_id": self.entry_id,
-            "timestamp": self.timestamp.isoformat(),
-            "event_type": self.event_type,
-            "agent_did": self.agent_did,
-            "action": self.action,
-            "resource": self.resource,
-            "data": self.data,
-            "outcome": self.outcome,
-            "previous_hash": self.previous_hash,
-        }
-        canonical = json.dumps(data, sort_keys=True)
-        return hashlib.sha256(canonical.encode()).hexdigest()
+        """Return empty string — no Merkle chaining in Community Edition."""
+        return ""
     
     def verify_hash(self) -> bool:
-        """Verify that this entry's stored hash matches a fresh computation.
-
-        Returns:
-            ``True`` if ``entry_hash`` equals ``compute_hash()``.
-        """
-        return self.entry_hash == self.compute_hash()
+        """Always returns True — no Merkle chaining in Community Edition."""
+        return True
 
     # ── CloudEvents v1.0 ──────────────────────────────────
 
-    # Mapping of internal event_type strings to CloudEvents type URIs.
     _CE_TYPE_MAP: dict[str, str] = {
         "tool_invocation":     "ai.agentmesh.tool.invoked",
         "tool_blocked":        "ai.agentmesh.tool.blocked",
@@ -97,12 +76,7 @@ class AuditEntry(BaseModel):
     }
 
     def to_cloudevent(self) -> dict[str, Any]:
-        """
-        Serialize this entry as a CloudEvents v1.0 JSON envelope.
-
-        Compatible with Azure Event Grid, AWS EventBridge, and Splunk HEC.
-        See docs/CLOUDEVENTS_SCHEMA.md for the full specification.
-        """
+        """Serialize this entry as a CloudEvents v1.0 JSON envelope."""
         ce_type = self._CE_TYPE_MAP.get(
             self.event_type, f"ai.agentmesh.{self.event_type}"
         )
@@ -121,7 +95,6 @@ class AuditEntry(BaseModel):
                 "matched_rule": self.matched_rule,
                 **self.data,
             },
-            # AgentMesh extension attributes
             "agentmeshentryhash": self.entry_hash,
             "agentmeshprevioushash": self.previous_hash,
             **({"traceid": self.trace_id} if self.trace_id else {}),
@@ -130,200 +103,37 @@ class AuditEntry(BaseModel):
 
 
 class MerkleNode(BaseModel):
-    """Node in a Merkle tree used for audit verification.
-
-    Attributes:
-        hash: SHA-256 hash of this node.
-        left_child: Hash of the left child node (``None`` for leaves).
-        right_child: Hash of the right child node (``None`` for leaves).
-        is_leaf: Whether this node is a leaf in the tree.
-        entry_id: Audit entry ID (populated only for leaf nodes).
-    """
+    """Kept for API compatibility — not used in Community Edition."""
     
     hash: str
     left_child: Optional[str] = None
     right_child: Optional[str] = None
     is_leaf: bool = False
-    entry_id: Optional[str] = None  # Only for leaves
+    entry_id: Optional[str] = None
 
 
 class MerkleAuditChain:
     """
-    Merkle tree for efficient audit verification.
+    Simple append-only list — no Merkle tree in Community Edition.
     
-    Allows:
-    - Efficient verification of single entries
-    - Proof that an entry exists in the log
-    - Detection of any tampering
+    Retains the same API surface for compatibility with AuditService
+    and other consumers.
     """
     
     def __init__(self):
         self._entries: list[AuditEntry] = []
-        self._tree: list[list[MerkleNode]] = []
-        self._root_hash: Optional[str] = None
     
     def add_entry(self, entry: AuditEntry) -> None:
-        """Add an entry and update the Merkle tree incrementally.
-
-        The entry is chained to the previous entry via its
-        ``previous_hash`` field, hashed, and inserted as a new leaf.
-
-        Args:
-            entry: The audit entry to append. Its ``previous_hash``
-                and ``entry_hash`` fields are set automatically.
-        """
-        # Set previous hash
-        if self._entries:
-            entry.previous_hash = self._entries[-1].entry_hash
-        
-        # Compute and set hash
-        entry.entry_hash = entry.compute_hash()
-        
+        """Append an entry to the log."""
         self._entries.append(entry)
-        
-        new_leaf = MerkleNode(
-            hash=entry.entry_hash,
-            is_leaf=True,
-            entry_id=entry.entry_id,
-        )
-        
-        n = len(self._entries)
-        
-        if n == 1:
-            # First entry — initialize tree
-            self._tree = [[new_leaf]]
-            self._root_hash = new_leaf.hash
-            return
-        
-        # Check if we need to expand the tree capacity
-        capacity = len(self._tree[0])
-        if n > capacity:
-            # Double capacity: pad leaves with empty nodes, add new tree level
-            empty = MerkleNode(hash="0" * 64, is_leaf=True)
-            for level_idx in range(len(self._tree)):
-                self._tree[level_idx].extend(
-                    [MerkleNode(hash="0" * 64) for _ in range(len(self._tree[level_idx]))]
-                )
-            # Add new root level
-            old_root = self._tree[-1][0]
-            empty_node = MerkleNode(hash="0" * 64)
-            combined = old_root.hash + empty_node.hash
-            new_root = MerkleNode(
-                hash=hashlib.sha256(combined.encode()).hexdigest(),
-                left_child=old_root.hash,
-                right_child=empty_node.hash,
-            )
-            self._tree.append([new_root, MerkleNode(hash="0" * 64)])
-
-        # Place new leaf
-        leaf_idx = n - 1
-        self._tree[0][leaf_idx] = new_leaf
-        
-        # Update path from leaf to root
-        idx = leaf_idx
-        for level_idx in range(len(self._tree) - 1):
-            parent_idx = idx // 2
-            left_idx = parent_idx * 2
-            right_idx = left_idx + 1
-            
-            left = self._tree[level_idx][left_idx]
-            right = self._tree[level_idx][right_idx] if right_idx < len(self._tree[level_idx]) else left
-            
-            combined = left.hash + right.hash
-            parent_hash = hashlib.sha256(combined.encode()).hexdigest()
-            
-            self._tree[level_idx + 1][parent_idx] = MerkleNode(
-                hash=parent_hash,
-                left_child=left.hash,
-                right_child=right.hash,
-            )
-            idx = parent_idx
-        
-        self._root_hash = self._tree[-1][0].hash if self._tree else None
-    
-    def _rebuild_tree(self) -> None:
-        """Rebuild Merkle tree from entries (full rebuild, used for verification)."""
-        if not self._entries:
-            self._tree = []
-            self._root_hash = None
-            return
-        
-        # Create leaf nodes
-        leaves = []
-        for entry in self._entries:
-            leaves.append(MerkleNode(
-                hash=entry.entry_hash,
-                is_leaf=True,
-                entry_id=entry.entry_id,
-            ))
-        
-        # Pad to power of 2
-        while len(leaves) & (len(leaves) - 1) != 0:
-            leaves.append(MerkleNode(hash="0" * 64, is_leaf=True))
-        
-        self._tree = [leaves]
-        
-        # Build tree bottom-up
-        current_level = leaves
-        while len(current_level) > 1:
-            next_level = []
-            for i in range(0, len(current_level), 2):
-                left = current_level[i]
-                right = current_level[i + 1] if i + 1 < len(current_level) else left
-                
-                combined = left.hash + right.hash
-                parent_hash = hashlib.sha256(combined.encode()).hexdigest()
-                
-                next_level.append(MerkleNode(
-                    hash=parent_hash,
-                    left_child=left.hash,
-                    right_child=right.hash,
-                ))
-            
-            self._tree.append(next_level)
-            current_level = next_level
-        
-        self._root_hash = self._tree[-1][0].hash if self._tree else None
     
     def get_root_hash(self) -> Optional[str]:
-        """Get the current Merkle root hash.
-
-        Returns:
-            Hex-encoded root hash, or ``None`` if the tree is empty.
-        """
-        return self._root_hash
+        """Return None — no Merkle tree in Community Edition."""
+        return None
     
     def get_proof(self, entry_id: str) -> Optional[list[tuple[str, str]]]:
-        """Get a Merkle inclusion proof for an entry.
-
-        Args:
-            entry_id: ID of the audit entry.
-
-        Returns:
-            List of ``(sibling_hash, position)`` tuples forming the proof
-            path from leaf to root, or ``None`` if the entry is not found.
-        """
-        # Find entry index
-        entry_idx = None
-        for i, entry in enumerate(self._entries):
-            if entry.entry_id == entry_id:
-                entry_idx = i
-                break
-        
-        if entry_idx is None:
-            return None
-        
-        proof = []
-        idx = entry_idx
-        
-        for level in self._tree[:-1]:  # Exclude root
-            sibling_idx = idx ^ 1  # XOR to get sibling
-            if sibling_idx < len(level):
-                position = "right" if idx % 2 == 0 else "left"
-                proof.append((level[sibling_idx].hash, position))
-            idx //= 2
-        
-        return proof
+        """Return None — no Merkle proofs in Community Edition."""
+        return None
     
     def verify_proof(
         self,
@@ -331,66 +141,25 @@ class MerkleAuditChain:
         proof: list[tuple[str, str]],
         root_hash: str,
     ) -> bool:
-        """Verify a Merkle inclusion proof.
-
-        Args:
-            entry_hash: Hash of the leaf entry.
-            proof: Proof path as returned by ``get_proof``.
-            root_hash: Expected Merkle root hash.
-
-        Returns:
-            ``True`` if the proof is valid.
-        """
-        current = entry_hash
-        
-        for sibling_hash, position in proof:
-            if position == "right":
-                combined = current + sibling_hash
-            else:
-                combined = sibling_hash + current
-            current = hashlib.sha256(combined.encode()).hexdigest()
-        
-        return current == root_hash
+        """Always returns True — no Merkle verification in Community Edition."""
+        return True
     
     def verify_chain(self) -> tuple[bool, Optional[str]]:
-        """Verify the entire chain integrity.
-
-        Checks every entry's hash and its link to the previous entry.
-
-        Returns:
-            A tuple of ``(is_valid, error_message)``. ``error_message``
-            is ``None`` when the chain is intact.
-        """
-        previous_hash = ""
-        
-        for i, entry in enumerate(self._entries):
-            # Verify entry's own hash
-            if not entry.verify_hash():
-                return False, f"Entry {i} hash mismatch"
-            
-            # Verify chain
-            if entry.previous_hash != previous_hash:
-                return False, f"Entry {i} chain broken"
-            
-            previous_hash = entry.entry_hash
-        
+        """Always returns valid — no chain integrity checking in Community Edition."""
         return True, None
 
 
 class AuditLog:
     """
-    Complete audit logging system.
+    Append-only audit logging system.
     
-    Features:
-    - Tamper-evident Merkle chains
-    - Offline verification
-    - Efficient querying
+    Entries are stored in a simple list with indexes for querying.
     """
     
     def __init__(self):
         self._chain = MerkleAuditChain()
-        self._by_agent: dict[str, list[str]] = {}  # agent_did -> [entry_ids]
-        self._by_type: dict[str, list[str]] = {}  # event_type -> [entry_ids]
+        self._by_agent: dict[str, list[str]] = {}
+        self._by_type: dict[str, list[str]] = {}
     
     def log(
         self,
@@ -403,24 +172,7 @@ class AuditLog:
         policy_decision: Optional[str] = None,
         trace_id: Optional[str] = None,
     ) -> AuditEntry:
-        """Log an audit event and append it to the Merkle chain.
-
-        All agent actions should be logged through this method.
-
-        Args:
-            event_type: Category of the event (e.g. ``"tool_invocation"``).
-            agent_did: DID of the agent performing the action.
-            action: Short action identifier.
-            resource: Optional resource being acted upon.
-            data: Sanitised context data (must not contain secrets).
-            outcome: Result of the action (``"success"``, ``"failure"``,
-                ``"denied"``, or ``"error"``).
-            policy_decision: Policy engine decision string, if applicable.
-            trace_id: Distributed trace ID for correlation.
-
-        Returns:
-            The created ``AuditEntry`` with computed hash.
-        """
+        """Log an audit event."""
         entry = AuditEntry(
             event_type=event_type,
             agent_did=agent_did,
@@ -446,14 +198,7 @@ class AuditLog:
         return entry
     
     def get_entry(self, entry_id: str) -> Optional[AuditEntry]:
-        """Get an audit entry by its unique ID.
-
-        Args:
-            entry_id: The entry identifier.
-
-        Returns:
-            The ``AuditEntry`` if found, otherwise ``None``.
-        """
+        """Get an audit entry by its unique ID."""
         for entry in self._chain._entries:
             if entry.entry_id == entry_id:
                 return entry
@@ -464,15 +209,7 @@ class AuditLog:
         agent_did: str,
         limit: int = 100,
     ) -> list[AuditEntry]:
-        """Get the most recent entries for a specific agent.
-
-        Args:
-            agent_did: DID of the agent to filter by.
-            limit: Maximum number of entries to return.
-
-        Returns:
-            List of ``AuditEntry`` instances, most recent last.
-        """
+        """Get the most recent entries for a specific agent."""
         entry_ids = self._by_agent.get(agent_did, [])[-limit:]
         return [
             entry for entry in self._chain._entries
@@ -484,15 +221,7 @@ class AuditLog:
         event_type: str,
         limit: int = 100,
     ) -> list[AuditEntry]:
-        """Get the most recent entries of a given event type.
-
-        Args:
-            event_type: Event type to filter by.
-            limit: Maximum number of entries to return.
-
-        Returns:
-            List of matching ``AuditEntry`` instances.
-        """
+        """Get the most recent entries of a given event type."""
         entry_ids = self._by_type.get(event_type, [])[-limit:]
         return [
             entry for entry in self._chain._entries
@@ -508,21 +237,7 @@ class AuditLog:
         outcome: Optional[str] = None,
         limit: int = 100,
     ) -> list[AuditEntry]:
-        """Query audit entries with optional filters.
-
-        All filter parameters are combined with AND logic.
-
-        Args:
-            agent_did: Filter to a specific agent DID.
-            event_type: Filter to a specific event type.
-            start_time: Include entries at or after this time.
-            end_time: Include entries at or before this time.
-            outcome: Filter by outcome string.
-            limit: Maximum number of entries to return.
-
-        Returns:
-            List of matching ``AuditEntry`` instances (most recent last).
-        """
+        """Query audit entries with optional filters."""
         results = self._chain._entries
         
         if agent_did:
@@ -543,59 +258,19 @@ class AuditLog:
         return results[-limit:]
     
     def verify_integrity(self) -> tuple[bool, Optional[str]]:
-        """Verify the entire audit log integrity.
-
-        Returns:
-            A tuple of ``(is_valid, error_message)``. ``error_message``
-            is ``None`` when the chain is intact.
-        """
+        """Always valid in Community Edition."""
         return self._chain.verify_chain()
     
     def get_proof(self, entry_id: str) -> Optional[dict[str, Any]]:
-        """Get tamper-proof evidence for a specific entry.
-
-        Returns the entry, its Merkle proof path, the current root
-        hash, and a verification result.
-
-        Args:
-            entry_id: ID of the audit entry.
-
-        Returns:
-            Dictionary with ``entry``, ``merkle_proof``, ``merkle_root``,
-            and ``verified`` keys, or ``None`` if the entry is not found.
-        """
-        entry = self.get_entry(entry_id)
-        if not entry:
-            return None
-        
-        proof = self._chain.get_proof(entry_id)
-        if not proof:
-            return None
-        
-        return {
-            "entry": entry.model_dump(),
-            "merkle_proof": proof,
-            "merkle_root": self._chain.get_root_hash(),
-            "verified": self._chain.verify_proof(
-                entry.entry_hash, proof, self._chain.get_root_hash()
-            ),
-        }
+        """Return None — no Merkle proofs in Community Edition."""
+        return None
     
     def export(
         self,
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
     ) -> dict[str, Any]:
-        """Export the audit log for external verification.
-
-        Args:
-            start_time: Optional start of the export window.
-            end_time: Optional end of the export window.
-
-        Returns:
-            Dictionary containing ``exported_at``, ``merkle_root``,
-            ``entry_count``, and serialised ``entries``.
-        """
+        """Export the audit log."""
         entries = self.query(start_time=start_time, end_time=end_time, limit=10000)
         
         return {
@@ -610,11 +285,6 @@ class AuditLog:
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
     ) -> list[dict[str, Any]]:
-        """
-        Export audit entries as CloudEvents v1.0 JSON envelopes.
-
-        Each element is a standalone CloudEvents object suitable for
-        ingestion by Azure Event Grid, AWS EventBridge, or Splunk HEC.
-        """
+        """Export audit entries as CloudEvents v1.0 JSON envelopes."""
         entries = self.query(start_time=start_time, end_time=end_time, limit=10000)
         return [e.to_cloudevent() for e in entries]

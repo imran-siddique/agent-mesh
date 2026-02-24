@@ -1,8 +1,10 @@
 """
 Delegation Chains
 
-Cryptographic delegation chains that ensure sub-agents can never
-have more capabilities than their parent. Scope always narrows.
+# Community Edition — basic trust scoring and governance
+
+Simple scope passing: sub-agent gets parent's scopes minus any denied ones.
+No cryptographic chain verification.
 """
 
 from datetime import datetime, timedelta
@@ -34,37 +36,19 @@ class UserContext(BaseModel):
     metadata: dict = Field(default_factory=dict, description="Additional user attributes")
 
     def is_valid(self) -> bool:
-        """Check if the user context is still valid.
-
-        Returns:
-            True if the context has not expired.
-        """
+        """Check if the user context is still valid."""
         if self.expires_at and datetime.utcnow() > self.expires_at:
             return False
         return True
 
     def has_permission(self, permission: str) -> bool:
-        """Check if the user has a specific permission.
-
-        Args:
-            permission: The permission string to check.
-
-        Returns:
-            True if the user has the permission or a wildcard grant.
-        """
+        """Check if the user has a specific permission."""
         if "*" in self.permissions:
             return True
         return permission in self.permissions
 
     def has_role(self, role: str) -> bool:
-        """Check if the user has a specific role.
-
-        Args:
-            role: The role name to check.
-
-        Returns:
-            True if the user has the given role.
-        """
+        """Check if the user has a specific role."""
         return role in self.roles
 
     @classmethod
@@ -76,18 +60,7 @@ class UserContext(BaseModel):
         permissions: Optional[list[str]] = None,
         ttl_seconds: int = 3600,
     ) -> "UserContext":
-        """Create a new user context with TTL.
-
-        Args:
-            user_id: Unique user identifier.
-            user_email: Optional email for audit trails.
-            roles: User roles for RBAC.
-            permissions: Fine-grained permission strings.
-            ttl_seconds: Time-to-live in seconds (default 1 hour).
-
-        Returns:
-            A new UserContext with computed expiration.
-        """
+        """Create a new user context with TTL."""
         now = datetime.utcnow()
         return cls(
             user_id=user_id,
@@ -127,20 +100,15 @@ class DelegationLink(BaseModel):
     # User context for OBO flows
     user_context: Optional[UserContext] = Field(None, description="End-user context for OBO flows")
 
-    # Cryptographic binding
+    # Kept for API compatibility (not cryptographically enforced)
     parent_signature: str = Field(..., description="Parent's signature on this delegation")
     link_hash: str = Field(..., description="Hash of this link for chain verification")
     previous_link_hash: Optional[str] = Field(None, description="Hash of previous link in chain")
     
     def verify_capability_narrowing(self) -> bool:
-        """Verify that delegated capabilities are a subset of parent's.
-
-        Returns:
-            True if all delegated capabilities are permitted by the parent.
-        """
+        """Verify that delegated capabilities are a subset of parent's."""
         for cap in self.delegated_capabilities:
             if cap not in self.parent_capabilities:
-                # Check for wildcard narrowing (e.g., read:* -> read:data)
                 if not self._is_narrower_capability(cap, self.parent_capabilities):
                     return False
         return True
@@ -157,11 +125,7 @@ class DelegationLink(BaseModel):
         return False
     
     def compute_hash(self) -> str:
-        """Compute hash of this link for chain verification.
-
-        Returns:
-            SHA-256 hex digest of the canonical link data.
-        """
+        """Compute hash of this link."""
         data = {
             "link_id": self.link_id,
             "depth": self.depth,
@@ -176,23 +140,11 @@ class DelegationLink(BaseModel):
         return hashlib.sha256(canonical.encode()).hexdigest()
     
     def is_valid(self) -> bool:
-        """Check if this link is valid.
-
-        Validates expiration, capability narrowing, and hash integrity.
-
-        Returns:
-            True if the link passes all validation checks.
-        """
-        # Check expiration
+        """Check if this link is valid (expiration and capability narrowing only)."""
         if self.expires_at and datetime.utcnow() > self.expires_at:
             return False
         
-        # Verify capability narrowing
         if not self.verify_capability_narrowing():
-            return False
-        
-        # Verify hash
-        if self.link_hash != self.compute_hash():
             return False
         
         return True
@@ -200,13 +152,10 @@ class DelegationLink(BaseModel):
 
 class DelegationChain(BaseModel):
     """
-    Complete delegation chain from root sponsor to current agent.
+    Simple delegation chain from root sponsor to current agent.
     
-    Properties:
-    - Immutable once created
-    - Each link narrows capabilities
-    - Cryptographically verifiable
-    - Traceable to human sponsor
+    Sub-agent gets parent's scopes minus any denied ones.
+    No cryptographic chain verification.
     """
     
     DEFAULT_MAX_DEPTH: ClassVar[int] = DEFAULT_DELEGATION_MAX_DEPTH
@@ -219,7 +168,7 @@ class DelegationChain(BaseModel):
     root_sponsor_verified: bool = Field(default=False)
     root_capabilities: list[str] = Field(..., description="Capabilities granted by sponsor")
     
-    # Known agent identities for signature verification
+    # Known agent identities (kept for API compatibility)
     known_identities: dict[str, AgentIdentity] = Field(default_factory=dict)
     
     # Chain links
@@ -271,30 +220,11 @@ class DelegationChain(BaseModel):
     chain_hash: str = Field(default="", description="Hash of entire chain")
     
     def get_depth(self) -> int:
-        """Return the current depth of the delegation chain.
-
-        Returns:
-            The number of links in the chain.
-        """
+        """Return the current depth of the delegation chain."""
         return len(self.links)
 
     def add_link(self, link: DelegationLink) -> None:
-        """Add a link to the chain.
-
-        Validates that:
-        1. Depth limit is not exceeded
-        2. Link connects to current leaf
-        3. Capabilities are properly narrowed
-        4. Link hash is correct
-
-        Args:
-            link: The delegation link to append.
-
-        Raises:
-            DelegationDepthError: If the chain would exceed max_depth.
-            ValueError: If the link does not connect to the chain, hash
-                is invalid, or capabilities are not properly narrowed.
-        """
+        """Add a link to the chain with simple scope narrowing validation."""
         new_depth = len(self.links) + 1
         if new_depth > self.max_depth:
             raise DelegationDepthError(
@@ -309,11 +239,9 @@ class DelegationChain(BaseModel):
             if link.previous_link_hash != last_link.link_hash:
                 raise ValueError("Link hash does not match previous link")
         else:
-            # First link - parent should be root
             if link.depth != 0:
                 raise ValueError("First link must have depth 0")
         
-        # Verify capability narrowing
         if not link.verify_capability_narrowing():
             raise ValueError("Link does not properly narrow capabilities")
         
@@ -322,21 +250,11 @@ class DelegationChain(BaseModel):
         self.leaf_did = link.child_did
         self.leaf_capabilities = link.delegated_capabilities
         self._update_chain_hash()
-    
-    def _verify_link_signature(self, link: DelegationLink) -> bool:
-        """Verify the Ed25519 signature on a delegation link."""
-        identity = self.known_identities.get(link.parent_did)
-        if identity is None:
-            return True  # Graceful fallback — can't verify without identity
-        signable_data = f"{link.parent_did}:{link.child_did}:{','.join(sorted(link.delegated_capabilities))}"
-        return identity.verify_signature(signable_data.encode(), link.parent_signature)
 
     def verify(self) -> tuple[bool, Optional[str]]:
         """
-        Verify the entire chain.
-        
-        Returns:
-            Tuple of (is_valid, error_message)
+        Verify the chain — simple scope narrowing only.
+        No cryptographic signature verification.
         """
         if not self.links:
             return True, None
@@ -345,27 +263,17 @@ class DelegationChain(BaseModel):
         previous_capabilities = self.root_capabilities
         
         for i, link in enumerate(self.links):
-            # Verify depth
             if link.depth != i:
                 return False, f"Invalid depth at link {i}"
             
-            # Verify hash chain
             if link.previous_link_hash != previous_hash:
                 return False, f"Hash chain broken at link {i}"
             
-            # Verify capability narrowing against actual previous capabilities
+            # Verify capability narrowing
             for cap in link.delegated_capabilities:
                 if cap not in previous_capabilities:
                     if not link._is_narrower_capability(cap, previous_capabilities):
                         return False, f"Capability escalation at link {i}: {cap}"
-            
-            # Verify link hash
-            if link.link_hash != link.compute_hash():
-                return False, f"Invalid link hash at link {i}"
-            
-            # Verify Ed25519 signature
-            if not self._verify_link_signature(link):
-                return False, f"Invalid signature at link {i}"
             
             previous_hash = link.link_hash
             previous_capabilities = link.delegated_capabilities
@@ -373,27 +281,15 @@ class DelegationChain(BaseModel):
         return True, None
     
     def get_effective_capabilities(self) -> list[str]:
-        """Get the effective capabilities at the end of the chain.
-
-        Returns:
-            The leaf agent's capabilities, or root capabilities if empty.
-        """
+        """Get the effective capabilities at the end of the chain."""
         if self.links:
             return self.links[-1].delegated_capabilities
         return self.root_capabilities
     
     def trace_capability(self, capability: str) -> list[dict]:
-        """Trace how a capability was granted through the chain.
-
-        Args:
-            capability: The capability string to trace.
-
-        Returns:
-            List of dicts describing each grant/narrowing from root to leaf.
-        """
+        """Trace how a capability was granted through the chain."""
         trace = []
         
-        # Check root
         if capability in self.root_capabilities or "*" in self.root_capabilities:
             trace.append({
                 "level": "root",
@@ -402,7 +298,6 @@ class DelegationChain(BaseModel):
                 "source_capabilities": self.root_capabilities,
             })
         
-        # Check each link
         for link in self.links:
             if capability in link.delegated_capabilities:
                 trace.append({
@@ -434,18 +329,7 @@ class DelegationChain(BaseModel):
         capabilities: list[str],
         sponsor_verified: bool = False,
     ) -> tuple["DelegationChain", DelegationLink]:
-        """Create a new chain with a root sponsor.
-
-        Args:
-            sponsor_email: Email of the human sponsor at chain root.
-            root_agent_did: DID of the first agent in the chain.
-            capabilities: Capabilities granted by the sponsor.
-            sponsor_verified: Whether the sponsor has been verified.
-
-        Returns:
-            Tuple of (DelegationChain, DelegationLink) where the link
-            is the first link to be signed by the sponsor.
-        """
+        """Create a new chain with a root sponsor."""
         import uuid
         
         chain_id = f"chain_{uuid.uuid4().hex[:16]}"
@@ -459,7 +343,6 @@ class DelegationChain(BaseModel):
             leaf_capabilities=capabilities,
         )
         
-        # Create first link (sponsor -> root agent)
         link = DelegationLink(
             link_id=f"link_{uuid.uuid4().hex[:12]}",
             depth=0,
@@ -467,8 +350,8 @@ class DelegationChain(BaseModel):
             child_did=root_agent_did,
             parent_capabilities=capabilities,
             delegated_capabilities=capabilities,
-            parent_signature="",  # To be signed
-            link_hash="",  # To be computed after signing
+            parent_signature="",
+            link_hash="",
         )
         link.link_hash = link.compute_hash()
         

@@ -1,14 +1,16 @@
 """
 Capability Scoping
 
-Capability-scoped credential issuance per tool/resource per agent.
-Agents cannot access any resource not explicitly in their credential scope.
+# Community Edition — basic trust scoring and governance
+
+Simple string-based capability scope checking.
+Scope check: granted_capability.startswith(requested_capability).
+No cryptographic enforcement.
 """
 
 from datetime import datetime
 from typing import Optional, Literal
 from pydantic import BaseModel, Field
-import hashlib
 import uuid
 
 
@@ -56,23 +58,7 @@ class CapabilityGrant(BaseModel):
     
     @classmethod
     def parse_capability(cls, capability: str) -> tuple[str, str, Optional[str]]:
-        """Parse a capability string into its component parts.
-
-        Capability strings follow the format
-        ``action:resource[:qualifier]``.
-
-        Args:
-            capability: Capability string to parse (e.g.
-                ``"read:data"`` or ``"execute:tools:calculator"``).
-
-        Returns:
-            A tuple of ``(action, resource, qualifier)`` where
-            *qualifier* is ``None`` when not present.
-
-        Raises:
-            ValueError: If the string contains fewer than two
-                colon-separated parts.
-        """
+        """Parse a capability string into (action, resource, qualifier)."""
         parts = capability.split(":")
         if len(parts) < 2:
             raise ValueError(f"Invalid capability format: {capability}")
@@ -92,25 +78,7 @@ class CapabilityGrant(BaseModel):
         resource_ids: Optional[list[str]] = None,
         expires_at: Optional[datetime] = None,
     ) -> "CapabilityGrant":
-        """Create a new capability grant from a capability string.
-
-        The capability string is parsed automatically into its
-        ``action``, ``resource``, and ``qualifier`` components.
-
-        Args:
-            capability: Capability string (e.g. ``"read:data"``).
-            granted_to: DID of the agent receiving the grant.
-            granted_by: DID of the agent issuing the grant.
-            resource_ids: Optional list of specific resource IDs this
-                grant applies to.
-            expires_at: Optional expiration datetime (UTC).
-
-        Returns:
-            A new ``CapabilityGrant`` instance.
-
-        Raises:
-            ValueError: If *capability* cannot be parsed.
-        """
+        """Create a new capability grant from a capability string."""
         action, resource, qualifier = cls.parse_capability(capability)
         
         return cls(
@@ -125,12 +93,7 @@ class CapabilityGrant(BaseModel):
         )
     
     def is_valid(self) -> bool:
-        """Check if the grant is currently active and not expired.
-
-        Returns:
-            ``True`` if the grant is active and has not passed its
-            expiration time.
-        """
+        """Check if the grant is currently active and not expired."""
         if not self.active:
             return False
         if self.expires_at and datetime.utcnow() > self.expires_at:
@@ -140,36 +103,30 @@ class CapabilityGrant(BaseModel):
     def matches(self, requested: str, resource_id: Optional[str] = None) -> bool:
         """Check if this grant satisfies a requested capability.
 
-        Supports exact matching, wildcard (``*``) matching on action
-        and resource parts, and optional resource-ID scoping.
-
-        Args:
-            requested: Capability string being requested (e.g.
-                ``"read:data"``).
-            resource_id: Optional specific resource ID to match
-                against the grant's ``resource_ids`` list.
-
-        Returns:
-            ``True`` if the grant is valid and covers the requested
-            capability and resource ID.
+        Uses simple startswith matching for scope checking.
         """
         if not self.is_valid():
             return False
         
-        req_action, req_resource, req_qualifier = self.parse_capability(requested)
-        
-        # Check action
-        if self.action != "*" and self.action != req_action:
-            return False
-        
-        # Check resource
-        if self.resource != "*" and self.resource != req_resource:
-            return False
-        
-        # Check qualifier if present
-        if req_qualifier and self.qualifier:
-            if self.qualifier != "*" and self.qualifier != req_qualifier:
+        # Simple string-based scope check
+        if self.capability == "*" or self.capability == requested:
+            pass  # exact match or wildcard
+        elif self.capability.endswith(":*"):
+            prefix = self.capability[:-1]  # e.g. "read:" from "read:*"
+            if not requested.startswith(prefix):
                 return False
+        elif requested.startswith(self.capability):
+            pass  # granted is a prefix of requested
+        else:
+            # Fall back to component matching
+            req_action, req_resource, req_qualifier = self.parse_capability(requested)
+            if self.action != "*" and self.action != req_action:
+                return False
+            if self.resource != "*" and self.resource != req_resource:
+                return False
+            if req_qualifier and self.qualifier:
+                if self.qualifier != "*" and self.qualifier != req_qualifier:
+                    return False
         
         # Check resource ID if scoped
         if self.resource_ids and resource_id:
@@ -179,11 +136,7 @@ class CapabilityGrant(BaseModel):
         return True
     
     def revoke(self) -> None:
-        """Revoke this grant immediately.
-
-        Sets ``active`` to ``False`` and records the revocation
-        timestamp.
-        """
+        """Revoke this grant immediately."""
         self.active = False
         self.revoked_at = datetime.utcnow()
 

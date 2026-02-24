@@ -1,8 +1,9 @@
 """
 Reward Engine
 
-The platform's ability to learn. Per-agent trust scores from
-multi-dimensional reward signals, updated every ≤30s.
+# Community Edition — basic trust scoring and governance
+
+Single-dimension trust scoring with per-agent reward signals.
 """
 
 from datetime import datetime, timedelta
@@ -33,23 +34,19 @@ class RewardConfig(BaseModel):
     revocation_threshold: int = Field(default=TRUST_REVOCATION_THRESHOLD, ge=0, le=1000)
     warning_threshold: int = Field(default=TRUST_WARNING_THRESHOLD, ge=0, le=1000)
     
-    # Dimension weights (must sum to 1.0)
+    # Dimension weights (kept for API compatibility, not used in scoring)
     policy_compliance_weight: float = Field(default=WEIGHT_POLICY_COMPLIANCE)
     resource_efficiency_weight: float = Field(default=WEIGHT_RESOURCE_EFFICIENCY)
     output_quality_weight: float = Field(default=WEIGHT_OUTPUT_QUALITY)
     security_posture_weight: float = Field(default=WEIGHT_SECURITY_POSTURE)
     collaboration_health_weight: float = Field(default=WEIGHT_COLLABORATION_HEALTH)
     
+    # Single trust score (0.0-1.0)
+    trust_score: float = Field(default=0.5, ge=0.0, le=1.0)
+    
     def validate_weights(self) -> bool:
-        """Verify weights sum to 1.0."""
-        total = (
-            self.policy_compliance_weight +
-            self.resource_efficiency_weight +
-            self.output_quality_weight +
-            self.security_posture_weight +
-            self.collaboration_health_weight
-        )
-        return abs(total - 1.0) < 0.001
+        """No-op — always passes in Community Edition."""
+        return True
 
 
 class AgentRewardState(BaseModel):

@@ -1,11 +1,9 @@
-"""Tests for Behavioral Trust Decay with Network Effects."""
+"""Tests for Trust Decay — Community Edition."""
 
 import time
 import pytest
 from agentmesh.reward.trust_decay import (
-    InteractionEdge,
     NetworkTrustEngine,
-    RegimeChangeAlert,
     TrustEvent,
 )
 
@@ -46,19 +44,15 @@ class TestScoreManagement:
 
 
 class TestInteractionGraph:
-    def test_record_interaction(self, engine):
-        engine.record_interaction("a", "b")
+    """Interaction graph is a no-op in Community Edition."""
+
+    def test_record_interaction_noop(self, engine):
         engine.record_interaction("a", "b")
         neighbors = engine.get_neighbors("a")
-        assert len(neighbors) == 1
-        peer, weight = neighbors[0]
-        assert peer == "b"
-        assert weight == 0.02  # 2/100
+        assert neighbors == []
 
-    def test_bidirectional_neighbors(self, engine):
-        engine.record_interaction("a", "b")
-        assert len(engine.get_neighbors("a")) == 1
-        assert len(engine.get_neighbors("b")) == 1
+    def test_get_neighbors_empty(self, engine):
+        assert engine.get_neighbors("a") == []
 
 
 # =============================================================================
@@ -82,34 +76,29 @@ class TestTrustEvents:
         assert engine.get_score("a") == 400.0
 
     def test_propagation_to_neighbor(self, engine):
+        """No propagation in Community Edition — only direct impact."""
         engine.set_score("a", 800.0)
         engine.set_score("b", 800.0)
-        # 50 interactions → weight = 0.5
-        for _ in range(50):
-            engine.record_interaction("a", "b")
+        engine.record_interaction("a", "b")
 
         event = TrustEvent(agent_did="a", event_type="failure", severity_weight=1.0)
         deltas = engine.process_trust_event(event)
 
-        # B should also be affected
-        assert "b" in deltas
-        assert deltas["b"] < 0
-        assert engine.get_score("b") < 800.0
+        # B should NOT be affected (no propagation)
+        assert "b" not in deltas
+        assert engine.get_score("b") == 800.0
 
     def test_propagation_depth_limit(self):
+        """No propagation in Community Edition."""
         engine = NetworkTrustEngine(propagation_depth=1)
         engine.set_score("a", 800.0)
         engine.set_score("b", 800.0)
         engine.set_score("c", 800.0)
-        for _ in range(100):
-            engine.record_interaction("a", "b")
-            engine.record_interaction("b", "c")
 
         event = TrustEvent(agent_did="a", event_type="failure", severity_weight=1.0)
         deltas = engine.process_trust_event(event)
 
-        # B affected (depth 0), C should NOT be affected (depth 1 exceeds limit)
-        assert "b" in deltas
+        assert "b" not in deltas
         assert "c" not in deltas
 
     def test_no_propagation_without_edges(self, engine):
@@ -168,51 +157,18 @@ class TestTemporalDecay:
 
 
 class TestRegimeDetection:
-    def _populate_baseline(self, engine, agent_did, now):
-        """Add a baseline of mostly 'db_query' actions."""
-        baseline_start = now - 86400 * 15  # 15 days ago
-        for i in range(100):
-            t = baseline_start + i * 1000
-            engine._action_history[agent_did].append((t, "db_query"))
-        for i in range(10):
-            t = baseline_start + 100000 + i * 1000
-            engine._action_history[agent_did].append((t, "shell"))
+    """Regime detection is a no-op in Community Edition."""
 
-    def test_no_alert_with_stable_behavior(self, engine):
-        now = time.time()
-        self._populate_baseline(engine, "a", now)
-        # Recent actions match baseline
-        for i in range(10):
-            engine._action_history["a"].append((now - 100 + i * 10, "db_query"))
-        alert = engine.detect_regime_change("a", now=now)
-        assert alert is None
-
-    def test_alert_on_behavior_shift(self, engine):
-        now = time.time()
-        self._populate_baseline(engine, "a", now)
-        # Recent actions: completely different
-        for i in range(20):
-            engine._action_history["a"].append((now - 100 + i * 5, "privilege_escalation"))
-        alert = engine.detect_regime_change("a", now=now)
-        assert alert is not None
-        assert isinstance(alert, RegimeChangeAlert)
-        assert alert.kl_divergence > engine.regime_threshold
-
-    def test_insufficient_data_returns_none(self, engine):
-        # Only 3 actions — not enough
-        for i in range(3):
-            engine.record_action("a", "db_query")
+    def test_always_returns_none(self, engine):
+        engine.record_action("a", "db_query")
         assert engine.detect_regime_change("a") is None
 
-    def test_regime_change_callback(self, engine):
+    def test_callback_never_fires(self, engine):
         alerts = []
         engine.on_regime_change(lambda a: alerts.append(a))
-        now = time.time()
-        self._populate_baseline(engine, "a", now)
-        for i in range(20):
-            engine._action_history["a"].append((now - 100 + i * 5, "code_execution"))
-        engine.detect_regime_change("a", now=now)
-        assert len(alerts) == 1
+        engine.record_action("a", "action")
+        engine.detect_regime_change("a")
+        assert len(alerts) == 0
 
 
 # =============================================================================
@@ -232,22 +188,7 @@ class TestQueries:
         engine.record_interaction("a", "b")
         report = engine.get_health_report()
         assert report["agent_count"] >= 1
-        assert report["edge_count"] == 1
+        assert report["edge_count"] == 0  # No interaction graph in Community Edition
 
     def test_alerts_list(self, engine):
         assert engine.alerts == []
-
-
-# =============================================================================
-# InteractionEdge
-# =============================================================================
-
-
-class TestInteractionEdge:
-    def test_weight_saturates(self):
-        edge = InteractionEdge(from_did="a", to_did="b", interaction_count=200)
-        assert edge.weight == 1.0
-
-    def test_weight_linear(self):
-        edge = InteractionEdge(from_did="a", to_did="b", interaction_count=50)
-        assert edge.weight == 0.5

@@ -1,15 +1,15 @@
 """
 Reward & Learning Engine (Layer 4)
 
-Continuous behavioral feedback loop that scores every agent action
-against a multi-dimensional governance rubric.
+# Community Edition — basic trust scoring and governance
+
+Behavioral feedback loop that scores agent actions
+against a governance rubric.
 """
 
 from .engine import RewardEngine
 from .scoring import TrustScore, RewardDimension, RewardSignal
-from .learning import AdaptiveLearner, WeightOptimizer
-from .anomaly import BehavioralAnomalyDetector, AnomalyReport
-from .trust_decay import NetworkTrustEngine, TrustEvent, RegimeChangeAlert
+from .trust_decay import NetworkTrustEngine, TrustEvent
 from .distribution import (
     ContributionWeightedStrategy,
     DistributionResult,
@@ -28,13 +28,8 @@ __all__ = [
     "TrustScore",
     "RewardDimension",
     "RewardSignal",
-    "AdaptiveLearner",
-    "WeightOptimizer",
-    "BehavioralAnomalyDetector",
-    "AnomalyReport",
     "NetworkTrustEngine",
     "TrustEvent",
-    "RegimeChangeAlert",
     "ContributionWeightedStrategy",
     "DistributionResult",
     "EqualSplitStrategy",

@@ -1,11 +1,10 @@
-"""Tests for persistent audit log."""
+"""Tests for persistent audit log — removed in Community Edition."""
 
 import pytest
-import asyncio
-from agentmesh.governance.persistent_audit import PersistentAuditLog
-from agentmesh.governance.audit import AuditEntry
-from agentmesh.storage.memory_provider import MemoryStorageProvider
-from agentmesh.storage.provider import StorageConfig
+
+pytestmark = pytest.mark.skip(
+    reason="persistent_audit.py removed in Community Edition"
+)
 
 
 @pytest.fixture

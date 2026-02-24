@@ -1,8 +1,10 @@
-"""Tests for behavioral anomaly detection."""
+"""Tests for behavioral anomaly detection — removed in Community Edition."""
 
 import pytest
-from datetime import datetime, timezone, timedelta
-from agentmesh.reward.anomaly import BehavioralAnomalyDetector, AnomalyReport, AgentBehaviorProfile
+
+pytestmark = pytest.mark.skip(
+    reason="anomaly.py removed in Community Edition"
+)
 
 
 class TestRapidFire:

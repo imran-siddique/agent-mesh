@@ -74,8 +74,6 @@ from .reward import (
     TrustScore,
     RewardDimension,
     RewardSignal,
-    AdaptiveLearner,
-    WeightOptimizer,
 )
 
 __all__ = [
@@ -136,6 +134,4 @@ __all__ = [
     "TrustScore",
     "RewardDimension",
     "RewardSignal",
-    "AdaptiveLearner",
-    "WeightOptimizer",
 ]

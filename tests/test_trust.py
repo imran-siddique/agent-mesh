@@ -64,34 +64,17 @@ class TestProtocolBridge:
         assert "iatp" in bridge.supported_protocols
     
     def test_a2a_to_mcp_translation(self):
-        """Test A2A to MCP message translation."""
+        """Protocol translation removed in Community Edition — passthrough only."""
         bridge = ProtocolBridge(agent_did="did:mesh:test")
         
-        a2a_message = {
-            "task_type": "summarize",
-            "parameters": {"text": "Hello world"},
-        }
-        
-        mcp_message = bridge._a2a_to_mcp(a2a_message)
-        
-        assert mcp_message["method"] == "tools/call"
-        assert mcp_message["params"]["name"] == "summarize"
+        # Passthrough bridge doesn't have _a2a_to_mcp
+        assert not hasattr(bridge, '_a2a_to_mcp')
     
     def test_mcp_to_a2a_translation(self):
-        """Test MCP to A2A message translation."""
+        """Protocol translation removed in Community Edition — passthrough only."""
         bridge = ProtocolBridge(agent_did="did:mesh:test")
         
-        mcp_message = {
-            "method": "tools/call",
-            "params": {
-                "name": "analyze",
-                "arguments": {"data": [1, 2, 3]},
-            },
-        }
-        
-        a2a_message = bridge._mcp_to_a2a(mcp_message)
-        
-        assert a2a_message["task_type"] == "analyze"
+        assert not hasattr(bridge, '_mcp_to_a2a')
 
 
 class TestTrustHandshake:
