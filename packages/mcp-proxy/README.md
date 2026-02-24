@@ -235,7 +235,7 @@ agentmesh policy generate audit.log > learned-policy.yaml
 │  │   Engine    │  │   Limiter   │  │  (CloudEvents)      │ │
 │  └─────────────┘  └─────────────┘  └─────────────────────┘ │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
-│  │   Input     │  │  Identity   │  │    Merkle Chain     │ │
+│  │   Input     │  │  Identity   │  │    hash chain Chain     │ │
 │  │ Sanitizer   │  │  Resolver   │  │  (Tamper Detection) │ │
 │  └─────────────┘  └─────────────┘  └─────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘

@@ -378,7 +378,7 @@ agentmesh proxy \
 
 ✅ **Least Privilege:** Agents can only perform allowed operations
 ✅ **Defense in Depth:** Multiple policy layers
-✅ **Audit Trail:** Tamper-evident Merkle chain
+✅ **Audit Trail:** Tamper-evident hash chain
 ✅ **Visibility:** Verification footers in outputs
 ✅ **Trust Decay:** Behavioral scoring with penalties
 

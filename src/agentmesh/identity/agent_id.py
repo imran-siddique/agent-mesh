@@ -58,7 +58,7 @@ class AgentIdentity(BaseModel):
     Unlike service accounts, agent identities:
     - Are linked to a human sponsor
     - Have ephemeral credentials
-    - Support delegation chains
+    - Support scope chains
     - Are continuously risk-scored
     """
     
@@ -92,7 +92,7 @@ class AgentIdentity(BaseModel):
     
     # Delegation
     parent_did: Optional[str] = Field(None, description="Parent agent DID if delegated")
-    delegation_depth: int = Field(default=0, ge=0, description="Depth in delegation chain")
+    delegation_depth: int = Field(default=0, ge=0, description="Depth in scope chain")
     
     # Private key stored separately (not serialized)
     _private_key: Optional[ed25519.Ed25519PrivateKey] = None
@@ -214,7 +214,7 @@ class AgentIdentity(BaseModel):
         Delegate to a child agent with narrowed capabilities.
         
         The child agent's capabilities MUST be a subset of the parent's.
-        This is enforced cryptographically - delegation chains can only narrow.
+        This is enforced cryptographically - scope chains can only narrow.
         """
         # Validate capabilities are a subset
         for cap in capabilities:

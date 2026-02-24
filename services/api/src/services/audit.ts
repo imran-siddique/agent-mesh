@@ -15,7 +15,7 @@ function computeHash(entry: Omit<AuditEntry, "hash">): string {
   return crypto.createHash("sha256").update(data).digest("hex");
 }
 
-/** Append an entry to the Merkle-chained audit log. */
+/** Append an entry to the hash-chained audit log. */
 export function appendAuditEntry(
   action: string,
   agentDid: string,
@@ -43,7 +43,7 @@ export function getAuditLog(): ReadonlyArray<AuditEntry> {
   return auditLog;
 }
 
-/** Verify the integrity of the Merkle chain. */
+/** Verify the integrity of the hash chain. */
 export function verifyChain(): boolean {
   for (let i = 0; i < auditLog.length; i++) {
     const entry = auditLog[i];

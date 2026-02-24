@@ -34,7 +34,7 @@ Added 5 comprehensive examples and 3 framework integration guides to demonstrate
 **Purpose:** Demonstrate multi-agent collaboration with governance
 
 **Key Features:**
-- Delegation chains (supervisor → specialists)
+- Scope chains (supervisor → specialists)
 - A2A trust handshakes
 - Collaborative trust scoring
 - Cross-agent audit trail
@@ -54,7 +54,7 @@ Added 5 comprehensive examples and 3 framework integration guides to demonstrate
 **Key Features:**
 - HIPAA compliance mapping
 - PHI detection and protection
-- Merkle-chained audit logs
+- hash-chained audit logs
 - Automated compliance reporting
 
 **Files:**

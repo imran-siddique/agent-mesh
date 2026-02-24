@@ -51,11 +51,11 @@ class TestMeshMetricsCreation:
         m = MeshMetrics()
         assert isinstance(m.active_agents, Gauge)
 
-    def test_delegation_chain_depth_is_histogram(self):
+    def test_scope_chain_depth_is_histogram(self):
         from prometheus_client import Histogram
 
         m = MeshMetrics()
-        assert isinstance(m.delegation_chain_depth, Histogram)
+        assert isinstance(m.scope_chain_depth, Histogram)
 
     def test_failed_verifications_is_counter(self):
         from prometheus_client import Counter
@@ -136,7 +136,7 @@ class TestDelegationAndPolicy:
         m = MeshMetrics()
         m.record_delegation(3)
 
-        assert m.delegation_chain_depth._sum.get() == 3.0
+        assert m.scope_chain_depth._sum.get() == 3.0
 
     def test_record_policy_evaluation(self):
         m = MeshMetrics()

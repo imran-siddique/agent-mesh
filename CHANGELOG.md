@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Layer 1: Identity & Zero-Trust Core
 - `AgentIdentity` - First-class agent identity with Ed25519 cryptographic keys
 - `AgentDID` - Decentralized identifiers for agents
-- `DelegationChain` - Delegation chains for scope narrowing
+- `ScopeChain` - Scope chains for scope narrowing
 - `HumanSponsor` - Human sponsor accountability for every agent
 - `Credential` - Ephemeral credentials with 15-minute default TTL
 - `CredentialManager` - Automatic credential rotation and revocation

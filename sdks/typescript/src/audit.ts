@@ -5,7 +5,7 @@ import { PolicyDecision } from './policy';
 const GENESIS_HASH = '0'.repeat(64);
 
 /**
- * Append-only audit log with Merkle-chain integrity.
+ * Append-only audit log with hash-chain integrity.
  * Each entry's hash covers its content plus the previous entry's hash.
  */
 export class AuditLogger {
@@ -56,7 +56,7 @@ export class AuditLogger {
     return full;
   }
 
-  /** Verify Merkle-chain integrity of the entire log. */
+  /** Verify hash-chain integrity of the entire log. */
   verify(): boolean {
     for (let i = 0; i < this.entries.length; i++) {
       const entry = this.entries[i];

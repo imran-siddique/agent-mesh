@@ -190,4 +190,4 @@ vercel
 - **Registry**: In-memory store (Map) for agent records, keyed by DID
 - **Identity**: Ed25519 keypair generation and signing via Node.js `crypto`
 - **Trust Engine**: Weighted multi-dimensional scoring with tier classification
-- **Audit Log**: Merkle-chained append-only log for tamper-evident audit trail
+- **Audit Log**: hash-chained append-only log for tamper-evident audit trail

@@ -166,7 +166,7 @@ The following were identified in the PRD but deferred for follow-up:
 2. **Sidecar Injection Webhook** - Automatic sidecar injection
 3. **SPIRE Integration** - Real workload identity (stubs exist)
 4. **Event Streaming** - Kafka/NATS for reward signals
-5. **Merkle Tree Publishing** - Public transparency log
+5. **Hash Chain Tree Publishing** - Public transparency log
 6. **Data Residency** - Region-based routing
 7. **HSM Integration** - Hardware security modules for CA keys
 

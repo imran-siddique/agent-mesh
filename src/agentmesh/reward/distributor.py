@@ -26,7 +26,7 @@ class RewardDistributor:
     Built-in strategies (registered by default):
     - ``equal`` — equal split
     - ``trust_weighted`` — weighted by trust score
-    - ``hierarchical`` — delegation-chain proportional
+    - ``hierarchical`` — scope-chain proportional
     - ``contribution`` — explicit contribution weights
     """
 

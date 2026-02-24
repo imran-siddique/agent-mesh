@@ -1,4 +1,4 @@
-"""Tests for delegation chain depth limit enforcement."""
+"""Tests for scope chain depth limit enforcement."""
 
 import uuid
 
@@ -6,7 +6,7 @@ import pytest
 
 from agentmesh.constants import DEFAULT_DELEGATION_MAX_DEPTH
 from agentmesh.exceptions import DelegationDepthError
-from agentmesh.identity.delegation import DelegationChain, DelegationLink
+from agentmesh.identity.delegation import ScopeChain, DelegationLink
 
 
 def _make_link(depth: int, parent_did: str, child_did: str, previous_hash: str | None = None):
@@ -27,9 +27,9 @@ def _make_link(depth: int, parent_did: str, child_did: str, previous_hash: str |
     return link
 
 
-def _make_chain(max_depth: int = DEFAULT_DELEGATION_MAX_DEPTH) -> DelegationChain:
-    """Helper to create a minimal DelegationChain."""
-    return DelegationChain(
+def _make_chain(max_depth: int = DEFAULT_DELEGATION_MAX_DEPTH) -> ScopeChain:
+    """Helper to create a minimal ScopeChain."""
+    return ScopeChain(
         chain_id=f"chain_{uuid.uuid4().hex[:16]}",
         root_sponsor_email="sponsor@example.com",
         root_capabilities=["read:data"],
@@ -48,7 +48,7 @@ class TestDelegationDepthDefault:
         assert chain.max_depth == 5
 
     def test_class_constant_matches(self):
-        assert DelegationChain.DEFAULT_MAX_DEPTH == 5
+        assert ScopeChain.DEFAULT_MAX_DEPTH == 5
 
 
 class TestDelegationDepthWithinLimit:

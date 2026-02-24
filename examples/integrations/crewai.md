@@ -6,7 +6,7 @@ Govern your CrewAI multi-agent crews with AgentMesh identity, delegation, and tr
 
 CrewAI provides collaborative multi-agent workflows, but AgentMesh adds:
 - **Cryptographic identity** for each crew member
-- **Delegation chains** with narrowing capabilities
+- **Scope chains** with narrowing capabilities
 - **Cross-agent trust handshakes**
 - **Collaborative trust scoring**
 
@@ -22,7 +22,7 @@ pip install agentmesh-platform crewai crewai-tools
 
 ```python
 from crewai import Agent, Task, Crew
-from agentmesh import AgentIdentity, DelegationChain, PolicyEngine
+from agentmesh import AgentIdentity, ScopeChain, PolicyEngine
 
 # Create supervisor identity
 supervisor_identity = AgentIdentity.create(
@@ -31,21 +31,21 @@ supervisor_identity = AgentIdentity.create(
     capabilities=["research", "writing", "review"]
 )
 
-# Create delegation chain
-delegation_chain = DelegationChain(root=supervisor_identity)
+# Create scope chain
+scope_chain = ScopeChain(root=supervisor_identity)
 
 # Delegate to crew members
-researcher_identity = delegation_chain.delegate(
+researcher_identity = scope_chain.delegate(
     name="researcher-agent",
     capabilities=["research"]  # Narrowed from supervisor
 )
 
-writer_identity = delegation_chain.delegate(
+writer_identity = scope_chain.delegate(
     name="writer-agent",
     capabilities=["writing"]  # Narrowed from supervisor
 )
 
-reviewer_identity = delegation_chain.delegate(
+reviewer_identity = scope_chain.delegate(
     name="reviewer-agent",
     capabilities=["review"]  # Narrowed from supervisor
 )
@@ -100,7 +100,7 @@ result = crew.kickoff()
 
 print(f"Result: {result}")
 print(f"Supervisor DID: {supervisor_identity.did}")
-print(f"Crew members: {len(delegation_chain.links)}")
+print(f"Crew members: {len(scope_chain.links)}")
 ```
 
 ## Advanced Features
@@ -186,7 +186,7 @@ def governed_task_execution(task, agent):
 
 ```python
 from crewai import Agent, Task, Crew, Process
-from agentmesh import AgentIdentity, DelegationChain, PolicyEngine, AuditLog
+from agentmesh import AgentIdentity, ScopeChain, PolicyEngine, AuditLog
 
 # Initialize AgentMesh
 supervisor = AgentIdentity.create(
@@ -195,7 +195,7 @@ supervisor = AgentIdentity.create(
     capabilities=["research", "writing", "seo", "social_media"]
 )
 
-delegation_chain = DelegationChain(root=supervisor)
+scope_chain = ScopeChain(root=supervisor)
 policy_engine = PolicyEngine.from_file("policies/content-crew.yaml")
 audit_log = AuditLog(agent_id=supervisor.did)
 
@@ -203,7 +203,7 @@ audit_log = AuditLog(agent_id=supervisor.did)
 seo_specialist = Agent(
     role="SEO Specialist",
     goal="Optimize content for search engines",
-    agentmesh_identity=delegation_chain.delegate(
+    agentmesh_identity=scope_chain.delegate(
         name="seo-specialist",
         capabilities=["research", "seo"]
     )
@@ -212,7 +212,7 @@ seo_specialist = Agent(
 content_writer = Agent(
     role="Content Writer",
     goal="Write engaging, SEO-optimized content",
-    agentmesh_identity=delegation_chain.delegate(
+    agentmesh_identity=scope_chain.delegate(
         name="content-writer",
         capabilities=["writing"]
     )
@@ -221,7 +221,7 @@ content_writer = Agent(
 social_media_manager = Agent(
     role="Social Media Manager",
     goal="Create social media posts",
-    agentmesh_identity=delegation_chain.delegate(
+    agentmesh_identity=scope_chain.delegate(
         name="social-media-manager",
         capabilities=["social_media", "writing"]
     )
@@ -288,7 +288,7 @@ policies:
 
 ## Best Practices
 
-1. **Use delegation chains** for crew hierarchies
+1. **Use scope chains** for crew hierarchies
 2. **Narrow capabilities** for specialized agents
 3. **Enable trust handshakes** for collaboration
 4. **Monitor trust scores** across the crew

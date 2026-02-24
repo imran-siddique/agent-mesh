@@ -8,7 +8,7 @@ This guide covers common issues encountered when running AgentMesh, organized by
 
 - [Handshake Failures](#handshake-failures)
 - [Identity Mismatch](#identity-mismatch)
-- [Delegation Chain Errors](#delegation-chain-errors)
+- [Scope Chain Errors](#scope-chain-errors)
 - [Trust Score Issues](#trust-score-issues)
 - [Proxy Connection Problems](#proxy-connection-problems)
 - [Performance Issues](#performance-issues)
@@ -147,11 +147,11 @@ print(exported)
 
 ---
 
-## Delegation Chain Errors
+## Scope Chain Errors
 
 ### Symptoms
 
-- `DelegationError` when creating or verifying delegation chains
+- `DelegationError` when creating or verifying scope chains
 - `DelegationDepthError` when the chain exceeds the maximum allowed depth
 - Delegation verification fails despite apparently valid chains
 
@@ -167,12 +167,12 @@ print(exported)
 
 ### Diagnosis Steps
 
-**1. Inspect the delegation chain:**
+**1. Inspect the scope chain:**
 
 ```python
-from agentmesh.trust import DelegationChain
+from agentmesh.trust import ScopeChain
 
-chain = DelegationChain.load("chain_id")
+chain = ScopeChain.load("chain_id")
 
 # Print each link in the chain
 for i, link in enumerate(chain.links):
@@ -380,7 +380,7 @@ curl http://localhost:8080/api/v1/trust/score \
 - **Rate limited:** Wait for the rate limit window to reset (check `X-RateLimit-Reset` header). If limits are too low, adjust the proxy configuration.
 - **Trust below threshold:** Improve the agent's trust score through positive interactions. If the agent is legitimate, review and adjust trust thresholds.
 - **Missing headers:** Ensure every request includes `X-Agent-DID` and `X-Agent-Public-Key` headers.
-- **Invalid capabilities:** Verify the agent's capabilities match what is required. Update the agent's capability set or delegation chain.
+- **Invalid capabilities:** Verify the agent's capabilities match what is required. Update the agent's capability set or scope chain.
 
 ---
 
@@ -440,7 +440,7 @@ kubectl exec -it -n agentmesh <agentmesh-pod> -- \
 redis-cli -h agentmesh-redis-master INFO stats | grep keyspace
 ```
 
-**4. Profile delegation chain verification:**
+**4. Profile scope chain verification:**
 
 ```python
 import time

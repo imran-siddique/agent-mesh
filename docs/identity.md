@@ -242,8 +242,8 @@ child_identity = parent_identity.delegate(
     ttl_seconds=300,  # 5 minutes max
 )
 
-# Delegation chain is recorded
-print(child_identity.delegation_chain)
+# Scope chain is recorded
+print(child_identity.scope_chain)
 # [
 #   {"did": "did:mesh:sponsor", "type": "human"},
 #   {"did": "did:mesh:parent", "type": "agent", "capabilities": ["read:*"]},
@@ -251,13 +251,13 @@ print(child_identity.delegation_chain)
 # ]
 ```
 
-### Verifying Delegation Chains
+### Verifying Scope Chains
 
 ```python
-from agentmesh import verify_delegation_chain
+from agentmesh import verify_scope_chain
 
 # Verify the chain is valid
-result = verify_delegation_chain(child_identity)
+result = verify_scope_chain(child_identity)
 
 if result.valid:
     print(f"Chain valid, depth: {result.depth}")
@@ -276,7 +276,7 @@ else:
 
 | Constraint | Default | Description |
 |------------|---------|-------------|
-| `max_depth` | 3 | Maximum delegation chain depth |
+| `max_depth` | 3 | Maximum scope chain depth |
 | `must_narrow` | true | Child capabilities must be subset of parent |
 | `max_ttl` | parent TTL | Child cannot outlive parent |
 | `require_audit` | true | All delegations logged |
@@ -471,12 +471,12 @@ capabilities = ["read:customer-data", "write:reports"]
 capabilities = ["*"]  # Full access
 ```
 
-### 4. Verify Delegation Chains
+### 4. Verify Scope Chains
 
 ```python
 # Always verify before trusting delegated identity
-if not verify_delegation_chain(peer_identity).valid:
-    raise SecurityError("Invalid delegation chain")
+if not verify_scope_chain(peer_identity).valid:
+    raise SecurityError("Invalid scope chain")
 ```
 
 ### 5. Monitor for Revocations
@@ -504,7 +504,7 @@ class AgentIdentity:
     created_at: datetime        # Creation timestamp
     expires_at: datetime        # Expiration timestamp
     parent_did: Optional[str]   # Parent agent (if delegated)
-    delegation_chain: List[Dict]  # Full chain of custody
+    scope_chain: List[Dict]  # Full chain of custody
     
     @classmethod
     def create(cls, name: str, sponsor: str, capabilities: List[str], **kwargs) -> "AgentIdentity"

@@ -22,7 +22,7 @@ The foundation layer provides:
 **Key Features**:
 - DIDs with format `did:mesh:<32-hex-chars>`
 - Ed25519 cryptographic keys
-- Delegation chains with strict narrowing
+- Scope chains with strict narrowing
 - Risk scoring updated every 30 seconds
 
 ### Layer 2: Trust & Protocol Bridge ✅
@@ -48,13 +48,13 @@ The translation layer provides:
 The guardrails layer provides:
 - **Policy Engine** (`governance/policy.py`): Declarative YAML/JSON policies
 - **Compliance Mapping** (`governance/compliance.py`): EU AI Act, SOC 2, HIPAA, GDPR
-- **Audit Logs** (`governance/audit.py`): Tamper-evident Merkle chain
+- **Audit Logs** (`governance/audit.py`): Tamper-evident hash chain
 - **Shadow Mode** (`governance/shadow.py`): Pre-production testing
 
 **Key Features**:
 - Sub-5ms policy evaluation
 - Automated compliance reports
-- Merkle-chained audit logs
+- hash-chained audit logs
 - Shadow mode for testing
 
 ### Layer 4: Reward & Learning Engine ✅
@@ -123,12 +123,12 @@ Async worker that:
 - Existing: `src/agentmesh/reward/engine.py`
 - To be created: Service wrapper in `services/reward_engine/`
 
-### services/audit - Merkle Chain Logger
+### services/audit - hash chain Chain Logger
 
 **Status**: Pending (existing governance/audit module serves this purpose)
 
 Tamper-evident logging:
-- Merkle-chained audit logs
+- hash-chained audit logs
 - Immutable event history
 - Compliance audit trails
 - Cryptographic verification
@@ -287,7 +287,7 @@ Shows agent status:
 ### HIPAA
 
 - **PHI Protection**: Capability-based access control
-- **Audit Controls**: Merkle-chained logs
+- **Audit Controls**: hash-chained logs
 - **Access Management**: Sponsor verification
 
 ### GDPR
@@ -372,7 +372,7 @@ Need to add:
 3. **Human Accountability**: Sponsor signatures required
 4. **Auto-Revocation**: Trust score triggers (<300)
 5. **mTLS**: All agent-to-agent communication
-6. **Merkle Chains**: Tamper-evident audit logs
+6. **hash chain Chains**: Tamper-evident audit logs
 
 ## Performance Targets
 

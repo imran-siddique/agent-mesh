@@ -50,7 +50,7 @@ func (al *AuditLogger) Log(agentID, action string, decision PolicyDecision) *Aud
 	return entry
 }
 
-// Verify checks the integrity of the entire Merkle chain.
+// Verify checks the integrity of the entire hash chain.
 func (al *AuditLogger) Verify() bool {
 	al.mu.Lock()
 	defer al.mu.Unlock()

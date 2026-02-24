@@ -20,7 +20,7 @@ Sent by an agent to register with AgentMesh. Contains:
 - **Human Sponsor**: Email and signature for accountability
 - **Capabilities**: What the agent is allowed to do (e.g., `["read:data", "write:reports"]`)
 - **Protocol Support**: Which protocols the agent supports (A2A, MCP, IATP, ACP)
-- **Delegation Chain**: Optional parent agent for delegated identities
+- **Scope Chain**: Optional parent agent for delegated identities
 
 #### 2. RegistrationResponse
 
@@ -149,7 +149,7 @@ python -m grpc_tools.protoc \
 The registration protocol supports compliance automation:
 
 - **EU AI Act**: Risk classification via capabilities, transparency via audit logs
-- **SOC 2**: Security controls via credential management, audit via Merkle chain
+- **SOC 2**: Security controls via credential management, audit via hash chain
 - **HIPAA**: PHI protection via capability scoping, audit controls
 - **GDPR**: Data processing transparency, right to explanation
 

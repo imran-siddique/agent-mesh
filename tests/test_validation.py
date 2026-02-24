@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from agentmesh.identity import AgentIdentity, AgentDID, DelegationChain, DelegationLink
+from agentmesh.identity import AgentIdentity, AgentDID, ScopeChain, DelegationLink
 from agentmesh.trust import TrustHandshake
 from agentmesh.reward.scoring import TrustScore
 from agentmesh.exceptions import (
@@ -161,14 +161,14 @@ class TestTrustHandshakeValidation:
 
 
 # ---------------------------------------------------------------------------
-# DelegationChain validation
+# ScopeChain validation
 # ---------------------------------------------------------------------------
 
-class TestDelegationChainValidation:
-    """Validation tests for DelegationChain constructor."""
+class TestScopeChainValidation:
+    """Validation tests for ScopeChain constructor."""
 
     def test_valid_construction(self):
-        chain, _ = DelegationChain.create_root(
+        chain, _ = ScopeChain.create_root(
             sponsor_email="sponsor@example.com",
             root_agent_did="did:mesh:root",
             capabilities=["read"],
@@ -177,7 +177,7 @@ class TestDelegationChainValidation:
 
     def test_empty_chain_id_raises(self):
         with pytest.raises(DelegationError, match="chain_id must not be empty"):
-            DelegationChain(
+            ScopeChain(
                 chain_id="",
                 root_sponsor_email="s@e.com",
                 root_capabilities=["read"],
@@ -187,7 +187,7 @@ class TestDelegationChainValidation:
 
     def test_empty_root_sponsor_email_raises(self):
         with pytest.raises(DelegationError, match="root_sponsor_email must not be empty"):
-            DelegationChain(
+            ScopeChain(
                 chain_id="chain_1",
                 root_sponsor_email="",
                 root_capabilities=["read"],
@@ -197,7 +197,7 @@ class TestDelegationChainValidation:
 
     def test_invalid_root_sponsor_email_raises(self):
         with pytest.raises(DelegationError, match="Invalid root_sponsor_email"):
-            DelegationChain(
+            ScopeChain(
                 chain_id="chain_1",
                 root_sponsor_email="not-an-email",
                 root_capabilities=["read"],
@@ -207,7 +207,7 @@ class TestDelegationChainValidation:
 
     def test_empty_root_capabilities_raises(self):
         with pytest.raises(DelegationError, match="root_capabilities must not be empty"):
-            DelegationChain(
+            ScopeChain(
                 chain_id="chain_1",
                 root_sponsor_email="s@e.com",
                 root_capabilities=[],
@@ -217,7 +217,7 @@ class TestDelegationChainValidation:
 
     def test_empty_leaf_did_raises(self):
         with pytest.raises(DelegationError, match="leaf_did must not be empty"):
-            DelegationChain(
+            ScopeChain(
                 chain_id="chain_1",
                 root_sponsor_email="s@e.com",
                 root_capabilities=["read"],
@@ -227,7 +227,7 @@ class TestDelegationChainValidation:
 
     def test_invalid_leaf_did_raises(self):
         with pytest.raises(DelegationError, match="did:mesh:"):
-            DelegationChain(
+            ScopeChain(
                 chain_id="chain_1",
                 root_sponsor_email="s@e.com",
                 root_capabilities=["read"],

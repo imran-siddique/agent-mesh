@@ -19,7 +19,7 @@ rules:
     action: warn
     priority: 20
   - name: block-deep-delegation
-    description: Deny delegation chains deeper than allowed
+    description: Deny scope chains deeper than allowed
     condition:
       field: delegation_depth
       operator: gt

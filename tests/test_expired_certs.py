@@ -1,4 +1,4 @@
-"""Tests for expired certificate handling in delegation chains (#119).
+"""Tests for expired certificate handling in scope chains (#119).
 
 Validates that credentials and delegation links with expired timestamps are
 correctly rejected, including edge cases around clock skew and boundary times.
@@ -11,7 +11,7 @@ import pytest
 
 from agentmesh.identity.agent_id import AgentIdentity
 from agentmesh.identity.credentials import Credential, CredentialManager
-from agentmesh.identity.delegation import DelegationChain, DelegationLink
+from agentmesh.identity.delegation import ScopeChain, DelegationLink
 
 
 # ---------------------------------------------------------------------------
@@ -28,12 +28,12 @@ def _make_identity(name: str = "test") -> AgentIdentity:
 
 def _chain_with_expiring_link(
     expires_at: datetime | None,
-) -> tuple[DelegationChain, DelegationLink]:
+) -> tuple[ScopeChain, DelegationLink]:
     """Build a 2-link chain where the second link has the given expiry."""
     agent_b_did = f"did:mesh:{uuid.uuid4().hex[:16]}"
     agent_c_did = f"did:mesh:{uuid.uuid4().hex[:16]}"
 
-    chain, root_link = DelegationChain.create_root(
+    chain, root_link = ScopeChain.create_root(
         sponsor_email="sponsor@example.com",
         root_agent_did=agent_b_did,
         capabilities=["read", "write"],
@@ -165,7 +165,7 @@ class TestDelegationLinkExpiry:
         assert not link.is_valid()
 
 
-class TestDelegationChainWithExpiredLinks:
+class TestScopeChainWithExpiredLinks:
     """Chain verification with expired links in the chain."""
 
     def test_chain_with_expired_link_verify_passes_structurally(self):

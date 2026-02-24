@@ -117,7 +117,7 @@ security: security-related changes
 
 - Protocol-agnostic identity (SPIFFE, DID, X.509)
 - Cryptographic trust verification
-- Immutable audit trails (Merkle trees)
+- Immutable audit trails (hash chain trees)
 - Compliance-first design (SOC2, HIPAA, EU AI Act)
 - Minimal attack surface
 - Agent-OS integration for IATP

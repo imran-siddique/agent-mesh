@@ -11,7 +11,7 @@ Provides six trust-management tools over MCP:
 | `check_trust` | Check if an agent is trusted — returns trust score |
 | `get_trust_score` | Detailed trust score breakdown |
 | `establish_handshake` | Initiate a cryptographic trust handshake with a peer |
-| `verify_delegation` | Verify a delegation chain is valid |
+| `verify_delegation` | Verify a scope chain is valid |
 | `record_interaction` | Record an interaction outcome to update trust |
 | `get_identity` | Get this server's DID, public key, and capabilities |
 

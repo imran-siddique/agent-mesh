@@ -92,7 +92,7 @@ CloudEvents is a specification for describing event data in a common way. By ado
     "violation_reason": "Command matches destructive pattern",
     "severity": "critical",
     "action_taken": "blocked",
-    "merkle_proof": {
+    "hash_chain_proof": {
       "entry_hash": "sha256:...",
       "previous_hash": "sha256:...",
       "chain_position": 1542
@@ -120,7 +120,7 @@ CloudEvents is a specification for describing event data in a common way. By ado
     "result_hash": "sha256:...",
     "policy_verdict": "allowed",
     "policies_evaluated": ["policy-read-only", "policy-no-pii"],
-    "merkle_proof": {
+    "hash_chain_proof": {
       "entry_hash": "sha256:...",
       "previous_hash": "sha256:..."
     }
@@ -188,7 +188,7 @@ AgentMesh defines these extension attributes:
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
-| `agentmeshmerkleroot` | String | Current Merkle tree root hash |
+| `agentmeshhashchainroot` | String | Current hash chain tree root hash |
 | `agentmeshtrustscope` | String | Trust scope (local, federated) |
 | `agentmeshpolicyversion` | String | Policy engine version |
 

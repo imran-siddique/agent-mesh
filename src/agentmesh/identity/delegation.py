@@ -1,5 +1,5 @@
 """
-Delegation Chains
+Scope Chains
 
 Simple scope passing: sub-agent gets parent's scopes minus any denied ones.
 """
@@ -20,7 +20,7 @@ class UserContext(BaseModel):
     User context for On-Behalf-Of (OBO) flows.
 
     When an agent acts on behalf of an end user, this context propagates
-    through the delegation chain so downstream agents can enforce
+    through the scope chain so downstream agents can enforce
     user-level access control.
     """
 
@@ -71,7 +71,7 @@ class UserContext(BaseModel):
 
 class DelegationLink(BaseModel):
     """
-    A single link in a delegation chain.
+    A single link in a scope chain.
     
     Each link represents a parent granting capabilities to a child.
     The child's capabilities MUST be a subset of the parent's.
@@ -147,9 +147,9 @@ class DelegationLink(BaseModel):
         return True
 
 
-class DelegationChain(BaseModel):
+class ScopeChain(BaseModel):
     """
-    Simple delegation chain from root sponsor to current agent.
+    Simple scope chain from root sponsor to current agent.
     
     Sub-agent gets parent's scopes minus any denied ones.
     No cryptographic chain verification.
@@ -217,7 +217,7 @@ class DelegationChain(BaseModel):
     chain_hash: str = Field(default="", description="Hash of entire chain")
     
     def get_depth(self) -> int:
-        """Return the current depth of the delegation chain."""
+        """Return the current depth of the scope chain."""
         return len(self.links)
 
     def add_link(self, link: DelegationLink) -> None:
@@ -225,7 +225,7 @@ class DelegationChain(BaseModel):
         new_depth = len(self.links) + 1
         if new_depth > self.max_depth:
             raise DelegationDepthError(
-                f"Delegation chain depth {new_depth} exceeds maximum allowed depth "
+                f"Scope chain depth {new_depth} exceeds maximum allowed depth "
                 f"of {self.max_depth}"
             )
 
@@ -325,7 +325,7 @@ class DelegationChain(BaseModel):
         root_agent_did: str,
         capabilities: list[str],
         sponsor_verified: bool = False,
-    ) -> tuple["DelegationChain", DelegationLink]:
+    ) -> tuple["ScopeChain", DelegationLink]:
         """Create a new chain with a root sponsor."""
         import uuid
         

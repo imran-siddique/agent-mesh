@@ -2,7 +2,7 @@
 Human Sponsor
 
 Every agent identity is linked to a human sponsor who is accountable.
-The sponsor's credentials are cryptographically linked to the delegation chain.
+The sponsor's credentials are cryptographically linked to the scope chain.
 """
 
 from datetime import datetime
@@ -38,7 +38,7 @@ class HumanSponsor(BaseModel):
     
     # Permissions
     max_agents: int = Field(default=10, description="Max agents this sponsor can create")
-    max_delegation_depth: int = Field(default=3, description="Max delegation chain depth")
+    max_delegation_depth: int = Field(default=3, description="Max scope chain depth")
     allowed_capabilities: list[str] = Field(default_factory=list)
     
     # Status

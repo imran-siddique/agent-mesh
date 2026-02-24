@@ -1555,7 +1555,7 @@ class TestCredentialManager:
 # ---------------------------------------------------------------------------
 # identity/delegation.py
 # ---------------------------------------------------------------------------
-from agentmesh.identity.delegation import DelegationLink, DelegationChain
+from agentmesh.identity.delegation import DelegationLink, ScopeChain
 
 
 class TestDelegationLink:
@@ -1623,30 +1623,30 @@ class TestDelegationLink:
         assert link.is_valid() is True
 
 
-class TestDelegationChain:
+class TestScopeChain:
     def test_create_root(self):
-        chain, link = DelegationChain.create_root(
+        chain, link = ScopeChain.create_root(
             "admin@org.com", "did:mesh:root", ["read:data", "write:data"]
         )
         assert chain.root_sponsor_email == "admin@org.com"
         assert link.depth == 0
 
     def test_add_link(self):
-        chain, link = DelegationChain.create_root(
+        chain, link = ScopeChain.create_root(
             "admin@org.com", "did:mesh:root", ["read:data"]
         )
         chain.add_link(link)
         assert chain.total_depth == 1
 
     def test_verify_empty(self):
-        chain, _ = DelegationChain.create_root(
+        chain, _ = ScopeChain.create_root(
             "admin@org.com", "did:mesh:root", ["read:data"]
         )
         valid, err = chain.verify()
         assert valid is True
 
     def test_verify_valid_chain(self):
-        chain, link = DelegationChain.create_root(
+        chain, link = ScopeChain.create_root(
             "admin@org.com", "did:mesh:root", ["read:data"]
         )
         chain.add_link(link)
@@ -1654,7 +1654,7 @@ class TestDelegationChain:
         assert valid is True
 
     def test_get_effective_capabilities(self):
-        chain, link = DelegationChain.create_root(
+        chain, link = ScopeChain.create_root(
             "admin@org.com", "did:mesh:root", ["read:data"]
         )
         assert chain.get_effective_capabilities() == ["read:data"]
@@ -1662,7 +1662,7 @@ class TestDelegationChain:
         assert "read:data" in chain.get_effective_capabilities()
 
     def test_trace_capability(self):
-        chain, link = DelegationChain.create_root(
+        chain, link = ScopeChain.create_root(
             "admin@org.com", "did:mesh:root", ["read:data"]
         )
         chain.add_link(link)

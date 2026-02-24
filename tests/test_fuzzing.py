@@ -1,7 +1,7 @@
 """
 Fuzz tests for identity and delegation parsers.
 
-Exercises AgentIdentity, AgentDID, DelegationChain, DelegationLink,
+Exercises AgentIdentity, AgentDID, ScopeChain, DelegationLink,
 and JWK import with malformed inputs to ensure clean error handling.
 No crashes, unhandled exceptions, or hangs.
 """
@@ -11,7 +11,7 @@ from pydantic import ValidationError
 
 from agentmesh.exceptions import AgentMeshError
 from agentmesh.identity.agent_id import AgentDID, AgentIdentity
-from agentmesh.identity.delegation import DelegationChain, DelegationLink, UserContext
+from agentmesh.identity.delegation import ScopeChain, DelegationLink, UserContext
 
 # ---------------------------------------------------------------------------
 # Acceptable exception types — parsers must raise one of these or succeed
@@ -272,13 +272,13 @@ class TestJWKFuzzing:
 
 
 # ===========================================================================
-# DelegationChain fuzzing
+# ScopeChain fuzzing
 # ===========================================================================
-class TestDelegationChainFuzzing:
+class TestScopeChainFuzzing:
     @pytest.mark.fuzz
     @pytest.mark.parametrize("val", MALFORMED_DICTS + WRONG_TYPES, ids=lambda v: repr(v)[:60])
     def test_model_validate_malformed(self, val):
-        assert_clean(DelegationChain.model_validate, val)
+        assert_clean(ScopeChain.model_validate, val)
 
     @pytest.mark.fuzz
     @pytest.mark.parametrize(
@@ -307,18 +307,18 @@ class TestDelegationChainFuzzing:
     )
     def test_mutated_valid_chain(self, field, bad_value):
         """Create a valid chain dict, mutate one field, verify clean handling."""
-        chain, _ = DelegationChain.create_root(
+        chain, _ = ScopeChain.create_root(
             sponsor_email="test@test.dev",
             root_agent_did="did:mesh:abc123",
             capabilities=["read"],
         )
         data = chain.model_dump()
         data[field] = bad_value
-        assert_clean(DelegationChain.model_validate, data)
+        assert_clean(ScopeChain.model_validate, data)
 
     @pytest.mark.fuzz
     def test_missing_required_fields(self):
-        chain, _ = DelegationChain.create_root(
+        chain, _ = ScopeChain.create_root(
             sponsor_email="test@test.dev",
             root_agent_did="did:mesh:abc123",
             capabilities=["read"],
@@ -327,19 +327,19 @@ class TestDelegationChainFuzzing:
         for field in required:
             data = chain.model_dump()
             del data[field]
-            assert_clean(DelegationChain.model_validate, data)
+            assert_clean(ScopeChain.model_validate, data)
 
     @pytest.mark.fuzz
     def test_extra_unexpected_fields(self):
-        chain, _ = DelegationChain.create_root(
+        chain, _ = ScopeChain.create_root(
             sponsor_email="test@test.dev",
             root_agent_did="did:mesh:abc123",
             capabilities=["read"],
         )
         data = chain.model_dump()
         data["evil"] = {"nested": {"deep": True}}
-        data["__class__"] = "DelegationChain"
-        assert_clean(DelegationChain.model_validate, data)
+        data["__class__"] = "ScopeChain"
+        assert_clean(ScopeChain.model_validate, data)
 
 
 # ===========================================================================
@@ -371,7 +371,7 @@ class TestDelegationLinkFuzzing:
         ],
     )
     def test_mutated_valid_link(self, field, bad_value):
-        _, link = DelegationChain.create_root(
+        _, link = ScopeChain.create_root(
             sponsor_email="test@test.dev",
             root_agent_did="did:mesh:abc123",
             capabilities=["read"],
@@ -453,9 +453,9 @@ class TestBulkFuzzing:
             assert_clean(AgentIdentity.from_jwk, inp)
 
     @pytest.mark.fuzz
-    def test_delegation_chain_bulk(self):
+    def test_scope_chain_bulk(self):
         for inp in self.BULK_INPUTS:
-            assert_clean(DelegationChain.model_validate, inp)
+            assert_clean(ScopeChain.model_validate, inp)
 
     @pytest.mark.fuzz
     def test_delegation_link_bulk(self):

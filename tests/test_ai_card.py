@@ -239,7 +239,7 @@ class TestJSONSerialization:
         card = AICard.from_identity(identity)
         delegation_data = f"{identity.did}:{identity_b.did}:read:data"
         sig = identity.sign(delegation_data.encode())
-        card.verifiable.delegation_chain.append(
+        card.verifiable.scope_chain.append(
             DelegationRecord(
                 delegator_did=str(identity.did),
                 delegatee_did=str(identity_b.did),
@@ -249,8 +249,8 @@ class TestJSONSerialization:
         )
         json_str = card.to_json()
         restored = AICard.from_json(json_str)
-        assert len(restored.verifiable.delegation_chain) == 1
-        assert restored.verifiable.delegation_chain[0].delegator_did == str(identity.did)
+        assert len(restored.verifiable.scope_chain) == 1
+        assert restored.verifiable.scope_chain[0].delegator_did == str(identity.did)
 
     def test_roundtrip_with_custom(self, identity):
         card = AICard.from_identity(identity)

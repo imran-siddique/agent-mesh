@@ -2,7 +2,7 @@
 
 TypeScript SDK for [AgentMesh](../../README.md) — a governance-first framework for multi-agent systems.
 
-Provides agent identity (Ed25519 DIDs), trust scoring, policy evaluation, Merkle-chain audit logging, and a unified `AgentMeshClient`.
+Provides agent identity (Ed25519 DIDs), trust scoring, policy evaluation, hash-chain audit logging, and a unified `AgentMeshClient`.
 
 ## Installation
 
@@ -89,7 +89,7 @@ await engine.loadFromYAML('./policy.yaml');
 
 ### `AuditLogger`
 
-Append-only audit log with Merkle-chain integrity verification.
+Append-only audit log with hash-chain integrity verification.
 
 ```typescript
 import { AuditLogger } from '@agentmesh/sdk';

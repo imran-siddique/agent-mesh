@@ -10,7 +10,7 @@ First-class agent identity with:
 
 from .agent_id import AgentIdentity, AgentDID
 from .credentials import Credential, CredentialManager
-from .delegation import DelegationChain, DelegationLink, UserContext
+from .delegation import ScopeChain, DelegationLink, UserContext
 from .sponsor import HumanSponsor
 from .risk import RiskScorer, RiskScore
 from .spiffe import SPIFFEIdentity, SVID
@@ -27,7 +27,7 @@ __all__ = [
     "AgentDID",
     "Credential",
     "CredentialManager",
-    "DelegationChain",
+    "ScopeChain",
     "DelegationLink",
     "UserContext",
     "HumanSponsor",

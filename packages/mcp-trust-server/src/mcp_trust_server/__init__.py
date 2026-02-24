@@ -9,7 +9,7 @@ Tools:
 - check_trust: Check if an agent is trusted
 - get_trust_score: Get detailed trust score with all 5 dimensions
 - establish_handshake: Initiate trust handshake with a peer agent
-- verify_delegation: Verify a delegation chain is valid
+- verify_delegation: Verify a scope chain is valid
 - record_interaction: Record an interaction outcome to update trust
 - get_identity: Get this agent's identity info
 """

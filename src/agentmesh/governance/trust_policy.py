@@ -119,7 +119,7 @@ class TrustDefaults(BaseModel):
     """Default trust policy parameters applied when no rule matches."""
 
     min_trust_score: int = Field(default=500, description="Minimum trust score required")
-    max_delegation_depth: int = Field(default=3, description="Maximum delegation chain depth")
+    max_delegation_depth: int = Field(default=3, description="Maximum scope chain depth")
     allowed_namespaces: list[str] = Field(
         default_factory=lambda: ["*"], description="Allowed agent namespaces"
     )

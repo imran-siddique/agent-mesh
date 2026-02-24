@@ -85,7 +85,7 @@ sequenceDiagram
 
 ---
 
-## 3. Delegation Chain Verification
+## 3. Scope Chain Verification
 
 Agent A delegates to Agent B, who sub-delegates to Agent C. When Agent C presents its
 chain to a verifier, the chain is walked back to the root sponsor.
@@ -199,4 +199,4 @@ sequenceDiagram
 - [Architecture Overview](../ARCHITECTURE.md)
 - [Trust Scoring Algorithm](trust-scoring.md)
 - [ADR-001: Ed25519 Keys](adr/001-ed25519-keys.md)
-- [ADR-003: Delegation Chain Design](adr/003-delegation-chain-design.md)
+- [ADR-003: Scope Chain Design](adr/003-scope-chain-design.md)

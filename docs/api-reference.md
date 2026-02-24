@@ -84,17 +84,17 @@ Manages credential lifecycle — issuance, validation, rotation, revocation.
 | `cleanup_expired` | `() → int` | Remove expired credentials. |
 | `on_revocation` | `(callback: Callable) → None` | Register a revocation callback. |
 
-### `DelegationChain` / `DelegationLink`
+### `ScopeChain` / `DelegationLink`
 
-Cryptographic delegation chains that can only narrow capabilities.
+Cryptographic scope chains that can only narrow capabilities.
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `DelegationChain.create_root` | `(sponsor_email, root_agent_did, capabilities, sponsor_verified?) → tuple` | Create the root of a chain. |
-| `DelegationChain.add_link` | `(link: DelegationLink) → None` | Append a delegation link. |
-| `DelegationChain.verify` | `() → tuple[bool, str \| None]` | Verify entire chain integrity. |
-| `DelegationChain.get_effective_capabilities` | `() → list[str]` | Compute narrowed capabilities. |
-| `DelegationChain.trace_capability` | `(capability: str) → list[dict]` | Trace a capability through the chain. |
+| `ScopeChain.create_root` | `(sponsor_email, root_agent_did, capabilities, sponsor_verified?) → tuple` | Create the root of a chain. |
+| `ScopeChain.add_link` | `(link: DelegationLink) → None` | Append a delegation link. |
+| `ScopeChain.verify` | `() → tuple[bool, str \| None]` | Verify entire chain integrity. |
+| `ScopeChain.get_effective_capabilities` | `() → list[str]` | Compute narrowed capabilities. |
+| `ScopeChain.trace_capability` | `(capability: str) → list[dict]` | Trace a capability through the chain. |
 | `DelegationLink.verify_capability_narrowing` | `() → bool` | Verify child caps ⊆ parent caps. |
 | `DelegationLink.is_valid` | `() → bool` | Check link validity. |
 
@@ -344,23 +344,23 @@ Automated compliance mapping for SOC 2, HIPAA, EU AI Act, and NIST.
 | `remediate_violation` | `(violation_id, notes) → bool` | Mark violation as remediated. |
 | `get_violations` | `(framework?, agent_did?, remediated?) → list[ComplianceViolation]` | Query violations. |
 
-### `AuditLog` / `MerkleAuditChain`
+### `AuditLog` / `HashChainAuditLog`
 
-Tamper-evident audit logging with Merkle-chain integrity.
+Tamper-evident audit logging with hash-chain integrity.
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
 | `AuditLog.log` | `(event_type, agent_did, action, resource?, data?, outcome?, …) → AuditEntry` | Log an audit entry. |
 | `AuditLog.query` | `(agent_did?, event_type?, start_time?, end_time?, outcome?, limit?) → list[AuditEntry]` | Query entries. |
-| `AuditLog.verify_integrity` | `() → tuple[bool, str \| None]` | Verify Merkle chain integrity. |
+| `AuditLog.verify_integrity` | `() → tuple[bool, str \| None]` | Verify hash chain integrity. |
 | `AuditLog.export_cloudevents` | `(start_time?, end_time?) → list[dict]` | Export as CloudEvents. |
-| `MerkleAuditChain.add_entry` | `(entry: AuditEntry) → None` | Add entry to chain. |
-| `MerkleAuditChain.get_proof` | `(entry_id: str) → list[tuple] \| None` | Get Merkle proof. |
-| `MerkleAuditChain.verify_chain` | `() → tuple[bool, str \| None]` | Verify full chain. |
+| `HashChainAuditLog.add_entry` | `(entry: AuditEntry) → None` | Add entry to chain. |
+| `HashChainAuditLog.get_proof` | `(entry_id: str) → list[tuple] \| None` | Get hash chain proof. |
+| `HashChainAuditLog.verify_chain` | `() → tuple[bool, str \| None]` | Verify full chain. |
 
 ### `PersistentAuditLog`
 
-Async file-backed audit log with Merkle integrity.
+Async file-backed audit log with hash chain integrity.
 
 | Method | Signature | Description |
 |--------|-----------|-------------|

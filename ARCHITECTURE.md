@@ -1,7 +1,7 @@
 # AgentMesh Architecture
 
 > Trust-first communication layer for AI agents — cryptographic identity,
-> multi-dimensional trust scoring, delegation chains, and governance enforcement.
+> multi-dimensional trust scoring, scope chains, and governance enforcement.
 
 ## 1. Overview
 
@@ -69,7 +69,7 @@ graph LR
     subgraph "Layer 3 — Governance"
         Pol["Policy Engine<br/>YAML/JSON + Rego"]
         OPA["OPA Integration"]
-        Audit["Merkle Audit<br/>Chain"]
+        Audit["Hash Chain Audit<br/>Chain"]
         Shadow["Shadow Mode"]
     end
 
@@ -98,9 +98,9 @@ graph LR
 
 | Layer | Responsibility | Key Modules |
 |-------|---------------|-------------|
-| **1 — Identity** | Ed25519 key pairs, DID generation (`did:mesh:<hex>`), SPIFFE mTLS, AI Card discovery, delegation chains | `identity/` |
+| **1 — Identity** | Ed25519 key pairs, DID generation (`did:mesh:<hex>`), SPIFFE mTLS, AI Card discovery, scope chains | `identity/` |
 | **2 — Trust** | 5-dimension trust scoring (0–1000), 3-phase handshake (<200 ms), TrustBridge protocol unification, capability grants | `trust/` |
-| **3 — Governance** | Declarative policy rules (<5 ms), OPA/Rego integration, Merkle audit trails, compliance mapping (EU AI Act, SOC 2, HIPAA, GDPR), shadow mode | `governance/` |
+| **3 — Governance** | Declarative policy rules (<5 ms), OPA/Rego integration, hash chain audit trails, compliance mapping (EU AI Act, SOC 2, HIPAA, GDPR), shadow mode | `governance/` |
 | **4 — Reward** | Reputation engine, weighted scoring, trust decay (2 pts/hr), anomaly detection (5 classes) | `reward/` |
 
 ---
@@ -257,7 +257,7 @@ flowchart LR
     Verdict1 --> Merge[Merge Verdicts]
     Verdict2 --> Merge
     Merge --> Comp[Compliance Mapping<br/>governance/compliance.py]
-    Comp --> Audit[Merkle Audit Chain<br/>governance/audit.py]
+    Comp --> Audit[Hash Chain Audit Chain<br/>governance/audit.py]
     Audit --> CE[CloudEvents v1.0<br/>Azure Event Grid<br/>AWS EventBridge<br/>Splunk]
 
     Shadow[Shadow Mode<br/>governance/shadow.py] -.->|dry-run<br/>&lt; 2 % divergence| PE
@@ -270,7 +270,7 @@ flowchart LR
 | **Policy** | `governance/policy.py` | Declarative YAML/JSON rules with rate limiting |
 | **OPA** | `governance/opa.py` | Rego policy evaluation (Kubernetes-familiar) |
 | **Compliance** | `governance/compliance.py` | Maps actions → EU AI Act, SOC 2, HIPAA, GDPR controls |
-| **Audit** | `governance/audit.py` | Merkle tree audit chain, tamper-evident, CloudEvents export |
+| **Audit** | `governance/audit.py` | hash chain tree audit chain, tamper-evident, CloudEvents export |
 | **Persistent Audit** | `governance/persistent_audit.py` | Durable audit log storage |
 | **Shadow** | `governance/shadow.py` | Test new policies in parallel; batch replay support |
 
@@ -289,7 +289,7 @@ sequenceDiagram
     OPA-->>Policy: rego verdict
     Policy->>Policy: merge verdicts<br/>(most restrictive wins)
     Policy-->>Agent: allow | deny | warn
-    Policy->>Audit: append to Merkle chain
+    Policy->>Audit: append to hash chain
 ```
 
 ---

@@ -250,9 +250,9 @@ class MeshMetrics:
                 f"{prefix}_active_agents_total",
                 "Number of active agents in the mesh",
             )
-            self.delegation_chain_depth = Histogram(
-                f"{prefix}_delegation_chain_depth",
-                "Delegation chain depths",
+            self.scope_chain_depth = Histogram(
+                f"{prefix}_scope_chain_depth",
+                "Scope chain depths",
             )
             self.failed_verifications = Counter(
                 f"{prefix}_failed_verifications_total",
@@ -312,14 +312,14 @@ class MeshMetrics:
         self.failed_verifications.labels(reason=reason).inc()
 
     def record_delegation(self, depth: int) -> None:
-        """Record a delegation chain depth observation.
+        """Record a scope chain depth observation.
 
         Args:
-            depth: Depth of the delegation chain.
+            depth: Depth of the scope chain.
         """
         if not self._enabled:
             return
-        self.delegation_chain_depth.observe(depth)
+        self.scope_chain_depth.observe(depth)
 
     def record_policy_evaluation(self, decision: str) -> None:
         """Record a policy evaluation decision.

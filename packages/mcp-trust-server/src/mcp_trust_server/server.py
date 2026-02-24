@@ -256,7 +256,7 @@ def establish_handshake(peer_did: str, capabilities: list[str]) -> dict:
 def verify_delegation(
     agent_did: str, delegator_did: str, capability: str
 ) -> dict:
-    """Verify that a delegation chain from *delegator_did* to *agent_did* is valid.
+    """Verify that a scope chain from *delegator_did* to *agent_did* is valid.
 
     Checks that the agent's DID is known, the delegator's trust score is
     sufficient, and the requested capability is plausible.

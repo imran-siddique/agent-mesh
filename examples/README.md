@@ -32,7 +32,7 @@ Each example is self-contained with its own README and dependencies. Navigate to
 
 **What you'll learn:**
 - Agent-to-agent (A2A) trust handshakes
-- Delegation chains (supervisor → specialist agents)
+- Scope chains (supervisor → specialist agents)
 - Cross-agent capability scoping
 - Collaborative trust scoring
 
@@ -46,7 +46,7 @@ Each example is self-contained with its own README and dependencies. Navigate to
 **What you'll learn:**
 - HIPAA compliance automation
 - PHI (Protected Health Information) handling policies
-- Merkle-chained audit logs for compliance
+- hash-chained audit logs for compliance
 - Automated compliance report generation
 
 **Best for:** Healthcare organizations, compliance teams

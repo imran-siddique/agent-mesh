@@ -12,7 +12,7 @@ from typing import Any
 
 import pytest
 
-from agentmesh.identity import AgentIdentity, DelegationChain, DelegationLink
+from agentmesh.identity import AgentIdentity, ScopeChain, DelegationLink
 from agentmesh.reward.scoring import (
     DimensionType,
     RewardDimension,

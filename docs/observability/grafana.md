@@ -33,7 +33,7 @@ The exporter exposes the following metrics:
 | `agentmesh_policy_violations_total` | Counter | `policy_id` | Policy violations |
 | `agentmesh_active_agents` | Gauge | — | Active agent count |
 | `agentmesh_handshake_latency_seconds` | Histogram | — | Handshake latency |
-| `agentmesh_delegation_depth` | Histogram | — | Delegation chain depth |
+| `agentmesh_delegation_depth` | Histogram | — | Scope chain depth |
 | `agentmesh_audit_entries_total` | Counter | `event_type` | Audit log entries |
 
 ## 2. Configure Prometheus
@@ -64,7 +64,7 @@ The dashboard includes:
 * **Trust Score Distribution** — histogram
 * **Top 10 Most Trusted Agents** — table
 * **Handshake Latency p50 / p95 / p99** — time series
-* **Delegation Chain Depth** — histogram
+* **Scope Chain Depth** — histogram
 
 ## 4. Import alerting rules
 

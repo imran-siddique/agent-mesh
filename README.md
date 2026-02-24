@@ -292,7 +292,7 @@ identity = AgentIdentity.create(
 )
 ```
 
-### 2. Delegation Chains
+### 2. Scope Chains
 
 Agents can delegate to sub-agents, but scope **always narrows**:
 
@@ -379,7 +379,7 @@ agentmesh/
 ├── identity/           # Layer 1: Identity & Zero-Trust
 │   ├── agent_id.py     # Agent identity management (DIDs, Ed25519 keys)
 │   ├── credentials.py  # Ephemeral credential issuance (15-min TTL)
-│   ├── delegation.py   # Delegation chains
+│   ├── delegation.py   # Scope chains
 │   ├── spiffe.py       # SPIFFE/SVID integration
 │   ├── risk.py         # Continuous risk scoring
 │   └── sponsor.py      # Human sponsor accountability
@@ -485,7 +485,7 @@ See our [full roadmap](docs/roadmap.md) for details.
 | Service wrapper for audit | `services/audit/` | Core audit module (`governance/audit.py`) is complete; service layer wrapper is a TODO |
 | Service wrapper for reward engine | `services/reward_engine/` | Core reward engine (`reward/engine.py`) is complete; service layer wrapper is a TODO |
 | Mesh control plane | `services/mesh-control-plane/` | Placeholder directory; no implementation yet |
-| Delegation chain cryptographic verification | `packages/langchain-agentmesh/trust.py` | Simulated verification; full cryptographic chain validation not yet implemented |
+| Scope chain cryptographic verification | `packages/langchain-agentmesh/trust.py` | Simulated verification; full cryptographic chain validation not yet implemented |
 
 ### Integration Caveats (Dify)
 

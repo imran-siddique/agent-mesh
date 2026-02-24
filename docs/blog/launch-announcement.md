@@ -66,7 +66,7 @@ agentmesh init --name my-agent --sponsor alice@company.com
 The generated agent comes with:
 - **15-minute credential TTL** (auto-rotation)
 - **Human sponsor accountability** (cryptographic chain)
-- **Audit logging** (tamper-evident Merkle chain)
+- **Audit logging** (tamper-evident hash chain)
 - **Policy enforcement** (< 5ms evaluation)
 
 ## Architecture: Four Layers That Compound
@@ -77,7 +77,7 @@ The generated agent comes with:
 │           │  Trust scores · Multi-dimensional · Adaptive       │
 ├───────────┼─────────────────────────────────────────────────────┤
 │  LAYER 3  │  Governance & Compliance Plane                     │
-│           │  Policy engine · EU AI Act / SOC2 · Merkle audit   │
+│           │  Policy engine · EU AI Act / SOC2 · hash chain audit   │
 ├───────────┼─────────────────────────────────────────────────────┤
 │  LAYER 2  │  Trust & Protocol Bridge                           │
 │           │  A2A · MCP · IATP · Capability scoping             │
@@ -110,7 +110,7 @@ The `agentmesh-platform` package (v1.0.0-alpha) includes:
 
 **Identity Module**
 - `AgentIdentity` — Ed25519 cryptographic identity
-- `DelegationChain` — Capabilities that can only narrow, never widen
+- `ScopeChain` — Capabilities that can only narrow, never widen
 - `CredentialManager` — 15-minute TTL, auto-rotation
 
 **Trust Module**  
@@ -121,7 +121,7 @@ The `agentmesh-platform` package (v1.0.0-alpha) includes:
 **Governance Module**
 - `PolicyEngine` — YAML/JSON policies, < 5ms evaluation
 - `ComplianceEngine` — EU AI Act, SOC 2, HIPAA, GDPR mapping
-- `MerkleAuditChain` — Tamper-evident logging
+- `HashChainAuditLog` — Tamper-evident logging
 
 **Reward Module**
 - `RewardEngine` — 5-dimension scoring

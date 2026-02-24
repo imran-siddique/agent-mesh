@@ -59,7 +59,7 @@ export class AuditLogger {
     const id = randomUUID();
     const time = new Date().toISOString();
 
-    // Compute Merkle hash for tamper detection
+    // Compute hash chain hash for tamper detection
     const dataJson = JSON.stringify(event);
     const entryHash = this.computeHash(`${this.previousHash}:${dataJson}`);
     this.previousHash = entryHash;

@@ -41,7 +41,7 @@ identity = AgentIdentity.create(
     name="data-analyst-agent",
     sponsor="alice@company.com",  # Human accountability
     capabilities=["read:customer-data", "write:reports"],
-    parent_agent="did:mesh:orchestrator",  # Delegation chain
+    parent_agent="did:mesh:orchestrator",  # Scope chain
 )
 ```
 
@@ -71,7 +71,7 @@ Agent A ──trust handshake──► Agent B
 
 **Why it matters**: An agent with valid credentials can still behave maliciously. Trust scoring catches behavioral anomalies that mTLS cannot.
 
-### 3. Delegation Chains Don't Exist
+### 3. Scope Chains Don't Exist
 
 **Service Meshes**: No concept of one service delegating authority to another.
 
@@ -79,7 +79,7 @@ Agent A ──trust handshake──► Agent B
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     DELEGATION CHAIN                             │
+│                     SCOPE CHAIN                                  │
 │                                                                  │
 │   Human Sponsor                                                  │
 │        │                                                         │
@@ -102,7 +102,7 @@ Agent A ──trust handshake──► Agent B
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**Why it matters**: LLM agents spawn sub-agents constantly. Without delegation chains, you can't prevent privilege escalation.
+**Why it matters**: LLM agents spawn sub-agents constantly. Without scope chains, you can't prevent privilege escalation.
 
 ### 4. Protocol Translation Is Required
 
@@ -161,7 +161,7 @@ result = compliance.evaluate(
 | Workload identity | ✅ SPIFFE | ✅ SPIFFE | ✅ SPIFFE + Agent DID |
 | Human sponsor | ❌ | ❌ | ✅ |
 | Capability scoping | ❌ | ❌ | ✅ |
-| Delegation chains | ❌ | ❌ | ✅ |
+| Scope chains | ❌ | ❌ | ✅ |
 | **Trust** |
 | mTLS | ✅ | ✅ | ✅ |
 | Trust scoring | ❌ | ❌ | ✅ |
@@ -171,7 +171,7 @@ result = compliance.evaluate(
 | Traffic policies | ✅ | ✅ | ✅ |
 | Capability policies | ❌ | ❌ | ✅ |
 | Compliance mapping | ❌ | ❌ | ✅ |
-| Audit trails | Logs only | Logs only | ✅ Merkle-chained |
+| Audit trails | Logs only | Logs only | ✅ hash-chained |
 | **Protocol** |
 | HTTP/gRPC | ✅ | ✅ | ✅ |
 | A2A | ❌ | ❌ | ✅ |

@@ -28,11 +28,11 @@ class TrustViolationError(TrustError):
 
 
 class DelegationError(AgentMeshError):
-    """Errors related to delegation chains."""
+    """Errors related to scope chains."""
 
 
 class DelegationDepthError(DelegationError):
-    """Raised when delegation chain exceeds the configured max depth."""
+    """Raised when scope chain exceeds the configured max depth."""
 
 
 class GovernanceError(AgentMeshError):

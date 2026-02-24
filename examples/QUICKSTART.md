@@ -114,7 +114,7 @@ python main.py
 **What you'll see:**
 - PHI detection in data
 - HIPAA policy enforcement
-- Merkle-chained audit logs
+- hash-chained audit logs
 - Compliance report generation
 
 ## Key Concepts in 2 Minutes
@@ -221,15 +221,15 @@ def my_tool(input):
 
 ```python
 from crewai import Agent
-from agentmesh import DelegationChain
+from agentmesh import ScopeChain
 
 supervisor = AgentIdentity.create(name="supervisor")
-delegation_chain = DelegationChain(root=supervisor)
+scope_chain = ScopeChain(root=supervisor)
 
 # Create crew member with narrowed capabilities
 worker = Agent(
     role="Worker",
-    agentmesh_identity=delegation_chain.delegate(
+    agentmesh_identity=scope_chain.delegate(
         name="worker",
         capabilities=["task:execute"]
     )

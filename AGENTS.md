@@ -2,13 +2,13 @@
 
 ## Project Overview
 
-AgentMesh is a **trust-first communication layer for AI agents** — providing cryptographic identity, multi-dimensional trust scoring, delegation chains, and governance enforcement for multi-agent systems.
+AgentMesh is a **trust-first communication layer for AI agents** — providing cryptographic identity, multi-dimensional trust scoring, scope chains, and governance enforcement for multi-agent systems.
 
 **Architecture:** 4-layer trust stack
 
 - **Layer 1 (Identity):** Ed25519 agent identity, DID (did:mesh:xxx), AI Card integration
 - **Layer 2 (Trust):** 5-dimension trust scoring, trust decay, handshake protocol, bridges
-- **Layer 3 (Governance):** Policy enforcement, compliance, Merkle audit chains
+- **Layer 3 (Governance):** Policy enforcement, compliance, hash chain audit chains
 - **Layer 4 (Reward):** Reputation tracking, reward distribution
 
 ## Build & Test Commands

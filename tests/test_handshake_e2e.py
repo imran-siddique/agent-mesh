@@ -10,7 +10,7 @@ import uuid
 
 import pytest
 
-from agentmesh.identity import AgentIdentity, DelegationChain, DelegationLink
+from agentmesh.identity import AgentIdentity, ScopeChain, DelegationLink
 from agentmesh.trust import TrustHandshake, HandshakeResult
 
 
@@ -96,7 +96,7 @@ class TestHandshakeE2E:
         assert result_ab.latency_ms is not None and result_ab.latency_ms >= 0
 
     @pytest.mark.asyncio
-    async def test_delegation_chain_after_handshake(self):
+    async def test_scope_chain_after_handshake(self):
         """After A↔B handshake, B delegates to C, and the chain A→B→C validates."""
         agent_a = _make_identity("root-a")
         agent_b = _make_identity("mid-b")
@@ -110,7 +110,7 @@ class TestHandshakeE2E:
         agent_c = _make_identity("leaf-c")
 
         # Step 3 — B delegates a narrowed capability set to C
-        chain, root_link = DelegationChain.create_root(
+        chain, root_link = ScopeChain.create_root(
             sponsor_email="root-a@test.example.com",
             root_agent_did=str(agent_b.did),
             capabilities=["read", "write"],
@@ -131,7 +131,7 @@ class TestHandshakeE2E:
         child_link.link_hash = child_link.compute_hash()
         chain.add_link(child_link)
 
-        # Step 4 — verify delegation chain is valid
+        # Step 4 — verify scope chain is valid
         is_valid, error = chain.verify()
         assert is_valid, f"Chain verification failed: {error}"
 
@@ -141,12 +141,12 @@ class TestHandshakeE2E:
         assert len(chain.links) == 2
 
     @pytest.mark.asyncio
-    async def test_delegation_chain_capability_narrowing(self):
-        """Delegation chain enforces capability narrowing at every hop."""
+    async def test_scope_chain_capability_narrowing(self):
+        """Scope chain enforces capability narrowing at every hop."""
         agent_b = _make_identity("del-b")
         agent_c = _make_identity("del-c")
 
-        chain, root_link = DelegationChain.create_root(
+        chain, root_link = ScopeChain.create_root(
             sponsor_email="admin@test.example.com",
             root_agent_did=str(agent_b.did),
             capabilities=["read"],
@@ -171,12 +171,12 @@ class TestHandshakeE2E:
             chain.add_link(bad_link)
 
     @pytest.mark.asyncio
-    async def test_delegation_chain_trace(self):
-        """Trace a capability through the full delegation chain."""
+    async def test_scope_chain_trace(self):
+        """Trace a capability through the full scope chain."""
         agent_b = _make_identity("trace-b")
         agent_c = _make_identity("trace-c")
 
-        chain, root_link = DelegationChain.create_root(
+        chain, root_link = ScopeChain.create_root(
             sponsor_email="sponsor@test.example.com",
             root_agent_did=str(agent_b.did),
             capabilities=["read", "write", "execute"],
@@ -218,7 +218,7 @@ class TestHandshakeE2E:
         assert result_ba.trust_score > 0
 
         # 4. B delegates to C with narrowed capabilities
-        chain, root_link = DelegationChain.create_root(
+        chain, root_link = ScopeChain.create_root(
             sponsor_email="life-a@test.example.com",
             root_agent_did=str(agent_b.did),
             capabilities=["read", "write"],

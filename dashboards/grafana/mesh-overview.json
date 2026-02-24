@@ -152,7 +152,7 @@
     },
     {
       "id": 7,
-      "title": "Delegation Chain Depth",
+      "title": "Scope Chain Depth",
       "type": "histogram",
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },

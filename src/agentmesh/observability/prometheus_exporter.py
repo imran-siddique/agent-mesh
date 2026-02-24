@@ -28,7 +28,7 @@ class MeshMetricsExporter:
     * ``policy_violations_total`` — counter of policy violations
     * ``active_agents`` — gauge of currently active agents
     * ``handshake_latency_seconds`` — histogram of handshake durations
-    * ``delegation_depth`` — histogram of delegation chain depths
+    * ``delegation_depth`` — histogram of scope chain depths
     * ``audit_entries_total`` — counter of audit log entries
 
     All recording methods are safe no-ops when *prometheus_client* is not
@@ -69,7 +69,7 @@ class MeshMetricsExporter:
         )
         self.delegation_depth = Histogram(
             f"{prefix}_delegation_depth",
-            "Delegation chain depth",
+            "Scope chain depth",
             buckets=(1, 2, 3, 4, 5, 7, 10, 15),
         )
         self.audit_entries_total = Counter(
@@ -132,10 +132,10 @@ class MeshMetricsExporter:
         self.active_agents.set(count)
 
     def record_delegation(self, depth: int) -> None:
-        """Observe a delegation chain depth.
+        """Observe a scope chain depth.
 
         Args:
-            depth: Depth of the delegation chain.
+            depth: Depth of the scope chain.
         """
         if not self._enabled:
             return

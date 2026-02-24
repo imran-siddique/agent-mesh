@@ -8,7 +8,7 @@ from agentmesh.identity import (
     AgentDID,
     Credential,
     CredentialManager,
-    DelegationChain,
+    ScopeChain,
     DelegationLink,
     HumanSponsor,
     RiskScorer,
@@ -196,11 +196,11 @@ class TestCredentials:
 
 
 class TestDelegation:
-    """Tests for DelegationChain."""
+    """Tests for ScopeChain."""
     
     def test_create_chain(self):
-        """Test creating delegation chain."""
-        chain, root_link = DelegationChain.create_root(
+        """Test creating scope chain."""
+        chain, root_link = ScopeChain.create_root(
             sponsor_email="sponsor@example.com",
             root_agent_did="did:mesh:root123",
             capabilities=["read", "write", "admin"],
@@ -212,7 +212,7 @@ class TestDelegation:
     
     def test_add_delegation_link(self):
         """Test adding delegation links."""
-        chain, root_link = DelegationChain.create_root(
+        chain, root_link = ScopeChain.create_root(
             sponsor_email="sponsor@example.com",
             root_agent_did="did:mesh:root",
             capabilities=["read", "write"],
@@ -243,7 +243,7 @@ class TestDelegation:
     
     def test_capability_narrowing_enforced(self):
         """Test that capabilities can only narrow, never widen."""
-        chain, root_link = DelegationChain.create_root(
+        chain, root_link = ScopeChain.create_root(
             sponsor_email="sponsor@example.com",
             root_agent_did="did:mesh:root",
             capabilities=["read"],
@@ -287,7 +287,7 @@ class TestDelegation:
     
     def test_verify_chain(self):
         """Test chain verification."""
-        chain, root_link = DelegationChain.create_root(
+        chain, root_link = ScopeChain.create_root(
             sponsor_email="sponsor@example.com",
             root_agent_did="did:mesh:root",
             capabilities=["read", "write"],

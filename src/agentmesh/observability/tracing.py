@@ -2,7 +2,7 @@
 OpenTelemetry Tracing Integration.
 
 Provides distributed tracing for AgentMesh operations including
-trust handshakes, identity verification, delegation chains, and policy checks.
+trust handshakes, identity verification, scope chains, and policy checks.
 """
 
 from typing import Optional, Any, Callable, TypeVar
@@ -275,7 +275,7 @@ class MeshTracer:
     """OpenTelemetry tracer for AgentMesh trust operations.
 
     Provides decorators for instrumenting handshakes, identity verification,
-    delegation chains, and governance policy checks with OTel spans following
+    scope chains, and governance policy checks with OTel spans following
     agent-sre attribute naming conventions.
     """
 
@@ -399,7 +399,7 @@ class MeshTracer:
         return self._wrap("mesh.trust.verification", _extract)(func)  # type: ignore[return-value]
 
     def trace_delegation(self, func: F) -> F:
-        """Decorator for delegation chain operations.
+        """Decorator for scope chain operations.
 
         Expected keyword arguments: delegator_did, delegatee_did, chain_depth.
         """
@@ -414,7 +414,7 @@ class MeshTracer:
                 "delegator.did": kwargs.get("delegator_did") or _arg(args, 0),
                 "delegatee.did": kwargs.get("delegatee_did") or _arg(args, 1),
                 "mesh.delegation.depth": int(depth) if depth is not None else None,
-                "mesh.delegation.chain_id": (
+                "mesh.scope.chain_id": (
                     getattr(result, "chain_id", None) if result is not None else None
                 ),
             }

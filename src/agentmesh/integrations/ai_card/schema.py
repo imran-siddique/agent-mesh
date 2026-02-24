@@ -51,13 +51,13 @@ class DelegationRecord(BaseModel):
 class AICardVerifiable(BaseModel):
     """Verifiable metadata for an AI Card.
 
-    Includes trust scores, capability attestations, and delegation chains
+    Includes trust scores, capability attestations, and scope chains
     that can be cryptographically verified.
     """
 
     trust_score: float = Field(default=1.0, ge=0.0, le=1.0)
     capability_attestations: Dict[str, CapabilityAttestation] = Field(default_factory=dict)
-    delegation_chain: List[DelegationRecord] = Field(default_factory=list)
+    scope_chain: List[DelegationRecord] = Field(default_factory=list)
 
 
 class AICardService(BaseModel):
@@ -297,8 +297,8 @@ class AICard(BaseModel):
                 }
                 for k, v in self.verifiable.capability_attestations.items()
             }
-        if self.verifiable.delegation_chain:
-            verifiable["delegation_chain"] = [
+        if self.verifiable.scope_chain:
+            verifiable["scope_chain"] = [
                 {
                     "delegator_did": d.delegator_did,
                     "delegatee_did": d.delegatee_did,
@@ -307,7 +307,7 @@ class AICard(BaseModel):
                     "issued_at": d.issued_at.isoformat(),
                     **({"expires_at": d.expires_at.isoformat()} if d.expires_at else {}),
                 }
-                for d in self.verifiable.delegation_chain
+                for d in self.verifiable.scope_chain
             ]
         data["verifiable"] = verifiable
 
@@ -371,7 +371,7 @@ class AICard(BaseModel):
                     issued_at=datetime.fromisoformat(att["issued_at"]),
                     expires_at=datetime.fromisoformat(att["expires_at"]) if att.get("expires_at") else None,
                 )
-            delegation_chain = [
+            scope_chain = [
                 DelegationRecord(
                     delegator_did=d["delegator_did"],
                     delegatee_did=d["delegatee_did"],
@@ -380,12 +380,12 @@ class AICard(BaseModel):
                     issued_at=datetime.fromisoformat(d["issued_at"]),
                     expires_at=datetime.fromisoformat(d["expires_at"]) if d.get("expires_at") else None,
                 )
-                for d in v.get("delegation_chain", [])
+                for d in v.get("scope_chain", [])
             ]
             verifiable = AICardVerifiable(
                 trust_score=v.get("trust_score", 1.0),
                 capability_attestations=attestations,
-                delegation_chain=delegation_chain,
+                scope_chain=scope_chain,
             )
 
         card_signature = None

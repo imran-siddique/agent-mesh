@@ -2,7 +2,7 @@
 Multi-Agent Customer Service System with AgentMesh Governance
 
 Demonstrates:
-- Agent delegation chains (supervisor → specialists)
+- Agent scope chains (supervisor → specialists)
 - A2A trust handshakes
 - Collaborative trust scoring
 - Cross-agent audit trails
@@ -16,7 +16,7 @@ from enum import Enum
 
 from agentmesh import (
     AgentIdentity,
-    DelegationChain,
+    ScopeChain,
     TrustHandshake,
     PolicyEngine,
     AuditLog,
@@ -99,7 +99,7 @@ class SupervisorAgent(GovernedAgent):
             ]
         )
         super().__init__(identity)
-        self.delegation_chain = DelegationChain(root=identity)
+        self.scope_chain = ScopeChain(root=identity)
         self.specialists: dict = {}
     
     def create_specialists(self):
@@ -107,7 +107,7 @@ class SupervisorAgent(GovernedAgent):
         print(f"\n👥 [{self.identity.name}] Creating specialist agents...\n")
         
         # Technical Support Agent
-        technical_identity = self.delegation_chain.delegate(
+        technical_identity = self.scope_chain.delegate(
             name="technical-support-agent",
             capabilities=["read:docs", "write:tickets"]  # Narrowed
         )
@@ -119,7 +119,7 @@ class SupervisorAgent(GovernedAgent):
         print(f"    Capabilities: {technical_identity.capabilities}")
         
         # Billing Agent
-        billing_identity = self.delegation_chain.delegate(
+        billing_identity = self.scope_chain.delegate(
             name="billing-agent",
             capabilities=["read:billing", "write:billing"]  # Narrowed
         )
@@ -131,7 +131,7 @@ class SupervisorAgent(GovernedAgent):
         print(f"    Capabilities: {billing_identity.capabilities}")
         
         # Escalation Agent
-        escalation_identity = self.delegation_chain.delegate(
+        escalation_identity = self.scope_chain.delegate(
             name="escalation-agent",
             capabilities=["notify:managers", "write:tickets"]  # Narrowed
         )
@@ -284,7 +284,7 @@ async def demo_multi_agent_system():
     
     print("\n" + "="*70)
     print("💡 Key Takeaways:")
-    print("  • Delegation chains enforce capability narrowing")
+    print("  • Scope chains enforce capability narrowing")
     print("  • Trust handshakes occur before every interaction")
     print("  • All inter-agent communication is audited")
     print("  • Trust scores adapt based on performance")

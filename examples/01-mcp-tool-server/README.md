@@ -169,7 +169,7 @@ Every tool invocation creates an audit entry:
 | **Rate Limiting** | Per-tool, per-hour limits enforced |
 | **Path Restrictions** | Filesystem access limited to approved paths |
 | **Output Sanitization** | Automatic redaction of sensitive data |
-| **Audit Logging** | Merkle-chained tamper-evident logs |
+| **Audit Logging** | hash-chained tamper-evident logs |
 | **Trust Scoring** | Adaptive scoring; access revoked if score drops |
 
 ## Monitoring
