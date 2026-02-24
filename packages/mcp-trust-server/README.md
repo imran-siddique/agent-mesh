@@ -8,14 +8,14 @@ Provides six trust-management tools over MCP:
 
 | Tool | Description |
 |------|-------------|
-| `check_trust` | Check if an agent is trusted — returns trust score + dimensions |
-| `get_trust_score` | Detailed trust score with all 5 dimensions |
+| `check_trust` | Check if an agent is trusted — returns trust score |
+| `get_trust_score` | Detailed trust score breakdown |
 | `establish_handshake` | Initiate a cryptographic trust handshake with a peer |
 | `verify_delegation` | Verify a delegation chain is valid |
 | `record_interaction` | Record an interaction outcome to update trust |
 | `get_identity` | Get this server's DID, public key, and capabilities |
 
-Trust is scored across five dimensions: **competence**, **integrity**, **availability**, **predictability**, and **transparency** (0–1000 each).
+Trust is scored across multiple dimensions (0–1000 each).
 
 ## Installation
 
@@ -87,15 +87,15 @@ Add to your `claude_desktop_config.json`:
 
 ### `check_trust(agent_did: str) -> dict`
 
-Quick trust check. Returns whether the agent meets the minimum trust threshold, overall score, trust level, and all five dimension scores.
+Quick trust check. Returns whether the agent meets the minimum trust threshold, overall score, and trust level.
 
 ### `get_trust_score(agent_did: str) -> dict`
 
-Full trust breakdown — overall score, trust level, all five dimensions, interaction count, and last-updated timestamp.
+Full trust breakdown — overall score, trust level, interaction count, and last-updated timestamp.
 
 ### `establish_handshake(peer_did: str, capabilities: list[str]) -> dict`
 
-Creates a signed cryptographic challenge for a trust handshake. Returns handshake ID, signature, and status.
+Creates a challenge for a trust handshake. Returns handshake ID, signature, and status.
 
 ### `verify_delegation(agent_did: str, delegator_did: str, capability: str) -> dict`
 

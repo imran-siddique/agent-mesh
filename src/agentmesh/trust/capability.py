@@ -1,11 +1,7 @@
 """
 Capability Scoping
 
-# Community Edition — basic trust scoring and governance
-
 Simple string-based capability scope checking.
-Scope check: granted_capability.startswith(requested_capability).
-No cryptographic enforcement.
 """
 
 from datetime import datetime

@@ -1,11 +1,8 @@
 """
-Trust Decay — Community Edition
-
-# Community Edition — basic trust scoring and governance
+Trust Decay
 
 Simple linear time decay: if no positive event in X hours, reduce
-score by Y per hour.  No KL divergence, no trust contagion, no
-regime detection.
+score by Y per hour.
 """
 
 from __future__ import annotations
@@ -86,17 +83,17 @@ class NetworkTrustEngine:
     # -- Interaction graph (no-op in basic edition) ---------------------------
 
     def record_interaction(self, from_did: str, to_did: str) -> None:
-        """Record an interaction (no-op in Community Edition)."""
+        """Record an interaction."""
         pass
 
     def get_neighbors(self, agent_did: str) -> List[Tuple[str, float]]:
-        """Return empty list — no interaction graph in Community Edition."""
+        """Return empty list."""
         return []
 
     # -- Trust events ---------------------------------------------------------
 
     def record_action(self, agent_did: str, action_type: str) -> None:
-        """Record an action (no-op in Community Edition)."""
+        """Record an action."""
         pass
 
     def record_positive_signal(self, agent_did: str, bonus: float = 5.0) -> None:
@@ -154,13 +151,13 @@ class NetworkTrustEngine:
     # -- Regime detection (no-op in basic edition) ----------------------------
 
     def detect_regime_change(self, agent_did: str, now: Optional[float] = None) -> None:
-        """No regime detection in Community Edition — always returns None."""
+        """Returns None."""
         return None
 
     # -- Callbacks ------------------------------------------------------------
 
     def on_regime_change(self, handler: Callable) -> None:
-        """No-op in Community Edition."""
+        """No-op."""
         pass
 
     def on_score_change(self, handler: Callable) -> None:

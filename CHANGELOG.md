@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Layer 1: Identity & Zero-Trust Core
 - `AgentIdentity` - First-class agent identity with Ed25519 cryptographic keys
 - `AgentDID` - Decentralized identifiers for agents
-- `DelegationChain` - Cryptographic delegation chains that strictly narrow (never widen)
+- `DelegationChain` - Delegation chains for scope narrowing
 - `HumanSponsor` - Human sponsor accountability for every agent
 - `Credential` - Ephemeral credentials with 15-minute default TTL
 - `CredentialManager` - Automatic credential rotation and revocation
@@ -36,20 +36,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - HIPAA
   - GDPR
 - `AuditLog` - Comprehensive audit logging
-- `MerkleAuditChain` - Tamper-evident audit trail with Merkle-chain hashing
 - `ShadowMode` - Pre-production red-teaming with <2% divergence target
 
 #### Layer 4: Reward & Learning Engine
-- `RewardEngine` - Multi-dimensional reward scoring with 5 dimensions:
-  - Policy Compliance
-  - Resource Efficiency
-  - Output Quality
-  - Security Posture
-  - Collaboration Health
+- `RewardEngine` - Behavioral reward scoring
 - `TrustScore` - Per-agent trust scores (0-1000 scale)
-- `AdaptiveLearner` - Behavioral pattern detection and policy recommendations
-- `WeightOptimizer` - A/B testing for reward dimension weights
-- Automatic credential revocation when trust score breaches threshold
 
 #### CLI
 - `agentmesh init` - Scaffold a governed agent in 30 seconds

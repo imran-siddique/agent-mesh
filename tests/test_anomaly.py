@@ -1,9 +1,9 @@
-"""Tests for behavioral anomaly detection — removed in Community Edition."""
+"""Tests for behavioral anomaly detection."""
 
 import pytest
 
 pytestmark = pytest.mark.skip(
-    reason="anomaly.py removed in Community Edition"
+    reason="anomaly.py not included"
 )
 
 

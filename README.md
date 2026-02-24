@@ -1,6 +1,6 @@
 <div align="center">
 
-# AgentMesh
+# AgentMesh — Community Edition
 
 **SSL for AI Agents**
 
@@ -99,10 +99,10 @@ The protocols exist (A2A, MCP, IATP). The agents are shipping. **The trust layer
 │                           AGENTMESH ARCHITECTURE                            │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  LAYER 4  │  Reward & Learning Engine                                       │
-│           │  Per-agent trust scores · Multi-dimensional rewards · Adaptive  │
+│           │  Per-agent trust scores · Behavioral rewards · Adaptive          │
 ├───────────┼─────────────────────────────────────────────────────────────────┤
 │  LAYER 3  │  Governance & Compliance Plane                                  │
-│           │  Policy engine · EU AI Act / SOC2 / HIPAA · Merkle audit logs   │
+│           │  Policy engine · EU AI Act / SOC2 / HIPAA · Audit logs          │
 ├───────────┼─────────────────────────────────────────────────────────────────┤
 │  LAYER 2  │  Trust & Protocol Bridge                                        │
 │           │  A2A · MCP · IATP · Protocol translation · Capability scoping   │
@@ -129,7 +129,7 @@ AgentMesh provides:
 | **Agent Identity** | First-class identity with human sponsor accountability |
 | **Ephemeral Credentials** | 15-minute TTL by default, auto-rotation |
 | **Protocol Bridge** | Native A2A, MCP, IATP with unified trust model |
-| **Reward Engine** | Continuous behavioral scoring, not static rules |
+| **Reward Engine** | Continuous behavioral scoring |
 | **Compliance Automation** | EU AI Act, SOC 2, HIPAA, GDPR mapping |
 
 ## Quick Start
@@ -202,8 +202,8 @@ pip install -e .
 |---------|----------|--------------|
 | [Registration Hello World](./examples/00-registration-hello-world/) | Agent registration walkthrough | Identity, DID, sponsor handshake |
 | [MCP Tool Server](./examples/01-mcp-tool-server/) | Secure MCP server with governance | Rate limiting, output sanitization, audit logs |
-| [Multi-Agent Customer Service](./examples/02-customer-service/) | Customer support automation | Delegation chains, trust handshakes, A2A |
-| [Healthcare HIPAA](./examples/03-healthcare-hipaa/) | HIPAA-compliant data analysis | Compliance automation, PHI protection, Merkle audit |
+| [Multi-Agent Customer Service](./examples/02-customer-service/) | Customer support automation | Trust handshakes, delegation, A2A |
+| [Healthcare HIPAA](./examples/03-healthcare-hipaa/) | HIPAA-compliant data analysis | Compliance automation, PHI protection, audit logs |
 | [DevOps Automation](./examples/04-devops-automation/) | Just-in-time DevOps credentials | Ephemeral creds, capability scoping |
 | [GitHub PR Review](./examples/05-github-integration/) | Code review agent | Output policies, shadow mode, trust decay |
 
@@ -219,7 +219,7 @@ pip install -e .
 
 ### Trust Visualization Dashboard
 
-Interactive Streamlit dashboard with 5 tabs:
+Interactive Streamlit dashboard:
 
 ```bash
 cd examples/06-trust-score-dashboard
@@ -264,8 +264,8 @@ Tabs: Trust Network | Trust Scores | Credential Lifecycle | Protocol Traffic | C
 
 **What you get:**
 - 🔒 **Policy Enforcement** - Block dangerous operations before they execute
-- 📊 **Trust Scoring** - Behavioral monitoring (800-1000 scale)  
-- 📝 **Audit Logs** - Tamper-evident record of every action
+- 📊 **Trust Scoring** - Per-agent trust scoring (800-1000 scale)  
+- 📝 **Audit Logs** - Record of every action
 - ✅ **Verification Footers** - Visual confirmation in outputs
 
 **Set it up in 10 seconds:**
@@ -325,7 +325,7 @@ if verification.verified:
 
 ### 4. Reward Scoring
 
-Every action is scored across multiple dimensions:
+Every action is scored to maintain agent trust:
 
 ```python
 from agentmesh import RewardEngine
@@ -334,16 +334,7 @@ engine = RewardEngine()
 
 # Actions are automatically scored
 score = engine.get_agent_score("did:mesh:my-agent")
-# {
-#   "total": 847,
-#   "dimensions": {
-#     "policy_compliance": 95,
-#     "resource_efficiency": 82,
-#     "output_quality": 88,
-#     "security_posture": 91,
-#     "collaboration_health": 84
-#   }
-# }
+# Returns trust score on 0-1000 scale
 ```
 
 ### 5. Policy Engine
@@ -388,7 +379,7 @@ agentmesh/
 ├── identity/           # Layer 1: Identity & Zero-Trust
 │   ├── agent_id.py     # Agent identity management (DIDs, Ed25519 keys)
 │   ├── credentials.py  # Ephemeral credential issuance (15-min TTL)
-│   ├── delegation.py   # Cryptographic delegation chains
+│   ├── delegation.py   # Delegation chains
 │   ├── spiffe.py       # SPIFFE/SVID integration
 │   ├── risk.py         # Continuous risk scoring
 │   └── sponsor.py      # Human sponsor accountability
@@ -402,13 +393,13 @@ agentmesh/
 ├── governance/         # Layer 3: Governance & Compliance
 │   ├── policy.py       # Declarative policy engine (YAML/JSON)
 │   ├── compliance.py   # Compliance mapping (EU AI Act, SOC2, HIPAA, GDPR)
-│   ├── audit.py        # Merkle-chained audit logs
+│   ├── audit.py        # Audit logs
 │   └── shadow.py       # Shadow mode for policy testing
 │
 ├── reward/             # Layer 4: Reward & Learning
 │   ├── engine.py       # Multi-dimensional reward engine
-│   ├── scoring.py      # 5-dimension trust scoring
-│   └── learning.py     # Adaptive learning & weight optimization
+│   ├── scoring.py      # Trust scoring
+│   └── learning.py     # Adaptive learning
 │
 ├── integrations/       # Protocol & framework adapters
 │   ├── ai_card/        # AI Card standard (cross-protocol identity)
@@ -468,7 +459,7 @@ report = compliance.generate_report(
 | Prompt Injection | Tool output sanitized at Protocol Bridge |
 | Credential Theft | 15-min TTL, instant revocation on trust breach |
 | Shadow Agents | Unregistered agents blocked at network layer |
-| Delegation Escalation | Chains are cryptographically narrowing |
+| Delegation Escalation | Chains enforce scope narrowing |
 | Cascade Failure | Per-agent trust scoring isolates blast radius |
 
 ## 🗺️ Roadmap
@@ -529,7 +520,7 @@ AgentMesh builds on:
 ## Frequently Asked Questions
 
 **What is an agent mesh?**
-An agent mesh is a trust and communication infrastructure for multi-agent AI systems, analogous to a service mesh for microservices. AgentMesh provides cryptographic identity (DID-based), per-agent trust scoring (0-1000 scale), ephemeral credentials, reward distribution, and automated compliance mapping.
+An agent mesh is a trust and communication infrastructure for multi-agent AI systems, analogous to a service mesh for microservices. AgentMesh provides identity (DID-based), per-agent trust scoring (0-1000 scale), ephemeral credentials, reward distribution, and automated compliance mapping.
 
 **How does AgentMesh handle trust between agents?**
 Every agent gets a trust score from 0 to 1000 based on behavioral history, vouching from other agents, and compliance with governance policies. Trust scores gate what actions agents can perform and which sessions they can join. The score updates in real-time based on agent behavior.
@@ -538,7 +529,7 @@ Every agent gets a trust score from 0 to 1000 based on behavioral history, vouch
 AgentMesh unifies three major protocols: Google's A2A (Agent-to-Agent) for inter-agent communication, Anthropic's MCP (Model Context Protocol) for tool integration, and IATP (Inter-Agent Trust Protocol) for cryptographic trust establishment. This means agents built on different frameworks can communicate through a single trust-verified channel.
 
 **Does AgentMesh help with regulatory compliance?**
-Yes. AgentMesh provides automated compliance mapping for EU AI Act, SOC 2, HIPAA, and GDPR. Combined with tamper-evident audit trails and deterministic policy enforcement from [Agent OS](https://github.com/imran-siddique/agent-os), it provides the documentation and safety guarantees needed for regulatory compliance.
+Yes. AgentMesh provides automated compliance mapping for EU AI Act, SOC 2, HIPAA, and GDPR. Combined with audit trails and deterministic policy enforcement from [Agent OS](https://github.com/imran-siddique/agent-os), it provides the documentation and safety guarantees needed for regulatory compliance.
 
 ## Contributing
 

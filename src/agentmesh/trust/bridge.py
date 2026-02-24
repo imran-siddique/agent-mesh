@@ -1,9 +1,7 @@
 """
 Trust Bridge
 
-# Community Edition — basic trust scoring and governance
-
-Direct passthrough bridge with no protocol translation.
+Direct passthrough bridge.
 Maintains the same API surface for compatibility.
 """
 

@@ -64,14 +64,14 @@ class TestProtocolBridge:
         assert "iatp" in bridge.supported_protocols
     
     def test_a2a_to_mcp_translation(self):
-        """Protocol translation removed in Community Edition — passthrough only."""
+        """Protocol translation not available — passthrough only."""
         bridge = ProtocolBridge(agent_did="did:mesh:test")
         
         # Passthrough bridge doesn't have _a2a_to_mcp
         assert not hasattr(bridge, '_a2a_to_mcp')
     
     def test_mcp_to_a2a_translation(self):
-        """Protocol translation removed in Community Edition — passthrough only."""
+        """Protocol translation not available — passthrough only."""
         bridge = ProtocolBridge(agent_did="did:mesh:test")
         
         assert not hasattr(bridge, '_mcp_to_a2a')

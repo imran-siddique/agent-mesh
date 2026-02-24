@@ -1,10 +1,7 @@
 """
 Identity Revocation List
 
-# Community Edition — basic trust scoring and governance
-
-Manual revocation list — a simple set of revoked DIDs that's
-manually managed. No automatic trust-breach-triggered revocation.
+Manual revocation list — a simple set of revoked DIDs.
 """
 
 from datetime import datetime, timedelta, timezone

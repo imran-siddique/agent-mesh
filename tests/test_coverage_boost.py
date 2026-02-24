@@ -1616,10 +1616,10 @@ class TestDelegationLink:
         assert link.is_valid() is False
 
     def test_is_valid_bad_hash(self):
-        """Community Edition: hash verification removed, bad hash doesn't invalidate."""
+        """Bad hash doesn't invalidate link."""
         link = self._make_link()
         link.link_hash = "badhash"
-        # Community Edition: no hash verification, link is still valid
+        # No hash verification, link is still valid
         assert link.is_valid() is True
 
 
@@ -1682,7 +1682,7 @@ class TestRewardConfig:
         assert cfg.validate_weights() is True
 
     def test_validate_weights_invalid(self):
-        """Community Edition: validate_weights() always returns True."""
+        """validate_weights() always returns True."""
         cfg = RewardConfig(policy_compliance_weight=0.5)
         assert cfg.validate_weights() is True
 
@@ -1840,19 +1840,19 @@ class TestProtocolBridge:
 
     @pytest.mark.asyncio
     async def test_translate_a2a_to_mcp(self):
-        """Community Edition: _translate removed, bridge is passthrough only."""
+        """Bridge is passthrough only."""
         pb = ProtocolBridge(agent_did="did:mesh:me")
         assert not hasattr(pb, '_translate')
 
     @pytest.mark.asyncio
     async def test_translate_mcp_to_a2a(self):
-        """Community Edition: _translate removed, bridge is passthrough only."""
+        """Bridge is passthrough only."""
         pb = ProtocolBridge(agent_did="did:mesh:me")
         assert not hasattr(pb, '_translate')
 
     @pytest.mark.asyncio
     async def test_translate_iatp_passthrough(self):
-        """Community Edition: _translate removed, bridge is passthrough only."""
+        """Bridge is passthrough only."""
         pb = ProtocolBridge(agent_did="did:mesh:me")
         assert not hasattr(pb, '_translate')
 

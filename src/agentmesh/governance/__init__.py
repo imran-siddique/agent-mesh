@@ -1,8 +1,6 @@
 """
 Governance & Compliance Plane (Layer 3)
 
-# Community Edition — basic trust scoring and governance
-
 Declarative policy engine with automated compliance mapping.
 Append-only audit logs.
 """

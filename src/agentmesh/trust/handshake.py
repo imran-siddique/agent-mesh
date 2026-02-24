@@ -1,11 +1,7 @@
 """
 Trust Handshake
 
-# Community Edition — basic trust scoring and governance
-
 Simple nonce-based challenge/response handshake.
-No IATP multi-protocol integration — just generate a random nonce,
-verify it comes back.
 """
 
 from datetime import datetime, timedelta

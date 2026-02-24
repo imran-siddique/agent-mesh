@@ -1,13 +1,13 @@
 # DevOps Automation Agent
 
-Secure a DevOps agent that deploys infrastructure, manages secrets, and executes privileged operations with just-in-time credentials and delegation.
+Secure a DevOps agent that deploys infrastructure, manages secrets, and executes privileged operations with short-lived credentials and delegation.
 
 ## What This Example Shows
 
 - **Narrow Delegation:** Sub-agents for different infrastructure tasks
-- **Just-in-Time Credentials:** Short-lived credentials for privileged operations
+- **Short-Lived Credentials:** Ephemeral credentials for privileged operations
 - **Resource-Specific Capability Grants:** Fine-grained permissions
-- **Risk-Based Adaptive Scoring:** Trust score adapts to behavior
+- **Behavioral Scoring:** Trust score adapts to behavior
 
 ## Use Case
 
@@ -37,11 +37,11 @@ A DevOps automation agent that:
 
 ## Key Features
 
-### 1. Just-in-Time Credentials
+### 1. Short-Lived Credentials
 
 ```python
 # Request temporary credentials for deployment
-cred = credential_manager.issue_jit_credential(
+cred = credential_manager.issue_credential(
     agent_id=deploy_agent.did,
     scope=["deploy:production"],
     ttl_minutes=15  # Expires in 15 minutes
@@ -75,7 +75,7 @@ policies:
         approvers: ["sre-team@company.com"]
 ```
 
-### 4. Risk-Based Scoring
+### 4. Behavioral Scoring
 
 Agent trust score decreases on:
 - Failed deployments
@@ -97,10 +97,10 @@ python main.py
 
 | Feature | Implementation |
 |---------|----------------|
-| **JIT Credentials** | 15-minute TTL, auto-rotation |
+| **Short-Lived Credentials** | 15-minute TTL, auto-rotation |
 | **Narrow Delegation** | Each sub-agent has minimal capabilities |
 | **Approval Workflows** | Destructive operations require human approval |
-| **Audit Trail** | All operations logged to Merkle chain |
+| **Audit Trail** | All operations logged |
 | **Risk Scoring** | Trust score adapts to behavior |
 | **Secret Management** | Integration with HashiCorp Vault |
 
@@ -119,7 +119,7 @@ Sub-Agents:
 
 📋 Deployment Task: Deploy app-v2.0 to production
 
-  1. ✓ JIT credentials issued (TTL: 15min)
+  1. ✓ Credentials issued (TTL: 15min)
   2. ✓ Approval requested from SRE team
   3. ⏳ Waiting for approval...
   4. ✓ Approval granted by john@company.com
@@ -129,7 +129,7 @@ Sub-Agents:
 
 ## Best Practices
 
-1. **Always use JIT credentials** for production access
+1. **Always use short-lived credentials** for production access
 2. **Require approval** for destructive operations
 3. **Monitor trust scores** and set alerts
 4. **Rotate secrets** automatically
@@ -138,7 +138,7 @@ Sub-Agents:
 ## Learn More
 
 - [AgentMesh Delegation](../../docs/delegation.md)
-- [JIT Credentials](../../docs/credentials.md)
+- [Credentials](../../docs/credentials.md)
 - [Risk Scoring](../../docs/risk-scoring.md)
 
 ---

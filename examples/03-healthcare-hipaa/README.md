@@ -6,7 +6,7 @@ This example demonstrates a HIPAA-compliant healthcare data analysis agent secur
 
 - **HIPAA Compliance Automation:** Automatic compliance mapping and reporting
 - **PHI Handling Policies:** Strict policies for Protected Health Information
-- **Merkle-Chained Audit Logs:** Tamper-evident audit trail for compliance
+- **Audit Logs:** Comprehensive audit trail for compliance
 - **Automated Compliance Reports:** Generate SOC 2 and HIPAA reports on demand
 
 ## Use Case
@@ -47,7 +47,7 @@ A healthcare analytics agent that:
 |---------|----------------|
 | **Access Control** | Role-based access with minimum necessary principle |
 | **Audit Controls** | Comprehensive logging of all PHI access |
-| **Integrity** | Merkle-chained audit logs prevent tampering |
+| **Integrity** | Append-only audit logs prevent tampering |
 | **Person/Entity Authentication** | Cryptographic identity for the agent |
 | **Transmission Security** | PHI encrypted in transit (TLS 1.3) |
 | **Encryption** | PHI encrypted at rest and in transit |
@@ -105,9 +105,9 @@ agentmesh compliance-report \
   --output report.pdf
 ```
 
-### 4. Merkle-Chained Audit Trail
+### 4. Audit Trail
 
-Every PHI access creates a tamper-evident audit entry:
+Every PHI access creates an audit entry:
 
 ```json
 {
@@ -116,9 +116,7 @@ Every PHI access creates a tamper-evident audit entry:
   "action": "phi_access",
   "patient_id": "[ENCRYPTED]",
   "purpose": "analytics",
-  "approved_by": "dr.smith@hospital.com",
-  "merkle_hash": "0x7a8f...",
-  "previous_hash": "0x3c2e..."
+  "approved_by": "dr.smith@hospital.com"
 }
 ```
 

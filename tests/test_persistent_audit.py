@@ -1,9 +1,9 @@
-"""Tests for persistent audit log — removed in Community Edition."""
+"""Tests for persistent audit log."""
 
 import pytest
 
 pytestmark = pytest.mark.skip(
-    reason="persistent_audit.py removed in Community Edition"
+    reason="persistent_audit.py not included"
 )
 
 

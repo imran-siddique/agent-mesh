@@ -1,4 +1,4 @@
-"""Tests for Trust Decay — Community Edition."""
+"""Tests for Trust Decay."""
 
 import time
 import pytest
@@ -44,7 +44,7 @@ class TestScoreManagement:
 
 
 class TestInteractionGraph:
-    """Interaction graph is a no-op in Community Edition."""
+    """Interaction graph is not active."""
 
     def test_record_interaction_noop(self, engine):
         engine.record_interaction("a", "b")
@@ -76,7 +76,7 @@ class TestTrustEvents:
         assert engine.get_score("a") == 400.0
 
     def test_propagation_to_neighbor(self, engine):
-        """No propagation in Community Edition — only direct impact."""
+        """No propagation — only direct impact."""
         engine.set_score("a", 800.0)
         engine.set_score("b", 800.0)
         engine.record_interaction("a", "b")
@@ -89,7 +89,7 @@ class TestTrustEvents:
         assert engine.get_score("b") == 800.0
 
     def test_propagation_depth_limit(self):
-        """No propagation in Community Edition."""
+        """No propagation."""
         engine = NetworkTrustEngine(propagation_depth=1)
         engine.set_score("a", 800.0)
         engine.set_score("b", 800.0)
@@ -157,7 +157,7 @@ class TestTemporalDecay:
 
 
 class TestRegimeDetection:
-    """Regime detection is a no-op in Community Edition."""
+    """Regime detection is not active."""
 
     def test_always_returns_none(self, engine):
         engine.record_action("a", "db_query")
@@ -188,7 +188,7 @@ class TestQueries:
         engine.record_interaction("a", "b")
         report = engine.get_health_report()
         assert report["agent_count"] >= 1
-        assert report["edge_count"] == 0  # No interaction graph in Community Edition
+        assert report["edge_count"] == 0  # No interaction graph
 
     def test_alerts_list(self, engine):
         assert engine.alerts == []

@@ -1,10 +1,7 @@
 """
 Delegation Chains
 
-# Community Edition — basic trust scoring and governance
-
 Simple scope passing: sub-agent gets parent's scopes minus any denied ones.
-No cryptographic chain verification.
 """
 
 from datetime import datetime, timedelta

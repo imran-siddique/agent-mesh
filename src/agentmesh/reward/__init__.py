@@ -1,8 +1,6 @@
 """
 Reward & Learning Engine (Layer 4)
 
-# Community Edition — basic trust scoring and governance
-
 Behavioral feedback loop that scores agent actions
 against a governance rubric.
 """

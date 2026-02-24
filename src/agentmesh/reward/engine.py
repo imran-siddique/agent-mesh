@@ -1,8 +1,6 @@
 """
 Reward Engine
 
-# Community Edition — basic trust scoring and governance
-
 Single-dimension trust scoring with per-agent reward signals.
 """
 
@@ -45,7 +43,7 @@ class RewardConfig(BaseModel):
     trust_score: float = Field(default=0.5, ge=0.0, le=1.0)
     
     def validate_weights(self) -> bool:
-        """No-op — always passes in Community Edition."""
+        """Always passes."""
         return True
 
 

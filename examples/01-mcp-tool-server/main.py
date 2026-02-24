@@ -74,7 +74,6 @@ class GovernedMCPServer:
         print("\n📝 Initializing audit log...")
         self.audit_log = AuditLog(
             agent_id=self.identity.did,
-            merkle_chain=True  # Tamper-evident audit trail
         )
         
         # Initialize reward engine (trust scoring)

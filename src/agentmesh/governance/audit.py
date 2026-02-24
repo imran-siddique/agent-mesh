@@ -1,9 +1,7 @@
 """
 Audit Log
 
-# Community Edition — basic trust scoring and governance
-
-Append-only JSON log. No Merkle hash chaining.
+Append-only JSON log.
 AuditEntry class retains all fields for compatibility, but
 previous_hash and entry_hash are not computed.
 """
@@ -54,11 +52,11 @@ class AuditEntry(BaseModel):
     session_id: Optional[str] = None
     
     def compute_hash(self) -> str:
-        """Return empty string — no Merkle chaining in Community Edition."""
+        """Return empty string."""
         return ""
     
     def verify_hash(self) -> bool:
-        """Always returns True — no Merkle chaining in Community Edition."""
+        """Always returns True."""
         return True
 
     # ── CloudEvents v1.0 ──────────────────────────────────
@@ -103,7 +101,7 @@ class AuditEntry(BaseModel):
 
 
 class MerkleNode(BaseModel):
-    """Kept for API compatibility — not used in Community Edition."""
+    """Retained for API compatibility."""
     
     hash: str
     left_child: Optional[str] = None
@@ -114,7 +112,7 @@ class MerkleNode(BaseModel):
 
 class MerkleAuditChain:
     """
-    Simple append-only list — no Merkle tree in Community Edition.
+    Append-only audit log.
     
     Retains the same API surface for compatibility with AuditService
     and other consumers.
@@ -128,11 +126,11 @@ class MerkleAuditChain:
         self._entries.append(entry)
     
     def get_root_hash(self) -> Optional[str]:
-        """Return None — no Merkle tree in Community Edition."""
+        """Return None."""
         return None
     
     def get_proof(self, entry_id: str) -> Optional[list[tuple[str, str]]]:
-        """Return None — no Merkle proofs in Community Edition."""
+        """Return None."""
         return None
     
     def verify_proof(
@@ -141,11 +139,11 @@ class MerkleAuditChain:
         proof: list[tuple[str, str]],
         root_hash: str,
     ) -> bool:
-        """Always returns True — no Merkle verification in Community Edition."""
+        """Always returns True."""
         return True
     
     def verify_chain(self) -> tuple[bool, Optional[str]]:
-        """Always returns valid — no chain integrity checking in Community Edition."""
+        """Always returns valid."""
         return True, None
 
 
@@ -258,11 +256,11 @@ class AuditLog:
         return results[-limit:]
     
     def verify_integrity(self) -> tuple[bool, Optional[str]]:
-        """Always valid in Community Edition."""
+        """Always valid."""
         return self._chain.verify_chain()
     
     def get_proof(self, entry_id: str) -> Optional[dict[str, Any]]:
-        """Return None — no Merkle proofs in Community Edition."""
+        """Return None."""
         return None
     
     def export(

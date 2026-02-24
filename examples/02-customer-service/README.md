@@ -25,7 +25,7 @@ This example demonstrates a governed multi-agent customer service system using A
 
 ## What This Example Shows
 
-1. **Delegation Chains:** Supervisor delegates to specialist agents with narrowed capabilities
+1. **Delegation:** Supervisor delegates to specialist agents with narrowed capabilities
 2. **A2A Trust Handshakes:** Agents verify each other's identity before communication
 3. **Collaborative Trust Scoring:** Multi-agent interactions influence trust scores
 4. **Capability Scoping:** Each sub-agent has precisely scoped permissions
@@ -109,11 +109,11 @@ python main.py
 
 | Feature | Implementation |
 |---------|----------------|
-| **Identity Hierarchy** | Supervisor → Sub-agents with cryptographic delegation |
+| **Identity Hierarchy** | Supervisor → Sub-agents with delegation |
 | **Narrow Delegation** | Sub-agents can only do subset of supervisor's actions |
 | **Trust Handshakes** | <200ms IATP handshakes before communication |
 | **Capability Isolation** | Technical agent can't access billing data |
-| **Cross-Agent Audit** | Merkle-chained logs across all agents |
+| **Cross-Agent Audit** | Audit logs across all agents |
 | **Trust Decay** | Poor collaboration lowers trust scores |
 
 ## Monitoring
