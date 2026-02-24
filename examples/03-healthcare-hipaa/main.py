@@ -4,7 +4,7 @@ Healthcare Data Analysis Agent with HIPAA Compliance
 Demonstrates:
 - HIPAA compliance automation
 - PHI (Protected Health Information) handling
-- Merkle-chained audit logs
+- Append-only audit logs
 - Automated compliance reporting
 """
 
@@ -17,7 +17,7 @@ from agentmesh import (
     AgentIdentity,
     ComplianceEngine,
     PolicyEngine,
-    MerkleAuditChain,
+    AuditChain,
 )
 
 
@@ -47,10 +47,10 @@ class HealthcareAgent:
         self.policy_engine = PolicyEngine()
         self._load_hipaa_policies()
         
-        # Initialize Merkle-chained audit log
+        # Initialize append-only audit log
         print("📝 Initializing tamper-evident audit log...")
-        self.audit_chain = MerkleAuditChain(agent_id=self.identity.did)
-        print("✓ Merkle audit chain initialized\n")
+        self.audit_chain = AuditChain(agent_id=self.identity.did)
+        print("✓ Audit chain initialized\n")
     
     def _load_hipaa_policies(self):
         """Load HIPAA-specific policies."""
@@ -140,7 +140,7 @@ class HealthcareAgent:
         return analysis
     
     def _audit_phi_access(self, patient_id: str, result: str, reason: str):
-        """Log PHI access to Merkle audit chain."""
+        """Log PHI access to audit chain."""
         entry = {
             "timestamp": datetime.utcnow().isoformat() + "Z",
             "agent": self.identity.did,
@@ -151,7 +151,7 @@ class HealthcareAgent:
             "compliance_frameworks": ["HIPAA-164.312(b)"]
         }
         
-        # Add to Merkle chain
+        # Add to audit chain
         # In production: self.audit_chain.append(entry)
         print(f"   📝 Audit: PHI access {result}")
     
@@ -190,7 +190,7 @@ Agent: {self.identity.did}
 
 SECURITY RULE COMPLIANCE:
 ✓ All required controls implemented
-✓ Audit logs: Merkle-chained (tamper-evident)
+✓ Audit logs: Append-only (tamper-evident)
 ✓ Access controls: Enforced via policy engine
 ✓ Encryption: TLS 1.3 (in transit), AES-256 (at rest)
 
@@ -253,7 +253,7 @@ async def demo_healthcare_agent():
     print("\n💡 Key HIPAA Features Demonstrated:")
     print("  • PHI detection and protection")
     print("  • Policy-based access control")
-    print("  • Merkle-chained audit logs")
+    print("  • Append-only audit logs")
     print("  • Automated compliance reporting")
     print("  • Minimum necessary access principle")
     print("="*70)

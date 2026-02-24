@@ -12,7 +12,7 @@ from agentmesh.governance import (
     ComplianceEngine,
     ComplianceFramework,
     AuditLog,
-    MerkleAuditChain,
+    AuditChain,
     ShadowMode,
 )
 
@@ -177,7 +177,7 @@ class TestCompliance:
 
 
 class TestAudit:
-    """Tests for AuditLog and MerkleAuditChain."""
+    """Tests for AuditLog and AuditChain."""
     
     def test_audit_entry(self):
         """Test creating and logging an audit entry."""
@@ -210,11 +210,11 @@ class TestAudit:
         all_entries = audit_log.query(event_type="action")
         assert len(all_entries) == 3
     
-    def test_merkle_chain(self):
+    def test_audit_chain(self):
         """Test append-only audit log."""
         from agentmesh.governance.audit import AuditEntry
         
-        chain = MerkleAuditChain()
+        chain = AuditChain()
         
         entry = AuditEntry(
             event_type="test",
@@ -230,7 +230,7 @@ class TestAudit:
         proof = chain.get_proof(entry.entry_id)
         assert proof is None
     
-    def test_merkle_tamper_detection(self):
+    def test_chain_tamper_detection(self):
         """Test that chain tampering is detected."""
         audit_log = AuditLog()
         
@@ -251,7 +251,7 @@ class TestAudit:
         
         export = audit_log.export()
         assert export["entry_count"] == 1
-        assert export["merkle_root"] is None  # No Merkle tree
+        assert export["chain_root"] is None  # No chain root
 
 
 class TestShadowMode:

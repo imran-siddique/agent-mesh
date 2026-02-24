@@ -100,7 +100,7 @@ class AuditEntry(BaseModel):
         }
 
 
-class MerkleNode(BaseModel):
+class ChainNode(BaseModel):
     """Retained for API compatibility."""
     
     hash: str
@@ -110,7 +110,7 @@ class MerkleNode(BaseModel):
     entry_id: Optional[str] = None
 
 
-class MerkleAuditChain:
+class AuditChain:
     """
     Append-only audit log.
     
@@ -155,7 +155,7 @@ class AuditLog:
     """
     
     def __init__(self):
-        self._chain = MerkleAuditChain()
+        self._chain = AuditChain()
         self._by_agent: dict[str, list[str]] = {}
         self._by_type: dict[str, list[str]] = {}
     
@@ -273,7 +273,7 @@ class AuditLog:
         
         return {
             "exported_at": datetime.utcnow().isoformat(),
-            "merkle_root": self._chain.get_root_hash(),
+            "chain_root": self._chain.get_root_hash(),
             "entry_count": len(entries),
             "entries": [e.model_dump() for e in entries],
         }

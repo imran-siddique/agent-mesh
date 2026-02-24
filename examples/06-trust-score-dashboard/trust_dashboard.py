@@ -149,7 +149,7 @@ def _build_audit_log(n: int = 20) -> pd.DataFrame:
     rng = np.random.default_rng(11)
     events = [
         "Trust score re-evaluated", "Credential rotated", "Compliance check passed",
-        "Anomaly flagged", "DID resolved", "Merkle proof verified",
+        "Anomaly flagged", "DID resolved", "Chain proof verified",
         "Credential expired", "Trust decay applied", "Policy violation detected",
         "Audit trail anchored",
     ]
@@ -507,7 +507,7 @@ with tab_compliance:
         compliance_rows.append(row)
     st.dataframe(pd.DataFrame(compliance_rows), use_container_width=True, hide_index=True)
 
-    col_audit, col_merkle = st.columns(2)
+    col_audit, col_chain = st.columns(2)
 
     with col_audit:
         st.subheader("Audit Log")
@@ -521,19 +521,19 @@ with tab_compliance:
         audit_df["severity"] = audit_df["severity"].apply(_sev_badge)
         st.dataframe(audit_df, use_container_width=True, hide_index=True, height=400)
 
-    with col_merkle:
-        st.subheader("Merkle Audit Trail Verification")
-        merkle_rows = []
+    with col_chain:
+        st.subheader("Audit Chain Verification")
+        chain_rows = []
         for a in filtered:
             root = hashlib.sha256(a["name"].encode()).hexdigest()[:16]
             verified = rng.random() > 0.1
-            merkle_rows.append({
+            chain_rows.append({
                 "agent": a["name"],
-                "merkle_root": f"0x{root}",
+                "chain_root": f"0x{root}",
                 "verified": "\u2705 Verified" if verified else "\u274c Failed",
                 "last_check": (NOW - dt.timedelta(minutes=int(rng.integers(5, 120)))).strftime("%H:%M"),
             })
-        st.dataframe(pd.DataFrame(merkle_rows), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(chain_rows), use_container_width=True, hide_index=True)
 
     # Compliance score heatmap
     st.subheader("Compliance Score Heatmap")

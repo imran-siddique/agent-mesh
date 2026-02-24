@@ -111,7 +111,7 @@ class TestAuditService:
         summary = self.svc.summary()
         assert summary["total_entries"] == 2
         assert summary["chain_valid"] is True
-        assert summary["root_hash"] is None  # No Merkle tree
+        assert summary["root_hash"] is None  # No chain root
 
     def test_summary_empty(self):
         summary = self.svc.summary()
@@ -119,11 +119,11 @@ class TestAuditService:
         assert summary["chain_valid"] is True
         assert summary["root_hash"] is None
 
-    def test_merkle_chain_accessible(self):
+    def test_audit_chain_accessible(self):
         self.svc.log_action("did:mesh:alice", "read")
         chain = self.svc.chain
         assert chain is not None
-        assert chain.get_root_hash() is None  # No Merkle tree
+        assert chain.get_root_hash() is None  # No chain root
 
 
 # ── RewardService Tests ─────────────────────────────────────────────

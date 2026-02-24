@@ -1,9 +1,9 @@
 """
 Audit Service
 
-Merkle-chained logger for tamper-evident audit trails.
+Append-only logger for tamper-evident audit trails.
 
-Wraps the core AuditLog and MerkleAuditChain to provide:
+Wraps the core AuditLog and AuditChain to provide:
 - Immutable event history
 - Cryptographic verification
 - Compliance audit trails
@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from agentmesh.governance.audit import AuditEntry, AuditLog, MerkleAuditChain
+from agentmesh.governance.audit import AuditEntry, AuditLog, AuditChain
 
 
 class AuditService:
@@ -32,8 +32,8 @@ class AuditService:
         self._log = AuditLog()
 
     @property
-    def chain(self) -> MerkleAuditChain:
-        """Access the underlying Merkle chain for verification."""
+    def chain(self) -> AuditChain:
+        """Access the underlying audit chain for verification."""
         return self._log._chain
 
     def log_action(
@@ -120,7 +120,7 @@ class AuditService:
         return self._log.query(event_type=event_type)
 
     def verify_chain(self) -> bool:
-        """Verify the integrity of the Merkle audit chain."""
+        """Verify the integrity of the audit chain."""
         valid, _error = self._log.verify_integrity()
         return valid
 
@@ -139,4 +139,4 @@ class AuditService:
         }
 
 
-__all__ = ["AuditService", "AuditEntry", "AuditLog", "MerkleAuditChain"]
+__all__ = ["AuditService", "AuditEntry", "AuditLog", "AuditChain"]

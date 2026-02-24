@@ -48,7 +48,7 @@ from .governance import (
     ComplianceReport,
     AuditLog,
     AuditEntry,
-    MerkleAuditChain,
+    AuditChain,
     ShadowMode,
     ShadowResult,
 )
@@ -112,7 +112,7 @@ __all__ = [
     "ComplianceReport",
     "AuditLog",
     "AuditEntry",
-    "MerkleAuditChain",
+    "AuditChain",
     "ShadowMode",
     "ShadowResult",
     

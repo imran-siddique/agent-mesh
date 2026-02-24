@@ -47,18 +47,18 @@ class TestPersistentAuditAppend:
         assert len(audit_log) == 5
 
     @pytest.mark.asyncio
-    async def test_merkle_root_updates(self, audit_log):
-        assert audit_log.merkle_root is None
+    async def test_chain_root_updates(self, audit_log):
+        assert audit_log.chain_root is None
         await audit_log.append(
             event_type="test", agent_did="did:mesh:a1", action="read"
         )
-        root1 = audit_log.merkle_root
+        root1 = audit_log.chain_root
         assert root1 is not None
 
         await audit_log.append(
             event_type="test", agent_did="did:mesh:a1", action="write"
         )
-        root2 = audit_log.merkle_root
+        root2 = audit_log.chain_root
         assert root2 != root1
 
     @pytest.mark.asyncio
@@ -183,7 +183,7 @@ class TestPersistentAuditExport:
         await audit_log.append(event_type="test", agent_did="did:mesh:a1", action="read")
         result = await audit_log.export()
         assert result["entry_count"] == 1
-        assert result["merkle_root"] is not None
+        assert result["chain_root"] is not None
 
     @pytest.mark.asyncio
     async def test_export_cloudevents(self, audit_log):

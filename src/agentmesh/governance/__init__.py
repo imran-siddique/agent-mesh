@@ -7,7 +7,7 @@ Append-only audit logs.
 
 from .policy import PolicyEngine, Policy, PolicyRule, PolicyDecision
 from .compliance import ComplianceEngine, ComplianceFramework, ComplianceReport
-from .audit import AuditLog, AuditEntry, MerkleAuditChain
+from .audit import AuditLog, AuditEntry, AuditChain
 from .shadow import ShadowMode, ShadowResult
 from .opa import OPAEvaluator, OPADecision, load_rego_into_engine
 from .trust_policy import (
@@ -30,7 +30,7 @@ __all__ = [
     "ComplianceReport",
     "AuditLog",
     "AuditEntry",
-    "MerkleAuditChain",
+    "AuditChain",
     "ShadowMode",
     "ShadowResult",
     "OPAEvaluator",
