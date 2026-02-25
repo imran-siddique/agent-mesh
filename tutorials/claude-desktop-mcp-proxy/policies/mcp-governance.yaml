@@ -1,0 +1,74 @@
+# AgentMesh Governance Policy — Claude Desktop MCP Tools
+#
+# Controls which MCP tools Claude Desktop can invoke and under what
+# conditions. Evaluated by the AgentMesh proxy on every tool call.
+
+policies:
+  - id: mcp-claude-desktop
+    name: Claude Desktop MCP Governance
+    version: "1.0"
+    enabled: true
+
+    rules:
+      # ── Safe read operations ─────────────────────────────
+      - id: allow-reads
+        name: Allow safe read operations
+        action: allow
+        conditions:
+          - "tool in ['read_file', 'search_files', 'list_directory', 'browse_web']"
+        severity: info
+        message: Read-only operations are always permitted
+
+      # ── Write / execute require approval ─────────────────
+      - id: approve-writes
+        name: Require approval for write operations
+        action: require_approval
+        conditions:
+          - "tool in ['write_file', 'execute_command']"
+        severity: high
+        message: Write and execute operations require human approval
+        approvers:
+          - "security@company.com"
+          - "devops@company.com"
+
+      # ── Destructive operations blocked ───────────────────
+      - id: block-destructive
+        name: Block destructive operations
+        action: deny
+        conditions:
+          - "tool in ['delete_file', 'modify_system', 'shell_exec']"
+        severity: critical
+        message: Destructive operations are blocked by governance policy
+
+      # ── Sensitive path protection ────────────────────────
+      - id: block-sensitive-paths
+        name: Block access to sensitive paths
+        action: deny
+        conditions:
+          - "tool == 'read_file'"
+          - "params.path starts_with '/etc/'"
+        severity: critical
+        message: Access to system configuration files is blocked
+
+      # ── Rate limiting ────────────────────────────────────
+      - id: rate-limit-web
+        name: Rate limit web browsing
+        action: deny
+        conditions:
+          - "count(tool='browse_web', window='1h') > 100"
+        severity: medium
+        message: Hourly rate limit exceeded for web browsing
+        limit: "100/hour"
+
+    # ── Global settings ──────────────────────────────────────
+    audit:
+      enabled: true
+      format: cloudevents
+      hash_chain: true
+      retention_days: 90
+
+    trust:
+      min_score: 600
+      score_penalty_on_deny: 10
+      score_penalty_on_approval_timeout: 5
+      score_bonus_on_allow: 1
