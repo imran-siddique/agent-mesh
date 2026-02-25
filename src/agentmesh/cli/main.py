@@ -405,6 +405,10 @@ def audit(agent: str, limit: int, fmt: str):
 from .proxy import proxy
 app.add_command(proxy)
 
+# Import trust subcommand group
+from .trust_cli import trust
+app.add_command(trust)
+
 
 @app.command()
 @click.option("--claude", is_flag=True, help="Generate Claude Desktop config")
