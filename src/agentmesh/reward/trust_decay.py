@@ -7,9 +7,12 @@ score by Y per hour.
 
 from __future__ import annotations
 
+import logging
 import time
 
 from agentmesh.constants import TRUST_SCORE_DEFAULT, TRUST_SCORE_MAX
+
+logger = logging.getLogger(__name__)
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -123,7 +126,7 @@ class NetworkTrustEngine:
             try:
                 cb(deltas)
             except Exception:
-                pass
+                logger.debug("Score change callback failed", exc_info=True)
 
         return deltas
 

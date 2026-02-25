@@ -6,8 +6,11 @@ Production-ready Redis backend with connection pooling and error handling.
 
 from typing import Optional
 import json
+import logging
 
 from .provider import AbstractStorageProvider, StorageConfig
+
+logger = logging.getLogger(__name__)
 
 
 class RedisStorageProvider(AbstractStorageProvider):
@@ -71,7 +74,7 @@ class RedisStorageProvider(AbstractStorageProvider):
                 await self._client.ping()
                 return True
         except Exception:
-            pass
+            logger.debug("Redis health check failed", exc_info=True)
         return False
     
     # Key-Value Operations

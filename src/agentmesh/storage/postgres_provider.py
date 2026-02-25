@@ -6,8 +6,11 @@ Enterprise-grade PostgreSQL backend with async SQLAlchemy ORM.
 
 from typing import Optional
 import json
+import logging
 
 from .provider import AbstractStorageProvider, StorageConfig
+
+logger = logging.getLogger(__name__)
 
 
 class PostgresStorageProvider(AbstractStorageProvider):
@@ -131,7 +134,7 @@ class PostgresStorageProvider(AbstractStorageProvider):
                     await conn.execute(text("SELECT 1"))
                 return True
         except Exception:
-            pass
+            logger.debug("PostgreSQL health check failed", exc_info=True)
         return False
     
     # Key-Value Operations

@@ -12,10 +12,13 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 import hashlib
+import logging
 import uuid
 import base64
 
 from agentmesh.exceptions import IdentityError
+
+logger = logging.getLogger(__name__)
 
 
 class AgentDID(BaseModel):
@@ -202,6 +205,7 @@ class AgentIdentity(BaseModel):
             public_key.verify(signature_bytes, data)
             return True
         except Exception:
+            logger.debug("Signature verification failed", exc_info=True)
             return False
     
     def delegate(

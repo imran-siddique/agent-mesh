@@ -8,9 +8,12 @@ Policy evaluation latency <5ms with 100% deterministic results.
 from datetime import datetime
 from typing import Optional, Literal, Any, Callable
 from pydantic import BaseModel, Field
+import logging
 import yaml
 import json
 import re
+
+logger = logging.getLogger(__name__)
 
 
 class PolicyRule(BaseModel):
@@ -69,6 +72,7 @@ class PolicyRule(BaseModel):
             # In production, would use a proper expression parser
             return self._eval_expression(self.condition, context)
         except Exception:
+            logger.debug("Policy rule evaluation failed for '%s'", self.name, exc_info=True)
             return False
     
     def _eval_expression(self, expr: str, context: dict) -> bool:

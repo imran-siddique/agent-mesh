@@ -11,11 +11,14 @@ from pydantic import BaseModel, Field
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 import hashlib
+import logging
 import uuid
 import base64
 import secrets
 
 from agentmesh.constants import CREDENTIAL_ROTATION_THRESHOLD_SECONDS
+
+logger = logging.getLogger(__name__)
 
 
 class Credential(BaseModel):
@@ -370,7 +373,7 @@ class CredentialManager:
             try:
                 callback(cred)
             except Exception:
-                pass  # Don't let callback failures block revocation
+                logger.debug("Revocation callback failed", exc_info=True)
         
         return True
     
