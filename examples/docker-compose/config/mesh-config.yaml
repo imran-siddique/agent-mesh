@@ -1,0 +1,60 @@
+# AgentMesh Configuration
+# This file configures the mesh server for the Docker Compose example.
+
+mesh:
+  name: "example-mesh"
+  version: "1.0.0"
+  environment: "development"
+
+# Trust engine settings
+trust:
+  # Minimum trust score (0.0–1.0) required for agent-to-agent communication
+  default_threshold: 0.6
+  # Score assigned to newly registered agents
+  initial_score: 0.5
+  # How quickly trust decays without interaction (seconds)
+  decay_interval: 3600
+  decay_factor: 0.01
+  # Score deltas for events
+  scoring:
+    successful_task: 0.05
+    failed_task: -0.10
+    policy_violation: -0.25
+    peer_endorsement: 0.08
+
+# Identity provider
+identity:
+  provider: "local"
+  # Token lifetime in seconds
+  token_ttl: 3600
+  # Algorithm used for signing agent identity tokens
+  algorithm: "HS256"
+  # In production, set via MESH_IDENTITY_SECRET env var
+  secret_key: "example-only-change-in-production"
+
+# Registry
+registry:
+  # Maximum agents allowed in this mesh instance
+  max_agents: 50
+  # Seconds between heartbeat pings before an agent is marked stale
+  heartbeat_interval: 30
+  stale_timeout: 90
+
+# Storage
+storage:
+  backend: "redis"
+  redis:
+    url: "redis://redis:6379/0"
+    key_prefix: "agentmesh:"
+
+# Logging
+logging:
+  level: "INFO"
+  format: "json"
+  include_timestamp: true
+
+# Metrics
+metrics:
+  enabled: true
+  port: 9090
+  path: "/metrics"

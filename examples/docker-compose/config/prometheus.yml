@@ -1,0 +1,24 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: "agentmesh-example"
+
+scrape_configs:
+  - job_name: "mesh-server"
+    static_configs:
+      - targets: ["mesh-server:9090"]
+        labels:
+          service: "mesh-server"
+
+  - job_name: "researcher-agent"
+    static_configs:
+      - targets: ["researcher-agent:9091"]
+        labels:
+          service: "researcher-agent"
+
+  - job_name: "writer-agent"
+    static_configs:
+      - targets: ["writer-agent:9092"]
+        labels:
+          service: "writer-agent"

@@ -1,0 +1,165 @@
+version: '3.8'
+
+# AgentMesh Multi-Agent Deployment Example
+# Demonstrates a complete mesh with server, two agents, and observability stack.
+# See README.md for usage instructions.
+
+services:
+  # Redis — state storage and pub/sub for agent communication
+  redis:
+    image: redis:7-alpine
+    container_name: mesh-redis
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - mesh
+
+  # AgentMesh Server — trust registry + identity service
+  mesh-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mesh-server
+    environment:
+      MESH_HOST: "0.0.0.0"
+      MESH_PORT: "8080"
+      MESH_METRICS_PORT: "9090"
+      MESH_REDIS_URL: "redis://redis:6379/0"
+      MESH_LOG_LEVEL: "INFO"
+      MESH_TRUST_THRESHOLD: "0.6"
+      MESH_CONFIG_PATH: "/etc/agentmesh/mesh-config.yaml"
+    ports:
+      - "8080:8080"   # API
+      - "9090:9090"   # Metrics
+    volumes:
+      - ./config/mesh-config.yaml:/etc/agentmesh/mesh-config.yaml:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - mesh
+
+  # Agent 1 — researcher agent with sidecar proxy
+  researcher-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mesh-researcher
+    environment:
+      MESH_MODE: "agent"
+      MESH_AGENT_ID: "researcher-agent-01"
+      MESH_AGENT_NAME: "Researcher"
+      MESH_AGENT_CAPABILITIES: "search,summarize,extract"
+      MESH_SERVER_URL: "http://mesh-server:8080"
+      MESH_SIDECAR_PORT: "8081"
+      MESH_METRICS_PORT: "9091"
+      MESH_REDIS_URL: "redis://redis:6379/1"
+      MESH_LOG_LEVEL: "DEBUG"
+    ports:
+      - "8081:8081"   # Sidecar proxy
+      - "9091:9091"   # Metrics
+    depends_on:
+      mesh-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8081/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 8s
+    networks:
+      - mesh
+
+  # Agent 2 — writer agent with sidecar proxy
+  writer-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mesh-writer
+    environment:
+      MESH_MODE: "agent"
+      MESH_AGENT_ID: "writer-agent-01"
+      MESH_AGENT_NAME: "Writer"
+      MESH_AGENT_CAPABILITIES: "draft,edit,format"
+      MESH_SERVER_URL: "http://mesh-server:8080"
+      MESH_SIDECAR_PORT: "8082"
+      MESH_METRICS_PORT: "9092"
+      MESH_REDIS_URL: "redis://redis:6379/2"
+      MESH_LOG_LEVEL: "DEBUG"
+    ports:
+      - "8082:8082"   # Sidecar proxy
+      - "9092:9092"   # Metrics
+    depends_on:
+      mesh-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8082/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 8s
+    networks:
+      - mesh
+
+  # Prometheus — metrics collection
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: mesh-prometheus
+    ports:
+      - "9093:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.enable-lifecycle'
+    depends_on:
+      - mesh-server
+    networks:
+      - mesh
+
+  # Grafana — dashboards (optional, can be removed for lightweight setups)
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: mesh-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: agentmesh
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/provisioning/dashboards/trust-metrics.json
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana-dashboard.json:/etc/grafana/provisioning/dashboards/trust-metrics.json:ro
+      - ./config/grafana-dashboard-provider.yml:/etc/grafana/provisioning/dashboards/provider.yml:ro
+      - ./config/grafana-datasource.yml:/etc/grafana/provisioning/datasources/prometheus.yml:ro
+    depends_on:
+      - prometheus
+    networks:
+      - mesh
+
+volumes:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  mesh:
+    driver: bridge
+    name: agentmesh-example
