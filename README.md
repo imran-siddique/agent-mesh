@@ -132,6 +132,119 @@ AgentMesh provides:
 | **Reward Engine** | Continuous behavioral scoring |
 | **Compliance Automation** | EU AI Act, SOC 2, HIPAA, GDPR mapping |
 
+## How It Works
+
+### 1. Agent Registration & DID Issuance
+
+```mermaid
+sequenceDiagram
+    participant Agent
+    participant CLI as AgentMesh CLI
+    participant CA as Certificate Authority
+    participant Registry as Agent Registry
+
+    Agent->>CLI: agentmesh init --name my-agent --sponsor alice@company.com
+    CLI->>CA: Request Ed25519 keypair & DID
+    CA-->>CLI: did:mesh:my-agent + signed certificate
+    CLI->>Agent: Write identity to local config
+    Agent->>CLI: agentmesh register
+    CLI->>Registry: Register DID + capabilities + sponsor
+    Registry-->>CLI: Registration confirmed
+    CLI-->>Agent: Agent ready (status: registered)
+```
+
+### 2. Trust Handshake Between Two Agents
+
+```mermaid
+sequenceDiagram
+    participant A as Agent A
+    participant Bridge as TrustBridge
+    participant B as Agent B
+
+    A->>Bridge: verify_peer(did:mesh:agent-b, min_trust=700)
+    Bridge->>B: IATP challenge (nonce + timestamp)
+    B-->>Bridge: Signed response (Ed25519 signature)
+    Bridge->>Bridge: Verify signature & check trust score
+    alt Trust score ≥ 700
+        Bridge-->>A: Verification succeeded (score: 850)
+        A->>Bridge: send_message(did:mesh:agent-b, payload)
+        Bridge->>B: Deliver message
+        B-->>Bridge: Acknowledge
+        Bridge-->>A: Message delivered
+    else Trust score < 700
+        Bridge-->>A: Verification failed (score: 620)
+    end
+```
+
+### 3. MCP Proxy Request Flow
+
+```mermaid
+sequenceDiagram
+    participant Client as MCP Client (e.g. Claude)
+    participant Proxy as AgentMesh Proxy
+    participant Policy as Policy Engine
+    participant Server as MCP Server
+
+    Client->>Proxy: Tool call request
+    Proxy->>Policy: Evaluate action against policy rules
+    alt Action allowed
+        Policy-->>Proxy: Allow
+        Proxy->>Server: Forward tool call
+        Server-->>Proxy: Tool result
+        Proxy->>Proxy: Sanitize output & append verification footer
+        Proxy-->>Client: Governed tool result
+    else Action denied
+        Policy-->>Proxy: Deny (rule: no-pii-export)
+        Proxy-->>Client: Action blocked + reason
+    end
+    Proxy->>Proxy: Write audit log entry
+```
+
+### 4. Credential Rotation Lifecycle
+
+```mermaid
+sequenceDiagram
+    participant Agent
+    participant CA as Certificate Authority
+    participant Registry as Agent Registry
+
+    CA->>Agent: Issue ephemeral credential (TTL: 15 min)
+    Note over Agent: Credential active
+
+    loop Every 15 minutes
+        Agent->>CA: Request credential rotation
+        CA->>CA: Verify agent DID & trust score
+        CA-->>Agent: New ephemeral credential (TTL: 15 min)
+        CA->>Registry: Update credential fingerprint
+        Note over Agent: Old credential invalidated
+    end
+
+    alt Trust breach detected
+        Registry->>CA: Revoke credential immediately
+        CA-->>Agent: Credential revoked
+        Note over Agent: Agent must re-register
+    end
+```
+
+### 5. Trust Score Update After Task Completion
+
+```mermaid
+sequenceDiagram
+    participant Agent
+    participant Governance as Governance Layer
+    participant Reward as Reward Engine
+    participant Registry as Agent Registry
+
+    Agent->>Governance: Complete task (action: data_export)
+    Governance->>Governance: Check compliance (SOC2, HIPAA)
+    Governance-->>Reward: Task result + compliance status
+    Reward->>Reward: Calculate score delta
+    Note over Reward: Policy compliance: +10<br/>Task success: +5<br/>No violations: +3
+    Reward->>Registry: Update trust score (820 → 838)
+    Registry-->>Agent: Updated trust score: 838
+    Reward->>Governance: Write audit log
+```
+
 ## Quick Start
 
 ### Option 1: Secure Claude Desktop (Recommended)
