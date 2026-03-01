@@ -422,18 +422,22 @@ child_identity = parent_identity.delegate(
 Cross-agent communication requires trust verification:
 
 ```python
-from agentmesh import TrustBridge
+from agentmesh import AgentIdentity, TrustBridge
 
-bridge = TrustBridge()
+# Create your identity first
+identity = AgentIdentity.create(name="my-agent", sponsor="admin@company.com")
+
+# Set up trust bridge
+bridge = TrustBridge(agent_did=str(identity.did))
 
 # Verify peer before communication
 verification = await bridge.verify_peer(
-    peer_id="did:mesh:other-agent",
+    peer_did="did:mesh:other-agent",
     required_trust_score=700,
 )
 
 if verification.verified:
-    await bridge.send_message(peer_id, message)
+    print(f"Peer trusted: score={verification.trust_score}")
 ```
 
 ### 4. Reward Scoring
@@ -551,7 +555,7 @@ compliance = ComplianceEngine(frameworks=[ComplianceFramework.SOC2, ComplianceFr
 
 # Check an action for violations
 violations = compliance.check_compliance(
-    agent_did="did:agentmesh:healthcare-agent",
+    agent_did="did:mesh:healthcare-agent",
     action_type="data_access",
     context={"data_type": "phi", "encrypted": True},
 )
