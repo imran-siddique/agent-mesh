@@ -18,6 +18,7 @@
 [![PyPI](https://img.shields.io/pypi/v/agentmesh-platform)](https://pypi.org/project/agentmesh-platform/)
 [![Downloads](https://img.shields.io/pypi/dm/agentmesh-platform)](https://pypi.org/project/agentmesh-platform/)
 [![Downloads](https://static.pepy.tech/badge/agentmesh-platform)](https://pepy.tech/project/agentmesh-platform)
+[![OWASP](https://img.shields.io/badge/OWASP_Agentic_Top_10-ASI--03,_07,_10-brightgreen)](https://github.com/imran-siddique/agent-governance/blob/master/docs/OWASP-COMPLIANCE.md)
 [![Agent-OS Compatible](https://img.shields.io/badge/agent--os-compatible-green.svg)](https://github.com/imran-siddique/agent-os)
 [![Featured in awesome-llm-apps](https://img.shields.io/badge/Featured%20in-awesome--llm--apps-orange)](https://github.com/Shubhamsaboo/awesome-llm-apps)
 [![Discussions](https://img.shields.io/github/discussions/imran-siddique/agent-mesh)](https://github.com/imran-siddique/agent-mesh/discussions)
