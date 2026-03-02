@@ -7,7 +7,7 @@ name = "agentmesh-platform"
 version = "2.0.1"
 description = "Community Edition — The Secure Nervous System for Cloud-Native Agent Ecosystems - Identity, Trust, Reward, Governance"
 readme = "README.md"
-license = {text = "Apache-2.0"}
+license = {text = "MIT"}
 authors = [
     {name = "Imran Siddique", email = "imran.siddique@microsoft.com"}
 ]
