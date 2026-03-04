@@ -6,9 +6,11 @@ First-class agent identity with:
 - Human sponsor accountability
 - Ephemeral credentials (15-min TTL)
 - SPIFFE/SVID workload identity
+- Microsoft Entra Agent ID integration
 """
 
 from .agent_id import AgentIdentity, AgentDID
+from .entra import EntraAgentIdentity, EntraAgentRegistry, EntraAgentBlueprint
 from .credentials import Credential, CredentialManager
 from .delegation import ScopeChain, DelegationLink, UserContext
 from .sponsor import HumanSponsor
@@ -50,4 +52,7 @@ __all__ = [
     "KeyStore",
     "SoftwareKeyStore",
     "PKCS11KeyStore",
+    "EntraAgentIdentity",
+    "EntraAgentRegistry",
+    "EntraAgentBlueprint",
 ]
