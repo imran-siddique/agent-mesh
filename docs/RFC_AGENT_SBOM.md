@@ -1,73 +1,202 @@
-# RFC: Agent-SBOM - Software Bill of Materials for AI Agents
+# RFC: AI-BOM — AI Bill of Materials for Agentic Systems
 
-**Status:** Draft  
+**Status:** Draft v2.0  
 **Author:** Imran Siddique (@imran-siddique)  
 **Created:** 2026-02-03  
-**Target:** LF AI & Data Foundation
+**Updated:** 2026-03-04  
+**Target:** LF AI & Data Foundation, OWASP AI SBOM Initiative  
+**Supersedes:** Agent-SBOM v1.0
 
 ## Abstract
 
-This RFC proposes a standardized format for describing the capabilities, dependencies, and risk profile of AI agents: the **Agent-SBOM** (Agent Software Bill of Materials).
+This RFC proposes the **AI-BOM** (AI Bill of Materials), a comprehensive standard for describing the full supply chain of AI agents — including model provenance, dataset lineage, weights versioning, tool capabilities, and governance policies.
 
-Just as traditional SBOMs enumerate software dependencies for supply chain security, Agent-SBOMs enumerate an agent's:
-- Model dependencies
-- Tool access capabilities
-- Human sponsor accountability
-- Trust boundaries
+AI-BOM extends the Agent-SBOM v1.0 concept beyond software dependencies to cover the complete AI supply chain:
+
+- **Model provenance** — training lineage, fine-tuning history, base model ancestry
+- **Dataset tracking** — training data, RAG sources, evaluation benchmarks with data cards
+- **Weights versioning** — cryptographic hashes, quantization records, adapter metadata
+- **Tool capabilities** — enumerated access, delegation rules, human-in-the-loop
+- **Human sponsor accountability** — organizational ownership chain
+- **Trust boundaries** — attestations, compliance mappings, risk profiles
 
 ## Motivation
 
 ### The Problem
 
-Modern AI agents are opaque. When an organization deploys an agent, they have no standard way to answer:
+Modern AI agents are opaque at every layer. When an organization deploys an agent, they have no standard way to answer:
 
 1. **What model powers this agent?** (GPT-4, Claude, Llama, fine-tuned?)
-2. **What tools can it access?** (filesystem, network, databases, APIs?)
-3. **Who is accountable?** (Which human/organization sponsors this agent?)
-4. **What are its trust boundaries?** (Can it delegate? To whom?)
+2. **What data was it trained on?** (Licensed datasets? PII-contaminated? Evaluation benchmarks?)
+3. **What version of weights is running?** (Original, quantized, LoRA-adapted?)
+4. **What tools can it access?** (Filesystem, network, databases, APIs?)
+5. **Who is accountable?** (Which human/organization sponsors this agent?)
+6. **What are its trust boundaries?** (Can it delegate? To whom?)
 
 ### Why This Matters
 
-- **Security teams** need to assess agent risk before deployment
-- **Compliance officers** need to audit agent capabilities
-- **Platform operators** need to enforce capability boundaries
+- **Security teams** need to assess agent risk across the full AI supply chain
+- **Compliance officers** need model and data lineage for regulatory audits (EU AI Act, NIST AI RMF)
+- **Platform operators** need to enforce capability boundaries at runtime
+- **Supply chain security** requires provenance verification for models, datasets, and weights
 - **Other agents** need to verify trust before interaction
+- **OWASP ASI-04** (Insecure Agent Supply Chain) identifies this as a top-10 agentic security risk
 
 ### Prior Art
 
 | Standard | Domain | Gap for Agents |
 |----------|--------|----------------|
-| SBOM (SPDX, CycloneDX) | Software dependencies | No model/capability info |
-| Model Cards | ML models | No tool/delegation info |
-| SLSA | Build provenance | No runtime behavior |
+| SBOM (SPDX, CycloneDX) | Software dependencies | No model/capability/data info |
+| Model Cards (Google) | ML model documentation | No tool/delegation/runtime info |
+| Data Cards (Google) | Dataset documentation | No agent integration |
+| SLSA | Build provenance | No runtime behavior or AI artifacts |
 | OAuth Scopes | API permissions | No AI-specific semantics |
+| OWASP AI SBOM | AI supply chain (emerging) | No agent-specific capabilities |
+| CycloneDX ML-BOM | ML component BOM | No agentic delegation/policy info |
+| GLACIS AI Supply Chain | Industry guidance | Framework, not machine-readable |
 
 ## Specification
 
-### Agent-SBOM Format
+### AI-BOM Schema (v2.0)
 
 ```json
 {
-  "$schema": "https://agentmesh.dev/schemas/agent-sbom/v1.json",
-  "sbomVersion": "1.0",
+  "$schema": "https://agentmesh.dev/schemas/ai-bom/v2.json",
+  "bomVersion": "2.0",
   "agentId": "did:mesh:abc123",
   "agentName": "CustomerServiceBot",
   "version": "2.1.0",
-  "created": "2026-02-03T12:00:00Z",
+  "created": "2026-03-04T12:00:00Z",
   
   "sponsor": {
     "type": "organization",
     "name": "Acme Corp",
     "contact": "ai-governance@acme.com",
-    "verificationMethod": "dns-txt"
+    "verificationMethod": "dns-txt",
+    "entraObjectId": "00000000-0000-0000-0000-000000000001",
+    "tenantId": "contoso.onmicrosoft.com"
   },
   
-  "model": {
-    "provider": "anthropic",
-    "model": "claude-3-sonnet",
-    "version": "20240229",
-    "fineTuned": false,
-    "quantization": null
+  "modelProvenance": {
+    "primary": {
+      "provider": "anthropic",
+      "model": "claude-3-sonnet",
+      "version": "20240229",
+      "baseModel": "claude-3-sonnet-base",
+      "family": "claude-3",
+      "license": "Anthropic Terms of Service",
+      "trainingCutoff": "2024-08-01",
+      "safetyCard": "https://docs.anthropic.com/claude-3-safety"
+    },
+    "fineTuning": {
+      "applied": true,
+      "method": "LoRA",
+      "baseCheckpoint": "claude-3-sonnet-20240229",
+      "fineTunedBy": "Acme Corp AI Team",
+      "fineTunedDate": "2026-01-15",
+      "hyperparameters": {
+        "learningRate": 2e-5,
+        "epochs": 3,
+        "rank": 16
+      },
+      "evaluationMetrics": {
+        "accuracy": 0.94,
+        "f1Score": 0.92,
+        "hallucinationRate": 0.02
+      }
+    },
+    "ancestry": [
+      {
+        "model": "claude-3-sonnet-base",
+        "version": "20240229",
+        "provider": "anthropic",
+        "relationship": "base-model"
+      }
+    ]
+  },
+  
+  "datasets": [
+    {
+      "id": "ds-customer-faq",
+      "name": "Customer FAQ Knowledge Base",
+      "version": "3.2",
+      "type": "fine-tuning",
+      "source": "internal",
+      "size": "50,000 examples",
+      "format": "JSONL",
+      "hash": "sha256:abc123...",
+      "dataCard": {
+        "description": "Curated Q&A pairs from customer support interactions",
+        "piiStatus": "redacted",
+        "piiMethod": "presidio-v2",
+        "license": "proprietary",
+        "biasAssessment": "reviewed-2026-01",
+        "dataClassification": "confidential",
+        "collectionMethod": "manual-curation",
+        "consentStatus": "obtained"
+      }
+    },
+    {
+      "id": "ds-product-docs",
+      "name": "Product Documentation",
+      "version": "2026.03",
+      "type": "rag-source",
+      "source": "internal",
+      "format": "Markdown",
+      "hash": "sha256:def456...",
+      "updateFrequency": "weekly",
+      "vectorStore": {
+        "provider": "Pinecone",
+        "index": "product-docs-v3",
+        "embeddingModel": "text-embedding-3-large",
+        "dimensions": 3072
+      },
+      "dataCard": {
+        "description": "Official product documentation for RAG retrieval",
+        "piiStatus": "none",
+        "license": "proprietary",
+        "dataClassification": "internal"
+      }
+    },
+    {
+      "id": "ds-eval-benchmark",
+      "name": "Customer Service Benchmark",
+      "version": "1.0",
+      "type": "evaluation",
+      "source": "internal",
+      "size": "2,000 test cases",
+      "hash": "sha256:ghi789...",
+      "dataCard": {
+        "description": "Human-labeled evaluation set for response quality",
+        "piiStatus": "synthetic",
+        "license": "proprietary"
+      }
+    }
+  ],
+  
+  "weights": {
+    "format": "safetensors",
+    "precision": "bf16",
+    "hash": "sha256:weights123...",
+    "size": "14.2 GB",
+    "quantization": null,
+    "adapters": [
+      {
+        "type": "LoRA",
+        "name": "customer-service-lora",
+        "version": "1.3",
+        "hash": "sha256:lora456...",
+        "size": "48 MB",
+        "rank": 16,
+        "targetModules": ["q_proj", "v_proj"]
+      }
+    ],
+    "slsaProvenance": {
+      "builder": "acme-ml-pipeline/v2",
+      "buildType": "fine-tune",
+      "invocation": "sha256:build789...",
+      "materials": ["ds-customer-faq@v3.2"]
+    }
   },
   
   "capabilities": {
@@ -117,6 +246,26 @@ Modern AI agents are opaque. When an organization deploys an agent, they have no
     ]
   },
   
+  "compliance": {
+    "frameworks": [
+      {
+        "name": "OWASP Agentic Top 10",
+        "version": "2026",
+        "coverage": ["ASI-01", "ASI-02", "ASI-03", "ASI-04", "ASI-05"]
+      },
+      {
+        "name": "CSA Agentic Trust Framework",
+        "version": "0.1.0",
+        "coverage": ["IM-01", "IM-02", "BM-01", "DG-01"]
+      },
+      {
+        "name": "EU AI Act",
+        "riskCategory": "limited",
+        "transparencyObligations": true
+      }
+    ]
+  },
+  
   "dependencies": {
     "agents": [
       {
@@ -131,6 +280,14 @@ Modern AI agents are opaque. When an organization deploys an agent, they have no
         "provider": "Pinecone",
         "dataClassification": "internal"
       }
+    ],
+    "software": [
+      {
+        "name": "langchain",
+        "version": "0.3.x",
+        "license": "MIT",
+        "spdxId": "SPDXRef-langchain"
+      }
     ]
   },
   
@@ -139,12 +296,16 @@ Modern AI agents are opaque. When an organization deploys an agent, they have no
     "networkAccess": true,
     "fileSystemAccess": "read-only",
     "codeExecution": false,
-    "estimatedRiskLevel": "medium"
+    "estimatedRiskLevel": "medium",
+    "dataExfiltrationRisk": "low",
+    "modelInversionRisk": "low",
+    "promptInjectionMitigations": ["input-filtering", "output-guardrails"]
   },
   
   "signatures": {
     "sponsor": "base64:...",
-    "platform": "base64:..."
+    "platform": "base64:...",
+    "algorithm": "Ed25519"
   }
 }
 ```
@@ -153,24 +314,75 @@ Modern AI agents are opaque. When an organization deploys an agent, they have no
 
 | Field | Description |
 |-------|-------------|
-| `sbomVersion` | Schema version (for forward compatibility) |
+| `bomVersion` | Schema version (for forward compatibility) |
 | `agentId` | Unique identifier (DID recommended) |
 | `agentName` | Human-readable name |
 | `sponsor` | Accountable human/organization |
-| `model` | AI model information |
+| `modelProvenance.primary` | Primary AI model information |
 | `capabilities.tools` | Enumerated tool access |
 
 ### Optional Fields
 
 | Field | Description |
 |-------|-------------|
+| `modelProvenance.fineTuning` | Fine-tuning provenance and metrics |
+| `modelProvenance.ancestry` | Base model lineage chain |
+| `datasets` | Training, RAG, and evaluation data sources |
+| `weights` | Model weights metadata with cryptographic hashes |
 | `capabilities.delegation` | Delegation rules |
 | `capabilities.humanInLoop` | HITL requirements |
 | `policies` | Attached governance policies |
 | `trust` | Trust attestations |
-| `dependencies` | Other agents/services used |
+| `compliance` | Regulatory framework coverage |
+| `dependencies` | Other agents, services, and software used |
 | `riskProfile` | Risk assessment summary |
 | `signatures` | Cryptographic signatures |
+
+### New in v2.0: Model Provenance
+
+The `modelProvenance` section tracks the complete lineage of the AI model:
+
+| Sub-field | Purpose |
+|-----------|---------|
+| `primary.baseModel` | Identifies the upstream base model |
+| `primary.trainingCutoff` | When the model's training data ends |
+| `primary.safetyCard` | Link to the model's safety evaluation |
+| `fineTuning.method` | Fine-tuning technique (LoRA, full, QLoRA, etc.) |
+| `fineTuning.evaluationMetrics` | Post-training evaluation results |
+| `ancestry[]` | Chain of model derivations from base to current |
+
+### New in v2.0: Dataset Tracking
+
+The `datasets` array supports three dataset types:
+
+| Type | Purpose | Key Fields |
+|------|---------|------------|
+| `fine-tuning` | Training data | size, format, PII status, bias assessment |
+| `rag-source` | Retrieval data | vector store config, update frequency |
+| `evaluation` | Test benchmarks | size, synthetic/real labels |
+
+Each dataset includes a **data card** inspired by Google Data Cards:
+
+| Data Card Field | Purpose |
+|-----------------|---------|
+| `piiStatus` | none / redacted / synthetic / present |
+| `piiMethod` | Anonymization technique used |
+| `biasAssessment` | When bias was last reviewed |
+| `consentStatus` | Data subject consent tracking |
+| `dataClassification` | public / internal / confidential / restricted |
+
+### New in v2.0: Weights Versioning
+
+The `weights` section provides cryptographic verification of model artifacts:
+
+| Field | Purpose |
+|-------|---------|
+| `hash` | SHA-256 of the complete weights file |
+| `format` | safetensors / GGUF / PyTorch / etc. |
+| `precision` | bf16 / fp16 / fp32 / int8 / int4 |
+| `quantization` | Quantization method and parameters |
+| `adapters[]` | LoRA/QLoRA adapter metadata with hashes |
+| `slsaProvenance` | SLSA-compatible build provenance |
 
 ## Use Cases
 
@@ -269,28 +481,56 @@ When agent capabilities change:
 
 | Standard | Relationship |
 |----------|--------------|
-| SPDX | Agent-SBOM extends SBOM concept to agents |
-| Model Cards | `model` section inspired by Model Cards |
-| SLSA | `signatures` section compatible with SLSA |
-| CloudEvents | Audit logs in CloudEvents reference SBOM |
+| SPDX 3.0 | AI-BOM extends SBOM concept; `dependencies.software` uses SPDX IDs |
+| CycloneDX ML-BOM | `modelProvenance` and `weights` align with ML-BOM components |
+| Model Cards (Google) | `modelProvenance.primary` inspired by Model Cards |
+| Data Cards (Google) | `datasets[].dataCard` structure based on Data Cards |
+| SLSA | `weights.slsaProvenance` uses SLSA v1.0 provenance format |
+| OWASP AI SBOM | AI-BOM is a superset covering agentic-specific fields |
+| CloudEvents | Audit logs in CloudEvents reference AI-BOM |
 | OPA | Policies can be OPA Rego files |
+| CSA ATF | `compliance.frameworks` maps to ATF requirements |
+| EU AI Act | `compliance.frameworks` tracks AI Act risk categories |
+
+## Alignment with OWASP Agentic Top 10
+
+| OWASP Risk | AI-BOM Coverage |
+|------------|-----------------|
+| ASI-01: Excessive Agency | `capabilities.tools` + `capabilities.delegation` |
+| ASI-02: Privilege Escalation | `capabilities.humanInLoop` + `policies` |
+| ASI-03: Supply Chain | `dependencies.software` + traditional SBOM fields |
+| **ASI-04: AI Supply Chain** | **`modelProvenance` + `datasets` + `weights` (NEW in v2.0)** |
+| ASI-05: Identity Spoofing | `sponsor` + `signatures` + Entra Agent ID |
+| ASI-06: Memory Poisoning | `datasets[type=rag-source]` tracking |
+| ASI-07: Prompt Injection | `riskProfile.promptInjectionMitigations` |
+| ASI-08: Cascading Hallucination | `modelProvenance.fineTuning.evaluationMetrics.hallucinationRate` |
+| ASI-09: Insufficient Logging | `trust.attestations` + audit trail |
+| ASI-10: Unmonitored Behavior | `riskProfile` + `compliance.frameworks` |
 
 ## Roadmap
 
-### v1.0 (This RFC)
-- Core schema definition
-- Required/optional fields
+### v1.0 (Original Agent-SBOM)
+- Core schema: agent identity, sponsor, model, capabilities
 - Signing requirements
 
-### v1.1 (Planned)
-- Multi-model agent support
-- Fine-tuning provenance
-- RAG data source attestation
+### v2.0 (This RFC — AI-BOM)
+- Model provenance with fine-tuning lineage
+- Dataset tracking with data cards
+- Weights versioning with SLSA provenance
+- Compliance framework mapping
+- Entra Agent ID integration
+- Software dependency SPDX alignment
 
-### v2.0 (Future)
-- Dynamic capability negotiation
-- Real-time SBOM updates
-- Cross-platform federation
+### v2.1 (Planned)
+- Multi-model agent support (ensemble, routing)
+- Dynamic capability negotiation protocols
+- Real-time AI-BOM updates via webhooks
+- Cross-platform federation (inter-org trust)
+
+### v3.0 (Future)
+- Autonomous AI-BOM generation from agent introspection
+- Live model drift detection linked to BOM
+- Regulatory compliance auto-assessment
 
 ## Implementation
 
@@ -298,32 +538,44 @@ When agent capabilities change:
 
 AgentMesh provides:
 - JSON Schema for validation
-- Python library for SBOM generation
-- CLI tool for SBOM creation/verification
+- Python library for AI-BOM generation
+- CLI tool for AI-BOM creation/verification
+- Integration with SPDX and CycloneDX export
 
 ```bash
-# Generate SBOM for an agent
-agentmesh sbom generate --agent my-agent --output sbom.json
+# Generate AI-BOM for an agent
+agentmesh bom generate --agent my-agent --output bom.json
 
-# Verify an SBOM
-agentmesh sbom verify sbom.json
+# Verify an AI-BOM (signature + schema)
+agentmesh bom verify bom.json
 
-# Check agent against SBOM
-agentmesh sbom enforce --sbom sbom.json --agent my-agent
+# Check agent runtime against AI-BOM
+agentmesh bom enforce --bom bom.json --agent my-agent
+
+# Export to CycloneDX ML-BOM format
+agentmesh bom export --format cyclonedx --output bom.cdx.json
+
+# Generate data card for a dataset
+agentmesh bom data-card --dataset customer-faq --output data-card.json
+
+# Verify model weights integrity
+agentmesh bom verify-weights --bom bom.json --weights-dir ./model/
 ```
 
 ## Call for Feedback
 
 We invite feedback on:
 
-1. **Schema completeness:** What fields are missing?
-2. **Interoperability:** How to align with existing standards?
-3. **Adoption:** What would make this useful for your organization?
+1. **Schema completeness:** What fields are missing for your AI supply chain needs?
+2. **Interoperability:** How to best align with OWASP AI SBOM, CycloneDX ML-BOM, SPDX 3.0?
+3. **Dataset tracking:** Are data cards sufficient for your regulatory requirements?
+4. **Model provenance:** What additional fine-tuning metadata is needed?
+5. **Adoption:** What tooling would make AI-BOM useful for your organization?
 
 Submit feedback:
 - GitHub: https://github.com/imran-siddique/agent-mesh/discussions
-- Email: rfc@agentmesh.dev
+- Microsoft: https://github.com/microsoft/agent-governance-toolkit/issues
 
 ---
 
-*This RFC is submitted for consideration by the LF AI & Data Foundation Trusted AI Committee.*
+*This RFC is submitted for consideration by the LF AI & Data Foundation Trusted AI Committee and the OWASP AI SBOM Initiative.*
